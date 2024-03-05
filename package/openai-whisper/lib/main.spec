@@ -7,7 +7,6 @@ from PyInstaller.utils.hooks import collect_submodules
 
 datas = []
 datas += collect_data_files("torch")
-datas += copy_metadata("nltk")
 datas += copy_metadata("transformers")
 datas += copy_metadata("torch")
 datas += copy_metadata("tqdm")
@@ -22,7 +21,6 @@ datas += copy_metadata("pyyaml")
 datas += copy_metadata("safetensors")
 
 hiddenimports = collect_submodules("sklearn") 
-hiddenimports.append("nltk")
 hiddenimports.append("torch")
 hiddenimports.append("torch.utils")
 hiddenimports.append("tqdm")

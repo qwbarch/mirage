@@ -47,7 +47,6 @@ let stopWhisper (Whisper whisper) = whisper.Kill()
 // TODO: use a lock since this currently assumes only one thread will send a request and
 // then get a response at the same time, which currently IS NOT THREAD SAFE
 let private request<'A, 'B> (Whisper whisper) (request: WhisperRequest<'A>) : Result<'B, string> =
-    printfn "%s" <| Json.serializeU request
     whisper.StandardInput.Write(Json.serializeU request)
     whisper.StandardInput.Write '\x00'
     whisper.StandardInput.Flush()
@@ -60,7 +59,6 @@ let private request<'A, 'B> (Whisper whisper) (request: WhisperRequest<'A>) : Re
         else
             ignore <| response.Append letter
     let body = Json.deserialize <| response.ToString()
-    printfn "%s" <| response.ToString()
     match body.response, body.error with
         | Some response, None -> Ok response
         | None, Some error -> Error error
@@ -109,15 +107,22 @@ type TranscribeParams =
         language: string
     }
 
+/// <summary>
+/// A transcription of the given audio samples.
+/// </summary>
 type Transcription =
     {   text: string
+        startTime: float32
+        endTime: float32
+        avgLogProb: float32
+        noSpeechProb: float32
     }
 
 /// <summary>
 /// Transcribe the given audio samples into text.
 /// </summary>
 let transcribe whisper transcribeParams =
-    request<TranscribeParams, Transcription> whisper
+    request<TranscribeParams, array<Transcription>> whisper
         {   requestType = "transcribe"
             body = Some transcribeParams
         }
