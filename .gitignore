@@ -405,3 +405,4 @@ bin
 .config
 **/build
 **/dist
+*.o
