@@ -1,4 +1,7 @@
-*.bat linguist-language=Batchfile
+lib/** linguist-vendored
+model/** linguist-vendored
+*.bat linguist-language=Batch
+*.c linguist-language=C
 *.dll filter=lfs diff=lfs merge=lfs -text
 *.lib filter=lfs diff=lfs merge=lfs -text
 *.mp3 filter=lfs diff=lfs merge=lfs -text
