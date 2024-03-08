@@ -9,6 +9,14 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.17.1" />
     <PackageReference Include="FSharpPlus" Version="1.5.0" />
+    <ContentWithTargetPath Include="../bin/silero-vad-api.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>silero-vad-api.dll</TargetPath>
+    </ContentWithTargetPath>
+    <ContentWithTargetPath Include="../../../lib/onnxruntime/lib/onnxruntime.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>onnxruntime.dll</TargetPath>
+    </ContentWithTargetPath>
     <Content
       Include="../../../model/silero-vad/**/*.*"
       CopyToOutputDirectory="PreserveNewest"
@@ -16,6 +24,7 @@
     />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Silero/VAD.fs" />
+    <Compile Include="Silero/Foreign.fs" />
+    <Compile Include="Silero/API.fs" />
   </ItemGroup>
 </Project>

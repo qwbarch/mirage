@@ -2,38 +2,28 @@ module App
 
 open FSharpPlus
 open System
-open Silero.VAD
 open System.Collections.Generic
 open NAudio.Wave
+open Silero.API
 
 let mutable audioBuffer: List<array<byte>> = new List<array<byte>>()
 
-let convertBytesToFloat (byteArray: byte[]) =
-    let bytesPerSample = 2 // Assuming 16-bit signed PCM samples
-    let sampleCount = byteArray.Length / bytesPerSample
-
-    let floatArray =
-        Array.init sampleCount (fun i ->
-            // Convert two bytes to a short (16-bit)
-            let sampleValue = BitConverter.ToInt16(byteArray, i * bytesPerSample)
-
-            // Normalize the sample value to the range [-1.0, 1.0]
-            let normalizedValue = float32 sampleValue / 32768.0f
-
-            // Store the normalized value in the float array
-            normalizedValue
-        )
-
-    floatArray
+let toFloatPCM (pcmData: byte[]) =
+    let bytesPerSample = 2
+    let sampleCount = pcmData.Length / bytesPerSample
+    Array.init sampleCount (fun i ->
+        let sampleValue = BitConverter.ToInt16(pcmData, i * bytesPerSample)
+        float32 sampleValue / 32768.0f
+    )
 
 let onDataAvailable silero _ (event: WaveInEventArgs) =
     audioBuffer.Add event.Buffer
-    if audioBuffer.Count = 3 then
+    if audioBuffer.Count >= 3 then
         let audioData = join <| Array.ofSeq audioBuffer
-        let samples = convertBytesToFloat audioData
+        let samples = toFloatPCM audioData
         audioBuffer.Clear()
         let x = detectSpeech silero samples
-        printfn "%d" x.Length
+        printfn "probability: %f" x
 
 [<EntryPoint>]
 let main _ =
@@ -47,4 +37,5 @@ let main _ =
     waveIn.DataAvailable.AddHandler <| new EventHandler<WaveInEventArgs>(onDataAvailable silero)
     waveIn.StartRecording()
     ignore <| Console.ReadLine()
+    releaseSilero silero
     0
