@@ -1,5 +1,4 @@
 #include "onnxruntime_c_api.h"
-#include <windows.h>
 
 #define WINDOW_SIZE 1024
 #define HC_LENGTH 2 * 1 * 64
@@ -33,8 +32,7 @@ struct SileroInitParams
 __declspec(dllexport) struct SileroVAD* init_silero(struct SileroInitParams init_params)
 {
     struct SileroVAD* vad = malloc(sizeof(struct SileroVAD));
-    OrtApiBase* ort_api_base = (OrtApiBase*) GetProcAddress(LoadLibraryA("onnxruntime.dll"), "OrtGetApiBase")();
-    vad->api = ort_api_base->GetApi(ORT_API_VERSION);
+    vad->api = OrtGetApiBase()->GetApi(ORT_API_VERSION);
     vad->api->CreateEnv(init_params.log_level, "Mirage", &vad->env);
     vad->api->CreateSessionOptions(&vad->session_options);
     vad->api->SetIntraOpNumThreads(vad->session_options, init_params.intra_threads);
