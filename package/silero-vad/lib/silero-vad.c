@@ -32,7 +32,6 @@ struct SileroInitParams
 
 __declspec(dllexport) struct SileroVAD* init_silero(struct SileroInitParams init_params)
 {
-    printf("model_path: %ls\n", init_params.model_path);
     struct SileroVAD* vad = malloc(sizeof(struct SileroVAD));
     OrtApiBase* ort_api_base = (OrtApiBase*) GetProcAddress(LoadLibraryA("onnxruntime.dll"), "OrtGetApiBase")();
     vad->api = ort_api_base->GetApi(ORT_API_VERSION);
@@ -64,9 +63,12 @@ __declspec(dllexport) void release_silero(struct SileroVAD* vad)
 
 /**
  * Detect if speech is found for the given pcm data. This assumes the following:
- * - Pcm data contains a single frame containing 30ms of audio.
- * - Sample rate is 16khz. If the audio isn't 16khz, this will result in undefined behaviour.
+ * - Pcm data contains a single frame containing 30ms of audio (960 samples).
+ * - Sample rate is 16khz.
+ * - Audio is mono-channel.
+ * - Each sample contains 2 bytes.
  * 
+ * If the given pcm data does not follow this structure, its output will be unknown (and can potentially crash).
  * Error handling is not present, as I assume the data sent from F# is already valid.
  */
 __declspec(dllexport) float detect_speech(struct SileroVAD* vad, const float* pcm_data, const int pcm_data_length)
@@ -76,7 +78,7 @@ __declspec(dllexport) float detect_speech(struct SileroVAD* vad, const float* pc
     vad->api->CreateTensorWithDataAsOrtValue(
         vad->memory_info,
         (float*) pcm_data,
-        pcm_data_length,
+        pcm_data_length * sizeof(float),
         input_shape,
         sizeof(input_shape) / sizeof(int64_t),
         ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT,
@@ -123,7 +125,7 @@ __declspec(dllexport) float detect_speech(struct SileroVAD* vad, const float* pc
     // Run inference. TODO: Make this async
     const OrtValue* input_tensors[] = {input_tensor, sr_tensor, h_tensor, c_tensor};
     OrtValue* output_tensors[] = {NULL, NULL, NULL};
-    OrtStatusPtr status = vad->api->Run(
+    vad->api->Run(
         vad->session,
         NULL,
         input_names,
@@ -135,38 +137,22 @@ __declspec(dllexport) float detect_speech(struct SileroVAD* vad, const float* pc
     );
 
     float* probabilities = NULL;
-    vad->api->GetTensorMutableData(output_tensors[0], (void**) &probabilities);
     float* h_output = NULL;
     float* c_output = NULL;
-    vad->api->GetTensorMutableData(output_tensors[1], (void**) &h_output);
-    vad->api->GetTensorMutableData(output_tensors[2], (void**) &c_output);
+    vad->api->GetTensorMutableData(output_tensors[0], &probabilities);
+    vad->api->GetTensorMutableData(output_tensors[1], &h_output);
+    vad->api->GetTensorMutableData(output_tensors[2], &c_output);
+
     memcpy(vad->h, h_output, HC_LENGTH * sizeof(float));
     memcpy(vad->c, c_output, HC_LENGTH * sizeof(float));
 
+    vad->api->ReleaseValue(output_tensors[0]);
+    vad->api->ReleaseValue(output_tensors[1]);
+    vad->api->ReleaseValue(output_tensors[2]);
     vad->api->ReleaseValue(input_tensor);
     vad->api->ReleaseValue(sr_tensor);
     vad->api->ReleaseValue(h_tensor);
     vad->api->ReleaseValue(c_tensor);
 
     return probabilities[0];
-}
-
-int main(int argc, char *argv[])
-{
-    printf("ok\n");
-    struct SileroInitParams init_params;
-    init_params.model_path = L"model/silero-vad/silero_vad.onnx";
-    init_params.inter_threads = 1;
-    init_params.intra_threads = 1;
-    init_params.log_level = ORT_LOGGING_LEVEL_ERROR;
-    struct SileroVAD* vad = init_silero(init_params);
-    int pcm_data_length = 16000 * 3;
-    float* pcm_data = (float*) malloc(pcm_data_length * sizeof(float));
-    memset(pcm_data, 0.0f, pcm_data_length);
-    float probability = detect_speech(vad, pcm_data, pcm_data_length);
-    //std::cout << "input_wav length: " << sizeof(input_wav.data()) << std::endl;
-    //float probability = detect_speech(vad, input_wav.data(), input_wav.size());
-    printf("detected speech probability: %f", probability);
-    release_silero(vad);
-    return 0;
 }
