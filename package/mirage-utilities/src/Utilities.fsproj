@@ -23,7 +23,8 @@
     <Compile Include="Mirage/Utilities/LVar.fs" />
     <Compile Include="Mirage/Utilities/Print.fs" />
     <Compile Include="Mirage/Utilities/AtomicFile.fs" />
+    <Compile Include="Mirage/Utilities/Operator.fs" />
     <Compile Include="Mirage/Utilities/Audio/Format.fs" />
-    <Compile Include="Mirage/Utilities/Audio/VAD.fs" />
+    <Compile Include="Mirage/Utilities/Audio/Speech.fs" />
   </ItemGroup>
 </Project>

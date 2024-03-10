@@ -3,18 +3,11 @@ module App
 open NAudio.Wave
 open System
 open Silero.API
-
-let toFloatPCM (pcmData: byte[]) =
-    let bytesPerSample = 2
-    let sampleCount = pcmData.Length / bytesPerSample
-    Array.init sampleCount <| fun i ->
-        let sampleValue = BitConverter.ToInt16(pcmData, i * bytesPerSample)
-        float32 sampleValue / 32768.0f
-
-let onDataAvailable silero _ (event: WaveInEventArgs) =
-    let samples = toFloatPCM <| event.Buffer
-    let x = detectSpeech silero samples
-    printfn "probability: %f" x
+open Mirage.Utilities.Audio.Format
+open Mirage.Utilities.Audio.Speech
+open FSharpPlus
+open System.Threading
+open System.Collections.Generic
 
 [<EntryPoint>]
 let main _ =
@@ -23,10 +16,24 @@ let main _ =
             {   cpuThreads = 4
                 workers = 1
             }
+    let onSpeechDetected detection =
+        match detection with
+            | SpeechStart -> printfn "speech started"
+            | SpeechEnd -> printfn "speech ended"
+            | SpeechFound _ -> ()
+    let writeSamples = 
+        initSpeechDetector
+            {   detectSpeech = result << detectSpeech silero
+                onSpeechDetected = result << onSpeechDetected
+                canceller = new CancellationTokenSource()
+            }
     let waveIn = new WaveInEvent()
     waveIn.WaveFormat <- new WaveFormat(16000, 16, 1)
     waveIn.BufferMilliseconds <- int <| 1024.0 / 16000.0 * 1000.0
-    waveIn.DataAvailable.AddHandler <| new EventHandler<WaveInEventArgs>(onDataAvailable silero)
+    let onDataAvailable _ (event: WaveInEventArgs) =
+        let samples = fromPCMBytes <| event.Buffer
+        writeSamples samples
+    waveIn.DataAvailable.AddHandler <| new EventHandler<WaveInEventArgs>(onDataAvailable)
     waveIn.StartRecording()
     ignore <| Console.ReadLine()
     releaseSilero silero
