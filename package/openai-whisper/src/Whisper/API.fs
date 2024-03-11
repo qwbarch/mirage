@@ -1,15 +1,25 @@
 module Whisper.API
 
-open FSharpPlus open FSharp.Json
 open System
 open System.IO
 open System.Diagnostics
 open System.Text
+open System.Threading
+open FSharp.Json
+open FSharpPlus
+open Mirage.Utilities.Async
+open Mirage.Utilities.Lock
 
-/// <summary>
 /// Context required to interact with whisper.
-/// </summary>
-type Whisper = private Whisper of Process
+type Whisper =
+    private
+        {   process': Process
+            cancelToken: CancellationToken
+            lock: Lock
+        }
+
+type WhisperException(message: string) =
+    inherit Exception(message)
 
 type WhisperRequest<'A> =
     {   requestType: string   
@@ -21,10 +31,8 @@ type WhisperResponse<'A> =
         error: Option<string>
     }
 
-/// <summary>
 /// Start the whisper process. This should only be invoked once.
-/// </summary>
-let startWhisper () =
+let startWhisper cancelToken =
     let whisper = new Process()
     whisper.StartInfo <-
         new ProcessStartInfo(
@@ -37,32 +45,43 @@ let startWhisper () =
     whisper.StartInfo.StandardInputEncoding <- Encoding.UTF8
     whisper.StartInfo.StandardOutputEncoding <- Encoding.UTF8
     ignore <| whisper.Start()
-    Whisper whisper
+    {   process' = whisper
+        cancelToken = cancelToken
+        lock = createLock()
+    }
 
-/// <summary>
-/// Kill the whisper process. Any attempts to use whisper after this will fail.
-/// </summary>
-let stopWhisper (Whisper whisper) = whisper.Kill()
+/// Kill the whisper process.<br />
+/// Note: The <b>CancellationToken</b> used during <b>startWhisper</b> is not implicitly cancelled or disposed.<br />
+/// You must handle this yourself explicitly.
+let stopWhisper whisper =
+    try whisper.process'.Kill()
+    finally dispose whisper.lock
 
-// TODO: use a lock since this currently assumes only one thread will send a request and
-// then get a response at the same time, which currently IS NOT THREAD SAFE
-let private request<'A, 'B> (Whisper whisper) (request: WhisperRequest<'A>) : Result<'B, string> =
-    whisper.StandardInput.Write(Json.serializeU request)
-    whisper.StandardInput.Write '\x00'
-    whisper.StandardInput.Flush()
-    let response = new StringBuilder()
-    let mutable running = true
-    while running do
-        let letter = char <| whisper.StandardOutput.Read()
-        if letter = '\x00' then
-            running <- false
-        else
-            ignore <| response.Append letter
-    let body = Json.deserialize <| response.ToString()
-    match body.response, body.error with
-        | Some response, None -> Ok response
-        | None, Some error -> Error error
-        | _, _ -> Error $"Received an unexpected response from whisper-s2t. Response: {response.ToString()}"
+let private request<'A, 'B> whisper (request: WhisperRequest<'A>) : Async<'B> =
+    withLock' whisper.lock << Lazy.toAsync<'B> <| fun () ->
+        task {
+            do! whisper.process'.StandardInput.WriteAsync(Json.serializeU request)
+            do! whisper.process'.StandardInput.WriteAsync '\x00'
+            do! whisper.process'.StandardInput.FlushAsync()
+            let response = new StringBuilder()
+            let mutable running = true
+            while running do
+                let buffer = new Memory<char>(Array.zeroCreate<char> 1)
+                let! bytesRead = whisper.process'.StandardOutput.ReadAsync(buffer, whisper.cancelToken)
+                if bytesRead = 0 then
+                    raise <| WhisperException "Unexpectedly read 0 bytes from whisper process's stdout."
+                let letter = buffer.Span[0]
+                if letter = '\x00' then
+                    running <- false
+                else
+                    ignore <| response.Append letter
+            let body = Json.deserialize <| response.ToString()
+            return
+                match body.response, body.error with
+                    | Some response, None -> response
+                    | None, Some error -> raise <| WhisperException error
+                    | _, _ -> raise <| WhisperException $"Received an unexpected response from whisper-s2t. Response: {response.ToString()}"
+        }
 
 let isCudaAvailable whisper =
     request<string, bool> whisper
@@ -83,9 +102,7 @@ type InitModelFullParams =
         workers: int
     }
 
-/// <summary>
-/// Initialize the whisper model. This needs to be run at least once for <b>transcribe</b> to work.<br />
-/// </summary>
+/// Initialize the whisper model. This needs to be run at least once for <b>transcribe</b> to work.
 let initModel whisper (modelParams: InitModelParams) =
     let baseDirectory = AppDomain.CurrentDomain.BaseDirectory
     let fullParams =
@@ -99,17 +116,13 @@ let initModel whisper (modelParams: InitModelParams) =
             body = Some fullParams
         }
 
-/// <summary>
 /// A batch of samples to transcribe.
-/// </summary>
 type TranscribeParams =
     {   samplesBatch: list<array<byte>>
         language: string
     }
 
-/// <summary>
 /// A transcription of the given audio samples.
-/// </summary>
 type Transcription =
     {   text: string
         startTime: float32
@@ -118,9 +131,7 @@ type Transcription =
         noSpeechProb: float32
     }
 
-/// <summary>
 /// Transcribe the given audio samples into text.
-/// </summary>
 let transcribe whisper transcribeParams =
     request<TranscribeParams, array<Transcription>> whisper
         {   requestType = "transcribe"

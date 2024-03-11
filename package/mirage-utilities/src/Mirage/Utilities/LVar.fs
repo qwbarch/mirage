@@ -1,6 +1,8 @@
 module Mirage.Utilities.LVar
-open Mirage.Utilities.Lock
+
+open FSharpPlus
 open System
+open Mirage.Utilities.Lock
 
 // A locked variable
 type LVar<'T> =
@@ -10,7 +12,7 @@ type LVar<'T> =
     }
     interface IDisposable with
         member this.Dispose() =
-            this.lock.Dispose()
+            dispose this.lock
 
 let newLVar (value: 'T) = { lock = createLock(); value = value }
 

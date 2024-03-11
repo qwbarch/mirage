@@ -1,20 +1,15 @@
 module Whisper.Test.Inference
 
-open NUnit.Framework
+open System.Threading
 open Assertion
-open FSharpPlus
-open Whisper.API
 open NAudio.Wave
-
-let private printError<'A> (program: Result<'A, string>) : Unit =
-    match program with
-        | Ok _ -> ()
-        | Error message -> printfn "%s" message
+open NUnit.Framework
+open Whisper.API
 
 [<Test>]
-let yo () =
-    printError <| monad' {
-        let whisper = startWhisper()
+let ``test transcription on jfk.wav`` () =
+    async {
+        let whisper = startWhisper (new CancellationTokenSource()).Token
         return!
             initModel whisper
                 {   useCuda = false

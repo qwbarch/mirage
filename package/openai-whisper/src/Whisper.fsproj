@@ -8,7 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="FSharp.Json" Version="0.4.1" />
-    <ProjectReference Include="../../utilities/src/Utilities.fsproj" />
+    <ProjectReference Include="../../mirage-utilities/src/Utilities.fsproj" />
     <ContentWithTargetPath Include="../lib/dist/main/main.exe">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>model/whisper-s2t/main.exe</TargetPath>

@@ -20,7 +20,7 @@ let main _ =
         match detection with
             | SpeechStart -> printfn "speech started"
             | SpeechEnd -> printfn "speech ended"
-            | SpeechFound _ -> ()
+            | SpeechFound samples -> printfn $"sample count: {samples.Length}"
     let writeSamples = 
         initSpeechDetector
             {   detectSpeech = result << detectSpeech silero
@@ -35,6 +35,8 @@ let main _ =
         writeSamples samples
     waveIn.DataAvailable.AddHandler <| new EventHandler<WaveInEventArgs>(onDataAvailable)
     waveIn.StartRecording()
+    for x in 0 .. 100 do
+        printfn ""
     ignore <| Console.ReadLine()
     releaseSilero silero
     0
