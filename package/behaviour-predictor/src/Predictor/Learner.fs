@@ -11,6 +11,7 @@ open Config
 open Utilities
 open System.Linq
 open System.Collections.Generic
+open PolicyFileHandler
 open Embedding
 open Mirage.Core.Async.LVar
 open Mirage.Core.Async.MVar
@@ -18,7 +19,7 @@ open Mirage.Core.Async.MVar
 let learnerLVar : LVar<LearnerAccess option> = newLVar(None)
 
 let addEmptyObservation
-    (fileHandler: FileHandler)
+    (fileHandler: PolicyFileHandler)
     (observation: Observation) =
     async {
         let! _ = accessLVar modelLVar <| fun model ->
@@ -48,7 +49,7 @@ let addEmptyObservation
 
 let addSpokeResponse 
     (spokeAtom: SpokeAtom) 
-    (fileHandler: FileHandler)
+    (fileHandler: PolicyFileHandler)
     = 
     async {
         // Get the embedding pertaining to only the user response in isolation.
@@ -84,7 +85,7 @@ let addSpokeResponse
 
 // Look for either game inputs or responses. Send the data to the right location depending on the response.
 let createLearnerMessageHandler 
-    (fileHandler: FileHandler)
+    (fileHandler: PolicyFileHandler)
     (statisticsUpdater: StatisticsUpdater)
     = 
     AutoCancelAgent.Start(fun inbox ->
@@ -114,7 +115,7 @@ let postToLearnerHandler
     handler.Post(gameInput)
 
 let learnerObservationSampler
-    (fileHandler: FileHandler)
+    (fileHandler: PolicyFileHandler)
     (observationChannel: LVar<DateTime -> Observation>)
     (isActiveLVar: LVar<bool>) =
     repeatAsync config.MIL_PER_OBS <| async {
@@ -149,7 +150,7 @@ let createActivityHandler (isActiveLVar: LVar<bool>) : ActivityHandler = AutoCan
 )
 
 let learnerThread 
-    (fileHandler: FileHandler) =
+    (fileHandler: PolicyFileHandler) =
     async {
         let isActiveLVar = newLVar(false)
         let activityHandler = createActivityHandler isActiveLVar

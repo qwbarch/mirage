@@ -8,6 +8,7 @@ open System.Collections.Generic
 open System
 open Domain
 open ObservationGenerator
+open Predictor.Model
 open EmitAction
 open Utilities
 open Mirage.Core.Async.LVar

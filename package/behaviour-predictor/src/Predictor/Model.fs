@@ -4,8 +4,8 @@ open Domain
 open System
 open System.Collections.Generic
 open Utilities
-open FileHandler
 open Mirage.Core.Async.LVar
+open PolicyFileHandler
 
 let mutable userId = Guid.Empty
 
@@ -37,7 +37,7 @@ let copyModelPolicy : Async<Policy> =
         return policy
     }
 
-let loadModel (fileState: FileState) = async {
+let loadModel (fileState: PolicyFileState) = async {
     logInfo "Called loadModel"
     let! _ = accessLVar modelLVar <| fun model ->
         for kv in fileState.fileToData do

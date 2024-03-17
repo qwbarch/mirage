@@ -29,7 +29,7 @@
     <Compile Include="Predictor/Domain.fs" />
     <Compile Include="Predictor/Utilities.fs" />
     <Compile Include="Predictor/EmitAction.fs" />
-    <Compile Include="Predictor/FileHandler.fs" />
+    <Compile Include="Predictor/PolicyFileHandler.fs" />
     <Compile Include="Predictor/Score.fs" />
     <Compile Include="Predictor/ActionSelector.fs" />
     <Compile Include="Predictor/PolicyController.fs" />

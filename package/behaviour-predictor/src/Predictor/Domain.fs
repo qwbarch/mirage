@@ -32,6 +32,13 @@ type SpokeAtom =
         // languageId: int32
     }
 
+type SpokePhraseAtom =
+    {   text: string
+        start: DateTime
+        history: SpokeAtom list
+        audioInfo: AudioInfo
+    }
+
 type HeardAtom =
     {   text: string
         speakerClass: EntityClass
@@ -178,26 +185,26 @@ type Model =
 
 type FilePath = string
 
-type FileFormat =
+type PolicyFileFormat =
     {   creationDate: DateTime // We maintain this for an easy way of ordering files
         data: (CompressedObservationFileFormat * FutureAction) array
     }
 
-type FileInfo =
+type PolicyFileInfo =
     {   creationDate: DateTime // Sort by DateTime first!!
         name: FilePath
     }
     
-type FileState =
-    {   dateToFileInfo: Dictionary<DateTime, FileInfo> // Any observation datetime to the file that stores that observation
+type PolicyFileState =
+    {   dateToFileInfo: Dictionary<DateTime, PolicyFileInfo> // Any observation datetime to the file that stores that observation
         fileToData: Dictionary<FilePath, (CompressedObservationFileFormat * FutureAction) array>
-        files: SortedSet<FileInfo>
+        files: SortedSet<PolicyFileInfo>
     }
 
-type FileMessage =
+type PolicyFileMessage =
     | Add of Observation * FutureAction
     | Update of DateTime * FutureAction
 
-type FileHandler = MailboxProcessor<FileMessage>
+type PolicyFileHandler = MailboxProcessor<PolicyFileMessage>
 
 type RandomSource = MathNet.Numerics.Random.Mcg31m1

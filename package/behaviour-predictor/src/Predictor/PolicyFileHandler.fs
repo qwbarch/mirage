@@ -1,5 +1,4 @@
-module Predictor.FileHandler
-
+module Predictor.PolicyFileHandler
 open Predictor.Domain
 open System.IO
 open System
@@ -7,7 +6,7 @@ open Utilities
 open FSharp.Json
 open FSharpPlus
 open System.Collections.Generic
-open Config
+open Predictor.Config
 open Mirage.Core.Async.AtomicFile
 
 let toCompressedObsFileFormat (obs: CompressedObservation) : CompressedObservationFileFormat =
@@ -43,8 +42,8 @@ let readStoredPolicy
     let fileToData = Dictionary()
     let filesSet = SortedSet()
     let mutable counter = 0
-    let add (fileName: string) (asFileFormat: FileFormat) =
-        let fileInfo : Domain.FileInfo =
+    let add (fileName: string) (asFileFormat: PolicyFileFormat) =
+        let fileInfo : Domain.PolicyFileInfo =
             {   creationDate = asFileFormat.creationDate
                 name = fileName
             }
@@ -66,7 +65,7 @@ let readStoredPolicy
                 fileReader.Close()
                 let asFileFormatOption = 
                     try
-                        Some <| Json.deserialize<FileFormat>(contents)
+                        Some <| Json.deserialize<PolicyFileFormat>(contents)
                     with
                     | ex -> 
                         logWarning <| "Unable to parse '" + file.ToString() + "'. Deleting..."
@@ -120,10 +119,10 @@ let toCompressedObs (observation: Observation) (context: (CompressedObservationF
     }
 
 let createFileHandler 
-    (fileState: FileState)
+    (fileState: PolicyFileState)
     (dir: string)
     (sizeLimit: int64) =
-    MailboxProcessor<FileMessage>.Start(fun inbox ->
+    MailboxProcessor<PolicyFileMessage>.Start(fun inbox ->
         let rec loop () =
             async {
                 let! message = inbox.Receive()

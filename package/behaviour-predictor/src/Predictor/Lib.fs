@@ -9,7 +9,7 @@ open ObservationGenerator
 open Embedding
 open Learner
 open FSharpPlus.Internals
-open FileHandler
+open PolicyFileHandler
 open System.IO
 open Model
 open Utilities
