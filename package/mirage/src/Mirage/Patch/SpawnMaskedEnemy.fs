@@ -6,6 +6,7 @@ open HarmonyLib
 open GameNetcodeStuff
 open Unity.Netcode
 open UnityEngine
+open UnityEngine.AI
 open Mirage.Core.Config
 open Mirage.Core.Field
 open Mirage.Core.Logger
@@ -60,6 +61,12 @@ type SpawnMaskedEnemy() =
         bodyVelocity: Vector3
     ) =
         if __instance.IsHost && killedPlayers.Add __instance.playerClientId then
+            let isOnNavMesh () =
+                let playerPosition = __instance.transform.position
+                let mutable meshHit = new NavMeshHit()
+                NavMesh.SamplePosition(playerPosition, &meshHit, 1f, NavMesh.AllAreas)
+                    && Mathf.Approximately(playerPosition.x, meshHit.position.x)
+                    && Mathf.Approximately(playerPosition.z, meshHit.position.z)
             let playerKilledByMaskItem = 
                 causeOfDeath = int CauseOfDeath.Suffocation
                     && spawnBody
@@ -70,7 +77,7 @@ type SpawnMaskedEnemy() =
             let config = getConfig()
             let isPlayerAloneRequired = not config.spawnOnlyWhenPlayerAlone || __instance.isPlayerAlone
             let spawnRateSuccess () = random.Next(1, 101) <= config.spawnOnPlayerDeath
-            if not (causeOfDeath = int CauseOfDeath.Gravity)
+            if (__instance.isInHangarShipRoom && StartOfRound.Instance.shipHasLanded || isOnNavMesh()) // isOnNavMesh is false while on the ship.
                 && not playerKilledByMaskItem
                 && not playerKilledByMaskedEnemy
                 && spawnBody
