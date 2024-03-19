@@ -1,5 +1,19 @@
 ## Changelog
 
+### 1.1.1
+
+- Add configuration option ``ImitateMode`` to change how a recording is picked.
+    - Set this to ``Random`` to keep the current behaviour (recordings are picked completely random).
+    - Set this to ``NoRepeat`` to avoid repeating the same recording (this can still happen when not many recordings exist). Here is how it works:
+        - A pool of recordings is filled.
+        - A recording is randomly picked, and then removed from the pool.
+        - When pool becomes empty, it becomes filled again.
+- ``SpawnOnPlayerDeath`` no longer spawns an enemy if the player is not on a navmesh.
+    - Previously, this was band-aid fixed by preventing a spawn if the player died by gravity.
+    - ``CauseOfDeath: Gravity`` no longer prevents the masked enemy from spawning, meaning ladders can spawn them properly now.
+    - Note: Many areas throughout the map such as standing on top of a railing is detected as a missing navmesh.
+      Such areas will prevent ``SpawnOnPlayerDeath`` from spawning a masked enemy.
+
 ### 1.1.0
 
 - Rewrote the config syncing logic. Thanks to Owen3H (author of CSync) for their config syncing [implementation](https://gist.github.com/Owen3H/c73e09314ed71b254256cbb15fd8c51e/5f314116ccd2ba3e5a2a38f01cf889dc674f2cfa).
