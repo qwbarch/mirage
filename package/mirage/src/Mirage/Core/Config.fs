@@ -45,6 +45,15 @@ type internal LocalConfig(config: ConfigFile) =
             40000,
             "The maximum amount of time in between voice playbacks (in milliseconds).\nThis only applies for non-masked enemies."
         )
+    member val ImitateMode =
+        config.Bind<string>(
+            imitateSection,
+            "ImitateMode",
+            "Random",
+            "Possible values: Random, NoRepeat\n"
+                + "Random: Recordings are randomly picked.\n"
+                + "NoRepeat: Recordings are randomly picked, except the recording can only be played once until no more recordings remain, which can then be replayed."
+        )
     member val DeleteRecordingsPerRound =
         config.Bind<bool>(
             imitateSection,
@@ -260,6 +269,8 @@ type internal LocalConfig(config: ConfigFile) =
             "Whether or not the arms out animation should be used."
         )
 
+type ImitateMode = ImitateRandom | ImitateNoRepeat
+
 /// <summary>
 /// Network synchronized configuration values. This is taken from the wiki:
 /// https://lethal.wiki/dev/intermediate/custom-config-syncing
@@ -270,6 +281,7 @@ type internal SyncedConfig =
         imitateMaxDelay: int
         imitateMinDelayNonMasked: int
         imitateMaxDelayNonMasked: int
+        imitateMode: ImitateMode
         muteLocalPlayerVoice: bool
         deleteRecordingsPerRound: bool
         enableMaskedEnemy: bool
@@ -305,6 +317,11 @@ let private toSyncedConfig (config: LocalConfig) =
         imitateMaxDelay = config.ImitateMaxDelay.Value
         imitateMinDelayNonMasked = config.ImitateMinDelayNonMasked.Value
         imitateMaxDelayNonMasked = config.ImitateMaxDelayNonMasked.Value
+        imitateMode =
+            match config.ImitateMode.Value.ToLower() with
+                | "random" -> ImitateRandom
+                | "norepeat" -> ImitateNoRepeat
+                | mode -> invalidOp $"Synced invalid ImitateMode value: {mode}"
         muteLocalPlayerVoice = config.MuteLocalPlayerVoice.Value
         deleteRecordingsPerRound = config.DeleteRecordingsPerRound.Value
         enableMaskedEnemy = config.EnableMaskedEnemy.Value
@@ -387,6 +404,9 @@ let initConfig (file: ConfigFile) =
                 return! Error $"{errorHeader}{maxDelayKey} cannot have a value smaller than 0."
             if config.ImitateMinDelay.Value > config.ImitateMaxDelay.Value then
                 return! Error $"{errorHeader}{minDelayKey} must have a value smaller than {maxDelayKey}"
+            logInfo $"imitateMode: {String.toLower config.ImitateMode.Value}"
+            if not <| exists ((=) (String.toLower config.ImitateMode.Value)) ["random"; "norepeat"] then
+                return! Error $"{errorHeader}{config.ImitateMode.Definition.Key} is set to an invalid value. Refer to the config for possible values."
             if config.SpawnOnPlayerDeath.Value < 0 || config.SpawnOnPlayerDeath.Value > 100 then
                 return! Error $"{errorHeader}{spawnOnPlayerDeathKey} must have a value between 0-100."
             set LocalConfig config

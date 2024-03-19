@@ -4,6 +4,7 @@ module Mirage.Unity.MimicVoice
 
 open FSharpPlus
 open UnityEngine
+open System.Collections.Generic
 open Mirage.Core.Field
 open Mirage.Core.Logger
 open Mirage.Core.Monad
@@ -30,6 +31,23 @@ type MimicVoice() as self =
     let getAudioStream = get AudioStream "AudioStream"
     let getEnemyAI = get EnemyAI "EnemyAI"
 
+    let recordings = new List<string>()
+
+    let getRecording () =
+        match getConfig().imitateMode with
+            | ImitateRandom -> getRandomRecording random
+            | ImitateNoRepeat ->
+                if recordings.Count = 0 then
+                    recordings.AddRange(getRecordings())
+                // Recordings can still be empty.
+                if recordings.Count = 0 then 
+                    None
+                else
+                    let index = random.Next recordings.Count
+                    let recording = recordings[index]
+                    recordings.RemoveAt index
+                    Some recording
+
     let startVoiceMimic (enemyAI: EnemyAI) =
         let mimicVoice () =
             handleResult <| monad' {
@@ -38,7 +56,7 @@ type MimicVoice() as self =
                 let! audioStream = getAudioStream methodName
                 ignore <| monad' {
                     let! player = mimicPlayer.GetMimickingPlayer()
-                    let! recording = getRandomRecording random
+                    let! recording = getRecording()
                     try
                         if player = StartOfRound.Instance.localPlayerController then
                             if player.IsHost then
