@@ -38,7 +38,7 @@ type MimicVoice() as self =
             | ImitateRandom -> getRandomRecording random
             | ImitateNoRepeat ->
                 if recordings.Count = 0 then
-                    recordings.AddRange(getRecordings())
+                    recordings.AddRange <| getRecordings()
                 // Recordings can still be empty.
                 if recordings.Count = 0 then 
                     None
