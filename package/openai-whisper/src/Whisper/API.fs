@@ -21,11 +21,13 @@ type Whisper =
 type WhisperException(message: string) =
     inherit Exception(message)
 
+// This cannot have a private constructor due to FSharpJson constraints.
 type WhisperRequest<'A> =
     {   requestType: string   
         body: Option<'A>
     }
 
+// This cannot have a private constructor due to FSharpJson constraints.
 type WhisperResponse<'A> =
     {   response: Option<'A>
         error: Option<string>
@@ -69,7 +71,7 @@ let private request<'A, 'B> whisper (request: WhisperRequest<'A>) : Async<'B> =
                 let buffer = new Memory<char>(Array.zeroCreate<char> 1)
                 let! bytesRead = whisper.process'.StandardOutput.ReadAsync(buffer, whisper.cancelToken)
                 if bytesRead = 0 then
-                    raise <| WhisperException "Unexpectedly read 0 bytes from whisper process's stdout."
+                    raise <| WhisperException "Unexpectedly read 0 bytes from whisper process' stdout."
                 let letter = buffer.Span[0]
                 if letter = '\x00' then
                     running <- false

@@ -3,7 +3,21 @@
 # WhisperS2T is licensed under MIT, which you can view here: https://github.com/shashikg/WhisperS2T/blob/main/LICENSE
 # Credits: https://github.com/shashikg/WhisperS2T
 
+from abc import ABC, abstractmethod
 import numpy as np
+
+class VADBaseClass(ABC):
+    def __init__(self, sampling_rate=16000):
+        self.sampling_rate = sampling_rate
+
+    @abstractmethod
+    def update_params(self, params={}):
+        pass
+
+    @abstractmethod
+    def __call__(self, audio_signal, batch_size=4):
+        pass
+
 
 class SpeechSegmenter:
     def __init__(
@@ -19,15 +33,19 @@ class SpeechSegmenter:
         cut_factor=2,
         sampling_rate=16000,
     ):
+
         self.vad_model = vad_model
+
         self.sampling_rate = sampling_rate
         self.padding = padding
         self.frame_size = frame_size
         self.min_seg_len = min_seg_len
         self.max_seg_len = max_seg_len
         self.max_silent_region = max_silent_region
+
         self.eos_thresh = eos_thresh
         self.bos_thresh = bos_thresh
+
         self.cut_factor = cut_factor
         self.cut_idx = int(self.max_seg_len / (self.cut_factor * self.frame_size))
         self.max_idx_in_seg = self.cut_factor * self.cut_idx
@@ -44,16 +62,13 @@ class SpeechSegmenter:
 
     def okay_to_merge(self, speech_probs, last_seg, curr_seg):
         conditions = [
-            (speech_probs[curr_seg["start"]][1] - speech_probs[last_seg["end"]][2])
-            < self.max_silent_region,
-            (speech_probs[curr_seg["end"]][2] - speech_probs[last_seg["start"]][1])
-            <= self.max_seg_len,
+            (speech_probs[curr_seg["start"]][1] - speech_probs[last_seg["end"]][2]) < self.max_silent_region,
+            (speech_probs[curr_seg["end"]][2] - speech_probs[last_seg["start"]][1]) <= self.max_seg_len,
         ]
 
         return all(conditions)
 
     def get_speech_segments(self, speech_probs):
-
         speech_flag, start_idx = False, 0
         speech_segments = []
         for idx, (speech_prob, _, _) in enumerate(speech_probs):
@@ -62,9 +77,7 @@ class SpeechSegmenter:
                     speech_flag = False
                     curr_seg = {"start": start_idx, "end": idx - 1}
 
-                    if len(speech_segments) and self.okay_to_merge(
-                        speech_probs, speech_segments[-1], curr_seg
-                    ):
+                    if len(speech_segments) and self.okay_to_merge(speech_probs, speech_segments[-1], curr_seg):
                         speech_segments[-1]["end"] = curr_seg["end"]
                     else:
                         speech_segments.append(curr_seg)
@@ -76,9 +89,7 @@ class SpeechSegmenter:
         if speech_flag:
             curr_seg = {"start": start_idx, "end": len(speech_probs) - 1}
 
-            if len(speech_segments) and self.okay_to_merge(
-                speech_probs, speech_segments[-1], curr_seg
-            ):
+            if len(speech_segments) and self.okay_to_merge(speech_probs, speech_segments[-1], curr_seg):
                 speech_segments[-1]["end"] = curr_seg["end"]
             else:
                 speech_segments.append(curr_seg)
@@ -98,27 +109,25 @@ class SpeechSegmenter:
                 _start_idx = int(start_idx + self.cut_idx)
                 _end_idx = int(min(end_idx, start_idx + self.max_idx_in_seg))
 
-                new_end_idx = _start_idx + np.argmin(
-                    speech_probs[_start_idx:_end_idx, 0]
-                )
-                start_ends.append(
-                    [speech_probs[start_idx][1], speech_probs[new_end_idx][2]]
-                )
+                new_end_idx = _start_idx + np.argmin(speech_probs[_start_idx:_end_idx, 0])
+                start_ends.append([speech_probs[start_idx][1], speech_probs[new_end_idx][2]])
                 start_idx = new_end_idx + 1
 
-            start_ends.append(
-                [speech_probs[start_idx][1], speech_probs[end_idx][2] + self.padding]
-            )
+            start_ends.append([speech_probs[start_idx][1], speech_probs[end_idx][2] + self.padding])
             start_ends[first_idx][0] = start_ends[first_idx][0] - self.padding
 
         return start_ends
 
-    def __call__(self, audio_signal=None):
+    def __call__(self, audio_signal):
         audio_duration = len(audio_signal) / self.sampling_rate
+
         speech_probs = self.vad_model(audio_signal)
         start_ends = self.get_speech_segments(speech_probs)
+
         if len(start_ends) == 0:
             start_ends = [[0.0, self.max_seg_len]]  # Quick fix for silent audio.
-        start_ends[0][0] = max(0.0, start_ends[0][0])  # Fix edges.
-        start_ends[-1][1] = min(audio_duration, start_ends[-1][1]) # Fix edges.
+
+        start_ends[0][0] = max(0.0, start_ends[0][0])  # fix edges
+        start_ends[-1][1] = min(audio_duration, start_ends[-1][1])  # fix edges
+
         return start_ends, audio_signal

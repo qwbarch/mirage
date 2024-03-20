@@ -45,12 +45,12 @@ let initSpeechDetector speechDetector : float32[] -> unit =
     let agent = new BlockingQueueAgent<float32[]>(Int32.MaxValue)
     let consumer =
         async {
-            let currentSample = ref 0
+            let mutable currentSample = 0
             let mutable endSamples = 0
             let mutable speechDetected = false
             while true do
                 let! samples = agent.AsyncGet()
-                currentSample += samples.Length
+                &currentSample += samples.Length
                 let! probability = speechDetector.detectSpeech samples
                 if probability >= StartThreshold then
                     if endSamples <> 0 then
@@ -61,8 +61,8 @@ let initSpeechDetector speechDetector : float32[] -> unit =
                     return! speechDetector.onSpeechDetected <| SpeechFound samples
                 else if probability < EndThreshold && speechDetected then
                     if endSamples = 0 then
-                        endSamples <- currentSample.Value
-                    if float32 (currentSample.Value - endSamples) < MinSilenceSamples then
+                        endSamples <- currentSample
+                    if float32 (currentSample - endSamples) < MinSilenceSamples then
                         return! speechDetector.onSpeechDetected <| SpeechFound samples
                     else
                         endSamples <- 0

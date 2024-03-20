@@ -1,5 +1,4 @@
 from src.model import WhisperModelCT2
-from src.transcribe import transcribe_samples
 
 import unittest
 import wave
@@ -18,6 +17,6 @@ class Test(unittest.TestCase):
                 device="cpu",
                 compute_type="float32",
             )
-            response = transcribe_samples(model, samples_batch=[samples], lang_codes=["en"], batch_size=1)
+            response = model.transcribe_with_vad(samples_batch=[samples], lang_codes=["en"], batch_size=32)
             expected = "And so my fellow Americans, ask not what your country can do for you, ask what you can do for your country."
             self.assertEqual(expected, response[0]["text"])

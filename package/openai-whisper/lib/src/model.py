@@ -3,15 +3,19 @@
 # WhisperS2T is licensed under MIT, which you can view here: https://github.com/shashikg/WhisperS2T/blob/main/LICENSE
 # Credits: https://github.com/shashikg/WhisperS2T
 
-from whisper_s2t.configs import *
-from src.audio import LogMelSpectogram
-from src.tokenizer import Tokenizer
-from src.segmenter import SpeechSegmenter
+from abc import ABC, abstractmethod
+from itertools import chain
 from src.frame_vad import FrameVAD
+from src.loader import WhisperDataLoader
+from src.audio import LogMelSpectogram
+from src.segmenter import SpeechSegmenter
+from src.tokenizer import Tokenizer
+from whisper_s2t.configs import *
 
 import os
-import ctranslate2
 import numpy as np
+import ctranslate2
+import torch
 import tokenizers
 
 FAST_ASR_OPTIONS = {
@@ -29,12 +33,12 @@ FAST_ASR_OPTIONS = {
     "suppress_tokens": [-1],
     "without_timestamps": True,
     "max_initial_timestamp": 1.0,
-    "word_timestamps": False,
     "sampling_temperature": 1.0,
     "return_scores": True,
     "return_no_speech_prob": True,
     "word_aligner_model": "tiny",
 }
+
 
 BEST_ASR_CONFIG = {
     "beam_size": 5,
@@ -51,38 +55,204 @@ BEST_ASR_CONFIG = {
     "suppress_tokens": [-1],
     "without_timestamps": True,
     "max_initial_timestamp": 1.0,
-    "word_timestamps": False,
     "sampling_temperature": 1.0,
     "return_scores": True,
     "return_no_speech_prob": True,
     "word_aligner_model": "tiny",
 }
 
-class WhisperModelCT2:
+
+class NoneTokenizer:
+    def __init__(self):
+        self.sot_prev = 0
+        self.silent_token = 0
+        self.no_timestamps = 0
+        self.timestamp_begin = 0
+
+    def sot_sequence(self, task=None, lang=None):
+        return [task, lang]
+
+    def encode(self, _):
+        return [0]
+
+
+def fix_batch_param(param, default_value, N):
+    if param is None:
+        param = N * [default_value]
+    elif type(param) == type(default_value):
+        param = N * [param]
+    elif len(param) != N:
+        param = N * [param[0]]
+
+    return param
+
+
+class WhisperModel(ABC):
+    def __init__(
+        self,
+        tokenizer=None,
+        n_mels=80,
+        device="cuda",
+        device_index=0,
+        compute_type="float16",
+        merge_chunks=True,
+        dta_padding=3.0,
+        use_dynamic_time_axis=False,
+        max_speech_len=29.0,
+        max_text_token_len=MAX_TEXT_TOKEN_LENGTH,
+        without_timestamps=True,
+        speech_segmenter_options={},
+        model_path=None,
+    ):
+
+        # Configure Params
+        self.device = device
+        self.device_index = device_index
+        self.compute_type = compute_type
+
+        self.n_mels = n_mels
+        self.merge_chunks = merge_chunks
+        self.max_speech_len = max_speech_len
+
+        self.dta_padding = dta_padding
+        self.use_dynamic_time_axis = use_dynamic_time_axis
+
+        self.without_timestamps = without_timestamps
+        self.max_text_token_len = max_text_token_len
+
+        self.speech_segmenter_options = speech_segmenter_options
+        self.speech_segmenter_options["max_seg_len"] = self.max_speech_len
+
+        self.model_path = model_path
+
+        # Tokenizer
+        if tokenizer is None:
+            tokenizer = NoneTokenizer()
+
+        self.tokenizer = tokenizer
+
+        self._init_dependables()
+
+    def _init_dependables(self):
+        # Rescaled Params
+        self.dta_padding = int(self.dta_padding * SAMPLE_RATE)
+        self.max_initial_prompt_len = self.max_text_token_len // 2 - 1
+
+        # Load Pre Processor
+        self.preprocessor = LogMelSpectogram(n_mels=self.n_mels, base_path=self.model_path).to(self.device)
+
+        # Load Speech Segmenter
+        vad_model = FrameVAD(device=self.device, base_path=self.model_path)
+        self.speech_segmenter = SpeechSegmenter(vad_model, **self.speech_segmenter_options)
+
+        # Load Data Loader
+        self.data_loader = WhisperDataLoader(
+            self.device,
+            self.tokenizer,
+            self.speech_segmenter,
+            dta_padding=self.dta_padding,
+            without_timestamps=self.without_timestamps,
+            max_speech_len=self.max_speech_len,
+            max_initial_prompt_len=self.max_initial_prompt_len,
+            use_dynamic_time_axis=self.use_dynamic_time_axis,
+            merge_chunks=self.merge_chunks,
+        )
+
+    def update_params(self, params={}):
+        for key, value in params.items():
+            setattr(self, key, value)
+
+        self._init_dependables()
+
+    @abstractmethod
+    def generate_segment_batched(self, features, prompts):
+        pass
+
+    @torch.no_grad()
+    def transcribe(
+        self,
+        samples_batch,
+        lang_codes=None,
+        tasks=None,
+        initial_prompts=None,
+        batch_size=8,
+    ):
+        lang_codes = fix_batch_param(lang_codes, "en", len(samples_batch))
+        tasks = fix_batch_param(tasks, "transcribe", len(samples_batch))
+        initial_prompts = fix_batch_param(initial_prompts, None, len(samples_batch))
+
+        responses = [[] for _ in samples_batch]
+
+        for signals, prompts, seq_len, seg_metadata in self.data_loader(
+            samples_batch,
+            lang_codes,
+            tasks,
+            initial_prompts,
+            batch_size=batch_size,
+            use_vad=False,
+        ):
+            mels, seq_len = self.preprocessor(signals, seq_len)
+            res = self.generate_segment_batched(mels.to(self.device), prompts, seq_len, seg_metadata)
+
+            for res_idx, _seg_metadata in enumerate(seg_metadata):
+                responses[_seg_metadata["file_id"]].append(
+                    {
+                        **res[res_idx],
+                        "start_time": round(_seg_metadata["start_time"], 3),
+                        "end_time": round(_seg_metadata["end_time"], 3),
+                    }
+                )
+
+        return list(chain(*responses))
+
+    @torch.no_grad()
+    def transcribe_with_vad(
+        self,
+        samples_batch,
+        lang_codes=None,
+        tasks=None,
+        initial_prompts=None,
+        batch_size=8,
+    ):
+
+        lang_codes = fix_batch_param(lang_codes, "en", len(samples_batch))
+        tasks = fix_batch_param(tasks, "transcribe", len(samples_batch))
+        initial_prompts = fix_batch_param(initial_prompts, None, len(samples_batch))
+
+        responses = [[] for _ in samples_batch]
+
+        for signals, prompts, seq_len, seg_metadata in self.data_loader(samples_batch, lang_codes, tasks, initial_prompts, batch_size=batch_size):
+            mels, seq_len = self.preprocessor(signals, seq_len)
+            res = self.generate_segment_batched(mels.to(self.device), prompts, seq_len, seg_metadata)
+
+            for res_idx, _seg_metadata in enumerate(seg_metadata):
+                responses[_seg_metadata["file_id"]].append(
+                    {
+                        **res[res_idx],
+                        "startTime": round(_seg_metadata["start_time"], 3),
+                        "endTime": round(_seg_metadata["end_time"], 3),
+                    }
+                )
+        return list(chain(*responses))
+
+
+class WhisperModelCT2(WhisperModel):
     def __init__(
         self,
         model_path: str,
         cpu_threads=4,
         num_workers=1,
-        device="cpu",
+        device="cuda",
         device_index=0,
         compute_type="float16",
         max_text_token_len=MAX_TEXT_TOKEN_LENGTH,
-        max_speech_len=29.0,
         asr_options={},
-        dta_padding=3.0,
-        n_mels=80,
-        speech_segmenter_options={},
-        without_timestamps=True,
-        use_dynamic_time_axis = False,
-        merge_chunks=True,
+        **model_kwargs
     ):
-        vad_path = os.path.join(model_path, "vad")
-        self.model_path = model_path
 
         # Load model
         self.model = ctranslate2.models.Whisper(
-            self.model_path,
+            model_path,
             device=device,
             device_index=device_index,
             compute_type=compute_type,
@@ -91,11 +261,11 @@ class WhisperModelCT2:
         )
 
         # Load tokenizer
-        tokenizer_file = os.path.join(self.model_path, "tokenizer.json")
+        tokenizer_file = os.path.join(model_path, "tokenizer.json")
         tokenizer = Tokenizer(
             tokenizers.Tokenizer.from_file(tokenizer_file),
             self.model.is_multilingual,
-            vad_path,
+            model_path,
         )
 
         # ASR Options
@@ -113,37 +283,25 @@ class WhisperModelCT2:
             "patience": self.asr_options["patience"],
             "suppress_blank": self.asr_options["suppress_blank"],
             "suppress_tokens": self.asr_options["suppress_tokens"],
-            "max_initial_timestamp_index": int(
-                round(self.asr_options["max_initial_timestamp"] / TIME_PRECISION)
-            ),
+            "max_initial_timestamp_index": int(round(self.asr_options["max_initial_timestamp"] / TIME_PRECISION)),
             "sampling_temperature": self.asr_options["sampling_temperature"],
         }
 
-        self.device = device
-        self.tokenizer = tokenizer
-        self.without_timestamps = without_timestamps
-        self.dta_padding = int(dta_padding * SAMPLE_RATE)
-        self.max_initial_prompt_len = max_text_token_len//2 -1
-        self.max_speech_len = max_speech_len
-        self.use_dynamic_time_axis = use_dynamic_time_axis
-        self.merge_chunks=merge_chunks
-
-        # Load Pre Processor
-        self.preprocessor = LogMelSpectogram(n_mels=n_mels, base_path=vad_path).to(self.device)
-
-        # Load Speech Segmenter
-        self.speech_segmenter = SpeechSegmenter(
-            FrameVAD(device=device, base_path=vad_path),
-            **speech_segmenter_options
+        super().__init__(
+            tokenizer=tokenizer,
+            device=device,
+            device_index=device_index,
+            compute_type=compute_type,
+            max_text_token_len=max_text_token_len,
+            model_path=model_path,
+            **model_kwargs,
         )
 
     def update_generation_kwargs(self, params={}):
         self.generate_kwargs.update(params)
 
         if "max_text_token_len" in params:
-            self.update_params(
-                params={"max_text_token_len": params["max_text_token_len"]}
-            )
+            self.update_params(params={"max_text_token_len": params["max_text_token_len"]})
 
     def encode(self, features):
         """
@@ -168,15 +326,10 @@ class WhisperModelCT2:
         jump_times = time_indices[jumps] * TIME_PRECISION
         start_times = jump_times[word_boundaries[:-1]]
         end_times = jump_times[word_boundaries[1:]]
-        word_probs = [
-            np.mean(text_token_probs[i:j])
-            for i, j in zip(word_boundaries[:-1], word_boundaries[1:])
-        ]
+        word_probs = [np.mean(text_token_probs[i:j]) for i, j in zip(word_boundaries[:-1], word_boundaries[1:])]
 
         return [
-            dict(
-                word=word, start=round(start, 2), end=round(end, 2), prob=round(prob, 2)
-            )
+            dict(word=word, start=round(start, 2), end=round(end, 2), prob=round(prob, 2))
             for word, start, end, prob in zip(words, start_times, end_times, word_probs)
         ]
 
@@ -184,14 +337,11 @@ class WhisperModelCT2:
         self, features, texts, text_tokens, sot_seqs, seq_lens, seg_metadata
     ):
         lang_codes = [_["lang_code"] for _ in seg_metadata]
-        word_tokens = self.tokenizer.split_to_word_tokens_batch(
-            texts, text_tokens, lang_codes
-        )
+        word_tokens = self.tokenizer.split_to_word_tokens_batch(texts, text_tokens, lang_codes)
 
         start_seq_wise_req = {}
         for _idx, _sot_seq in enumerate(sot_seqs):
             try:
-                # print(_sot_seq)
                 start_seq_wise_req[_sot_seq].append(_idx)
             except:
                 start_seq_wise_req[_sot_seq] = [_idx]
@@ -239,7 +389,6 @@ class WhisperModelCT2:
         return word_timings
 
     def generate_segment_batched(self, features, prompts, seq_lens, seg_metadata):
-
         if self.device == "cpu":
             features = np.ascontiguousarray(features.detach().numpy())
         else:
@@ -248,7 +397,7 @@ class WhisperModelCT2:
         result = self.model.generate(
             ctranslate2.StorageView.from_array(features),
             prompts,
-            **self.generate_kwargs
+            **self.generate_kwargs,
         )
 
         texts = self.tokenizer.decode_batch([x.sequences_ids[0] for x in result])
@@ -259,22 +408,10 @@ class WhisperModelCT2:
 
             if self.generate_kwargs["return_scores"]:
                 seq_len = len(r.sequences_ids[0])
-                cum_logprob = r.scores[0] * (
-                    seq_len ** self.generate_kwargs["length_penalty"]
-                )
-                response[-1]["avg_logprob"] = cum_logprob / (seq_len + 1)
+                cum_logprob = r.scores[0] * (seq_len ** self.generate_kwargs["length_penalty"])
+                response[-1]["avgLogProb"] = cum_logprob / (seq_len + 1)
 
             if self.generate_kwargs["return_no_speech_prob"]:
-                response[-1]["no_speech_prob"] = r.no_speech_prob
-
-        if self.asr_options["word_timestamps"]:
-            text_tokens = [x.sequences_ids[0] + [self.tokenizer.eot] for x in result]
-            sot_seqs = [tuple(_[-4:]) for _ in prompts]
-            word_timings = self.align_words(
-                features, texts, text_tokens, sot_seqs, seq_lens, seg_metadata
-            )
-
-            for _response, _word_timings in zip(response, word_timings):
-                _response["word_timestamps"] = _word_timings
+                response[-1]["noSpeechProb"] = r.no_speech_prob
 
         return response

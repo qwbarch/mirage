@@ -9,6 +9,9 @@
   <ItemGroup>
     <PackageReference Include="FSharp.Json" Version="0.4.1" />
     <ProjectReference Include="../../mirage-utilities/src/Utilities.fsproj" />
+      <Reference Include="FSharpx.Async">
+      <HintPath>../../../lib/FSharpx.Async.dll</HintPath>
+    </Reference>
     <ContentWithTargetPath Include="../lib/dist/main/main.exe">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>model/whisper-s2t/main.exe</TargetPath>
@@ -26,5 +29,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Whisper/API.fs" />
+    <Compile Include="Whisper/Transcribe.fs" />
   </ItemGroup>
 </Project>

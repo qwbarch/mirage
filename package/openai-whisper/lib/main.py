@@ -1,5 +1,4 @@
 from src.model import WhisperModelCT2
-from src.transcribe import transcribe_samples
 
 import torch
 import sys
@@ -21,14 +20,13 @@ def run_request(request):
                 cpu_threads=body["cpuThreads"],
                 num_workers=body["workers"],
             )
-            return "Success"
         case "transcribe":
-            batchSize = len(body["samplesBatch"])
-            return transcribe_samples(
-                model,
-                samples_batch=list(map(bytes, body["samplesBatch"])),
-                lang_codes=[body["language"]],
-                batch_size=batchSize,
+            samples_batch = body["samplesBatch"]
+            batch_size = len(samples_batch)
+            return model.transcribe_with_vad(
+                samples_batch=list(map(bytes, samples_batch)),
+                lang_codes=[body["language"]] * batch_size,
+                batch_size=32, # Taken from the WhisperS2T example. I'm assuming this is optimal for CTranslate2.
             )
 
 def read_null_terminated_utf_string(input_stream):
