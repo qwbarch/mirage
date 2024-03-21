@@ -21,6 +21,7 @@
     <PackageReference Include="HarmonyX" Version="2.12.0" />
     <PackageReference Include="FSharp.Control.AsyncSeq" Version="3.2.1" />
     <PackageReference Include="UniTask" Version="2.5.0" />
+    <PackageReference Include="TeamBMX.LobbyCompatibility" Version="1.0.1" PrivateAssets="all" />
     <Reference Include="FSharpx.Async">
       <HintPath>../../../lib/FSharpx.Async.dll</HintPath>
     </Reference>
@@ -62,7 +63,7 @@
     <Compile Include="Mirage/Patch/RemovePenalty.fs" />
     <Compile Include="Mirage/Patch/SpawnMaskedEnemy.fs" />
     <Compile Include="Mirage/Netcode.fs" />
-    <Compile Include="Properties/AssemblyInfo.fs" />
     <Compile Include="Mirage/Plugin.fs" />
+    <Compile Include="Properties/AssemblyInfo.fs" />
   </ItemGroup>
 </Project>

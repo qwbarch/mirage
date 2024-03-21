@@ -16,9 +16,13 @@
  *)
 module AssemblyInfo
 
-open System.Security.Permissions
-
 #nowarn "44"
+
+open System.Security.Permissions
+open LobbyCompatibility.Enums
+open LobbyCompatibility.Attributes
+
+[<assembly: SoftLobbyCompatibility(typeof<Mirage.Plugin>, CompatibilityLevel.Everyone, VersionStrictness.Minor)>]
 [<assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)>]
 
 ()
