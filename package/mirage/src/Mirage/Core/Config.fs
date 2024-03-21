@@ -404,7 +404,6 @@ let initConfig (file: ConfigFile) =
                 return! Error $"{errorHeader}{maxDelayKey} cannot have a value smaller than 0."
             if config.ImitateMinDelay.Value > config.ImitateMaxDelay.Value then
                 return! Error $"{errorHeader}{minDelayKey} must have a value smaller than {maxDelayKey}"
-            logInfo $"imitateMode: {String.toLower config.ImitateMode.Value}"
             if not <| exists ((=) (String.toLower config.ImitateMode.Value)) ["random"; "norepeat"] then
                 return! Error $"{errorHeader}{config.ImitateMode.Definition.Key} is set to an invalid value. Refer to the config for possible values."
             if config.SpawnOnPlayerDeath.Value < 0 || config.SpawnOnPlayerDeath.Value > 100 then
