@@ -57,6 +57,9 @@ let createStatisticsUpdater
                         match item with
                         | SpokeAtom spokeAtom ->
                             replaceDict stats.spokeQueue spokeAtom.start spokeAtom
+                        | SpokeRecordingAtom spokeRecordingAtom ->
+                            let spokeAtom = spokeRecordingAtom.spokeAtom
+                            replaceDict stats.spokeQueue spokeAtom.start spokeAtom
                         | HeardAtom heardAtom ->
                             if not <| stats.heardQueue.ContainsKey heardAtom.speakerId then
                                 stats.heardQueue.Add(heardAtom.speakerId, SortedDictionary())

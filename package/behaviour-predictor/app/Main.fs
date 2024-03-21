@@ -38,7 +38,6 @@ let mimicRegisterTextDefault
         | Spoke ->
             SpokeAtom {
                 text = text
-                audioOption = None
                 start = start
             }
         | Heard ->
@@ -70,7 +69,6 @@ let userRegisterTextDefault
         | Spoke ->
             SpokeAtom {
                 text = text
-                audioOption = audioOption
                 start = start
             }
         | Heard ->

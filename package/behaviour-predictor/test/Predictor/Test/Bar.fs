@@ -141,18 +141,17 @@ type public Test() =
             let emitWhisper =
                 async {
                     let mutable lastTime = t
+                    let mutable index = -1
                     for whisperTime, whisperText in whisperTimings do
+                        index <- index + 1
                         do! Async.Sleep (whisperTime - lastTime)
                         lastTime <- whisperTime
 
-                        // logInfo $"{whisperTime}"
                         let spokeAtom =
                             SpokeAtom {
                                 text = whisperText
-                                audioOption = None
                                 start = startTime
                             }
-
                         if speakerId = uid then
                             userRegisterText spokeAtom
                         elif mimics.Contains(speakerId) then
@@ -171,16 +170,17 @@ type public Test() =
                             elif mimics.Contains(listenerId) then
                                 mimicRegisterText listenerId heardAtom
 
-                    // one last emit to register the audio file if necessary
                     if speakerId = uid && guidOption.IsSome then
-                        let audioOption = Some <| {   
+                        userRegisterText <| SpokeRecordingAtom {
+                            spokeAtom = {
+                                text = text // this text is from the outer scope
+                                start = startTime
+                            }
+                            steps = []
+                            audioInfo = {   
                                 fileId = guidOption.Value
                                 duration = utteranceTime
                             }
-                        userRegisterText <| SpokeAtom {
-                            text = text // this text is from the outer scope
-                            audioOption = audioOption
-                            start = startTime
                         }
                 }
 
@@ -581,7 +581,7 @@ type public Test() =
                     hasPie <- true
                     if prevText = "apple" then
                         applePrev <- applePrev + 1
-                else
+                else if text = "apple" then
                     appleCount <- appleCount + 1
 
             printfn $"{hasPie} {applePrecedesPie} {appleCount} {pieCount} {applePrev}"
@@ -617,7 +617,7 @@ type public Test() =
                 StartMimic (darth, [])
                 Wait 1000;
                 Speak ("hello", bob, [mallory; darth])
-                Wait 3000;
+                Wait 5000;
                 EndMimic mallory
                 EndMimic darth
                 Wait 100;

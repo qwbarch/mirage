@@ -11,7 +11,6 @@ open Config
 open Utilities
 open System.Linq
 open System.Collections.Generic
-open PolicyFileHandler
 open Embedding
 open Mirage.Core.Async.LVar
 open Mirage.Core.Async.MVar
@@ -48,12 +47,13 @@ let addEmptyObservation
     }
 
 let addSpokeResponse 
-    (spokeAtom: SpokeAtom) 
+    (spokeRecordingAtom: SpokeRecordingAtom) 
     (fileHandler: PolicyFileHandler)
     = 
     async {
         // Get the embedding pertaining to only the user response in isolation.
         // Note that this is different from the spoken embedding from the recent statistics
+        let spokeAtom = spokeRecordingAtom.spokeAtom
         let! spokeAtomEmbedding = encodeText spokeAtom.text
 
         let! _ = accessLVar modelLVar <| fun model ->
@@ -65,9 +65,10 @@ let addSpokeResponse
                 if timeDifferenceMillis < 3 * config.MIL_PER_OBS then
                     let queueAction: QueueActionInfo = {
                         action = 
-                            {   fileId=spokeAtom.audioOption.Value.fileId 
+                            {   fileId=spokeRecordingAtom.audioInfo.fileId 
                                 embedding = spokeAtomEmbedding
-                                duration=spokeAtom.audioOption.Value.duration 
+                                steps = spokeRecordingAtom.steps
+                                duration=spokeRecordingAtom.audioInfo.duration 
                             }
                         delay = timeDifferenceMillis
                     }
@@ -94,9 +95,10 @@ let createLearnerMessageHandler
             let! gameInput = inbox.Receive()
             // If the person spoke and it corresponds to a saved recording, we update the model.
             match gameInput with
-            | SpokeAtom spokeAtom ->
-                if spokeAtom.audioOption.IsSome then
-                    do! addSpokeResponse spokeAtom fileHandler
+            | SpokeAtom _ ->
+                ()
+            | SpokeRecordingAtom spokeRecordingAtom ->
+                do! addSpokeResponse spokeRecordingAtom fileHandler
             | HeardAtom _ ->
                 ()
             | VoiceActivityAtom vaAtom ->
@@ -171,6 +173,7 @@ let learnerThread
             {   gameInputHandler = messageHandler
                 activityHandler = activityHandler
                 gameInputStatisticsLVar = currentStatistics
+                notifyUpdateStatistics = notifyUpdateStatistics
             }
         let! _ = writeLVar learnerLVar <| Some learner
         ()

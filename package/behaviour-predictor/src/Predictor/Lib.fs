@@ -12,8 +12,8 @@ open FSharpPlus.Internals
 open PolicyFileHandler
 open System.IO
 open Model
-open Utilities
 open Mirage.Core.Async.LVar
+open Mirage.Core.Async.MVar
 
 let initBehaviourPredictor
     (logInfo: string -> unit)
@@ -61,6 +61,7 @@ let clearMemory =
                 Async.RunSynchronously <| async {
                     let! _ = writeLVar learner.gameInputStatisticsLVar <| defaultGameInputStatistics()
                     let! _ = writeLVar modelLVar <| emptyModel()
+                    do! putMVar learner.notifyUpdateStatistics 1
                     ()
                 }
             ()

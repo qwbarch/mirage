@@ -17,25 +17,23 @@ type EntityId =
 
 type EntityClass = EntityId
 
-type AudioInfo = 
-    {   fileId: Guid
-        duration: int
-    }
-
 // Must be const
 // Separate spoke and heard inputs to properly handle a user talking with its own mimic.
 type SpokeAtom =
     {   text: string
-        audioOption: AudioInfo option
         start: DateTime
         // TODO
         // languageId: int32
     }
 
-type SpokePhraseAtom =
-    {   text: string
-        start: DateTime
-        history: SpokeAtom list
+type AudioInfo = 
+    {   fileId: Guid
+        duration: int
+    }
+
+type SpokeRecordingAtom =
+    {   spokeAtom: SpokeAtom
+        steps: (int * string) list
         audioInfo: AudioInfo
     }
 
@@ -55,6 +53,7 @@ type VoiceActivityAtom =
 
 type GameInput =
     | SpokeAtom of SpokeAtom
+    | SpokeRecordingAtom of SpokeRecordingAtom
     | VoiceActivityAtom of VoiceActivityAtom
     | HeardAtom of HeardAtom
     // | ConsoleAtom of ConsoleAtom
@@ -124,6 +123,7 @@ type CompressedObservationFileFormat =
 type AudioResponse =
     {   fileId: Guid
         embedding: Option<string * TextEmbedding>
+        steps: (int * string) list
         duration: int
     }
     override this.ToString() =
@@ -174,6 +174,7 @@ type LearnerAccess =
     {   gameInputHandler: LearnerMessageHandler
         activityHandler: ActivityHandler
         gameInputStatisticsLVar: LVar<GameInputStatistics>
+        notifyUpdateStatistics: MVar<int>
     }
 
 type Model =
