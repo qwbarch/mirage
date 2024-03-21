@@ -119,28 +119,28 @@ type MimicVoice() as self =
             let! mimicPlayer = getMimicPlayer methodName
             let! enemyAI = getEnemyAI methodName
             let localPlayer = StartOfRound.Instance.localPlayerController
+            let spectatingPlayer = if isNull localPlayer.spectatedPlayerScript then localPlayer else localPlayer.spectatedPlayerScript
             match mimicPlayer.GetMimickingPlayer() with
                 | None -> audioSource.mute <- true
                 | Some mimickingPlayer ->
-                    let isLocalPlayer = mimickingPlayer = localPlayer
                     let isMimicLocalPlayerMuted () =
                         let alwaysMute = getLocalConfig().AlwaysMuteLocalPlayer.Value
                         let muteWhileNotDead =
                             getConfig().muteLocalPlayerVoice
                                 && not mimickingPlayer.isPlayerDead
-                        isLocalPlayer && (muteWhileNotDead || alwaysMute)
+                        mimickingPlayer = localPlayer && (muteWhileNotDead || alwaysMute)
                     let isNotHauntedOrDisappearedDressGirl () =
                         enemyAI :? DressGirlAI && (
                             let dressGirlAI = enemyAI :?> DressGirlAI
                             let isVisible = dressGirlAI.staringInHaunt || dressGirlAI.moveTowardsDestination && dressGirlAI.movingTowardsTargetPlayer
                             not <| dressGirlAI.hauntingLocalPlayer || not isVisible
                         )
-                    let maskedEnemyIsHiding () = enemyAI :? MaskedPlayerEnemy && (enemyAI :?> MaskedPlayerEnemy).crouching
+                    let maskedEnemyIsHiding () =
+                        enemyAI :? MaskedPlayerEnemy && Vector3.Distance(enemyAI.transform.position, (enemyAI :?> MaskedPlayerEnemy).shipHidingSpot) < 0.4f
                     audioSource.mute <-
                         enemyAI.isEnemyDead
                             || maskedEnemyIsHiding()
                             || isMimicLocalPlayerMuted()
                             || isNotHauntedOrDisappearedDressGirl()
-                            || localPlayer.isInsideFactory && enemyAI.isOutside
-                            || not localPlayer.isInsideFactory && not enemyAI.isOutside
+                            || not (spectatingPlayer.isInsideFactory <> enemyAI.isOutside)
         }
