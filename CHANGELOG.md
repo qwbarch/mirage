@@ -1,5 +1,10 @@
 ## Changelog
 
+### 1.2.1
+
+- Temporarily removed support for [LobbyCompatibility](https://thunderstore.io/c/lethal-company/p/BMX/LobbyCompatibility/).
+    - It currently has a bug that makes it a required dependency, causing Mirage to error when starting/joining a lobby, if you don't have it installed.
+
 ### 1.2.0
 
 - Add support for [LobbyCompatibility](https://thunderstore.io/c/lethal-company/p/BMX/LobbyCompatibility/)
