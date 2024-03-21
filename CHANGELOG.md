@@ -1,5 +1,12 @@
 ## Changelog
 
+### 1.2.0
+
+- Add support for [LobbyCompatibility](https://thunderstore.io/c/lethal-company/p/BMX/LobbyCompatibility/)
+    - Compatibility level is set to minor version. E.g. Any ``1.2.X`` lobby is compatible with any other ``1.2.X`` version of Mirage.
+    - This only applies to ``v1.2.X`` and forward, as I did not follow proper versioning in the ``1.0.X`` versions.
+- Fixed issues of players not being able to hear voices mimicking them at times.
+
 ### 1.1.1
 
 - Add configuration option ``ImitateMode`` to change how a recording is picked.
