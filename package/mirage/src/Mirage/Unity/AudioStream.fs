@@ -3,7 +3,6 @@ module Mirage.Unity.AudioStream
 open FSharpPlus
 open UnityEngine
 open Unity.Netcode
-open Cysharp.Threading.Tasks
 open NAudio.Wave
 open System.IO
 open System.Threading
@@ -114,7 +113,7 @@ type AudioStream() =
             // If the client is late and hasn't been initialized by the time it starts to receive audio frames,
             // it will play silent noise until it reaches the earliest frame it receives.
             let! audioSender = getAudioSender "streamAudioFromHost"
-            toUniTask_ canceller.Token <| async {
+            runSync canceller.Token <| async {
                 this.InitializeAudioClientRpc pcmHeader
                 do! Async.Sleep 1000 // Wait a second for the clients to initialize its audio clip.
                 sendAudio audioSender
@@ -144,7 +143,7 @@ type AudioStream() =
     member this.StreamAudioFromFile(filePath: string) =
         handleResult <| monad' {
             if this.IsHost then
-                toUniTask_ canceller.Token <| async {
+                runSync canceller.Token <| async {
                     let! audioReader =
                         forkReturn <| async {
                             use audio = new AudioFileReader(filePath)
@@ -167,8 +166,7 @@ type AudioStream() =
                 let! audioSource = getAudioSource "InitializeAudioClientRpc"
                 let receiver = startReceiver audioSource pcmHeader
                 set AudioReceiver receiver
-                startTimeout receiver ReceiverTimeout
-                    |> _.AsUniTask().Forget()
+                runSync this.destroyCancellationToken <| startTimeout receiver ReceiverTimeout
         }
 
     /// <summary>
@@ -202,7 +200,7 @@ type AudioStream() =
         else
             iter stopSender AudioUploader.Value
             setNone AudioUploader
-            toUniTask_ canceller.Token <| async {
+            runSync canceller.Token <| async {
                 let! audioReader =
                     forkReturn <|
                         async {

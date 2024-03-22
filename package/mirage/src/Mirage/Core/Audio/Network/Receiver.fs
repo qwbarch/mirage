@@ -5,7 +5,6 @@ open UnityEngine
 open NAudio.Wave
 open Microsoft.FSharp.Data.UnitSystems.SI.UnitNames
 open System
-open System.Threading.Tasks
 open Mirage.Core.Audio.Data
 open Mirage.PluginInfo
 open Mirage.Core.Audio.Format
@@ -86,8 +85,8 @@ let setFrameData (receiver: AudioReceiver) (frameData: FrameData) =
 /// Set a timeout for the acceptable amount of time in between <b>setFrameData</b> calls.
 /// If the timeout is exceeded, the receiver will stop.
 /// </summary>
-let startTimeout (receiver: AudioReceiver) (timeout: int<second>) : Task<Unit> =
-    task {
+let startTimeout (receiver: AudioReceiver) (timeout: int<second>) : Async<Unit> =
+    async {
         receiver.timeoutEnabled <- true
         let timeoutMs = int64 timeout * 1000L
         receiver.startTime <- DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()

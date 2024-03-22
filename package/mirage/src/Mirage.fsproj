@@ -20,7 +20,6 @@
     <PackageReference Include="FSharpPlus" Version="1.5.0" />
     <PackageReference Include="HarmonyX" Version="2.12.0" />
     <PackageReference Include="FSharp.Control.AsyncSeq" Version="3.2.1" />
-    <PackageReference Include="UniTask" Version="2.5.0" />
     <Reference Include="FSharpx.Async">
       <HintPath>../../../lib/FSharpx.Async.dll</HintPath>
     </Reference>

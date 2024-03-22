@@ -1,29 +1,15 @@
 module Mirage.Core.Monad
 
 open System.Threading
-open System.Threading.Tasks
-open Cysharp.Threading.Tasks
 open FSharpPlus
 open FSharpx.Control
 open FSharpPlus.Data
 
 /// <summary>
-/// Convert an <b>Async</b> to a <b>Task</b>.
+/// Run the <b>Async</b> synchronously, cancelling the program when the token is cancelled.
 /// </summary>
-let toTask<'A> (token: CancellationToken) (program: Async<'A>) : Task<'A> =
-    Async.StartImmediateAsTask(program, token)
-
-/// <summary>
-/// Convert an  <b>Async</b> to a <b>UniTask</b>.
-/// </summary>
-let toUniTask<'A> (token: CancellationToken) : Async<'A> -> UniTask<'A> =
-    toTask token >> _.AsUniTask()
-
-/// <summary>
-/// Run the <b>Async</b> as a <b>UniTask</b>, but omit the return type.
-/// </summary>
-let toUniTask_ (token: CancellationToken) : Async<Unit> -> Unit =
-    toUniTask token >> _.Forget()
+let runSync<'A> (token: CancellationToken) (program: Async<'A>) : 'A =
+    Async.RunSynchronously(program, -1, token)
 
 /// <summary>
 /// Run the given program from the async thread pool, and then return the value to the caller thread.
