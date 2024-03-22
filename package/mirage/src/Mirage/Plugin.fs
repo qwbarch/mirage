@@ -18,9 +18,12 @@ open Mirage.Patch.SyncConfig
 open Mirage.Patch.RemovePenalty
 open Mirage.Patch.RecordAudio
 open Mirage.Patch.SpawnMaskedEnemy
+open Compatibility
+open LobbyCompatibility.Features
+open LobbyCompatibility.Enums
 
 [<BepInPlugin(pluginName, pluginId, pluginVersion)>]
-//[<BepInDependency(LobbyCompatibility.PluginInfo.PLUGIN_GUID, BepInDependency.DependencyFlags.SoftDependency)>]
+[<BepInDependency(LobbyCompatibility.PluginInfo.PLUGIN_GUID, BepInDependency.DependencyFlags.SoftDependency)>]
 type Plugin() =
     inherit BaseUnityPlugin()
 
@@ -28,6 +31,7 @@ type Plugin() =
 
     member this.Awake() =
         handleResultWith onError <| monad' {
+            initLobbyCompatibility()
             Logs.SetLogLevel(LogCategory.Recording, LogLevel.Error);
             initNetcodePatcher()
             return! initConfig this.Config
