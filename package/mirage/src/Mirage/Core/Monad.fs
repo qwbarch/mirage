@@ -6,10 +6,11 @@ open FSharpx.Control
 open FSharpPlus.Data
 
 /// <summary>
-/// Run the <b>Async</b> synchronously, cancelling the program when the token is cancelled.
+/// Run the <b>Async</b> synchronously on the current thread, cancelling the program when the token is cancelled.
+/// This operation is **non-blocking**.
 /// </summary>
-let runSync<'A> (token: CancellationToken) (program: Async<'A>) : 'A =
-    Async.RunSynchronously(program, -1, token)
+let runAsync_<'A> (token: CancellationToken) (program: Async<'A>) : Unit =
+    ignore <| Async.StartImmediateAsTask(program, token)
 
 /// <summary>
 /// Run the given program from the async thread pool, and then return the value to the caller thread.

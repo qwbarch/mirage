@@ -113,7 +113,7 @@ type AudioStream() =
             // If the client is late and hasn't been initialized by the time it starts to receive audio frames,
             // it will play silent noise until it reaches the earliest frame it receives.
             let! audioSender = getAudioSender "streamAudioFromHost"
-            runSync canceller.Token <| async {
+            runAsync_ canceller.Token <| async {
                 this.InitializeAudioClientRpc pcmHeader
                 do! Async.Sleep 1000 // Wait a second for the clients to initialize its audio clip.
                 sendAudio audioSender
@@ -143,7 +143,7 @@ type AudioStream() =
     member this.StreamAudioFromFile(filePath: string) =
         handleResult <| monad' {
             if this.IsHost then
-                runSync canceller.Token <| async {
+                runAsync_ canceller.Token <| async {
                     let! audioReader =
                         forkReturn <| async {
                             use audio = new AudioFileReader(filePath)
@@ -166,7 +166,7 @@ type AudioStream() =
                 let! audioSource = getAudioSource "InitializeAudioClientRpc"
                 let receiver = startReceiver audioSource pcmHeader
                 set AudioReceiver receiver
-                runSync this.destroyCancellationToken <| startTimeout receiver ReceiverTimeout
+                runAsync_ this.destroyCancellationToken <| startTimeout receiver ReceiverTimeout
         }
 
     /// <summary>
@@ -200,7 +200,7 @@ type AudioStream() =
         else
             iter stopSender AudioUploader.Value
             setNone AudioUploader
-            runSync canceller.Token <| async {
+            runAsync_ canceller.Token <| async {
                 let! audioReader =
                     forkReturn <|
                         async {

@@ -9,6 +9,8 @@ open FSharpPlus
 open HarmonyLib
 open Netcode
 open NAudio.Lame
+open LobbyCompatibility.Features
+open LobbyCompatibility.Enums
 open Mirage.PluginInfo
 open Mirage.Core.Config
 open Mirage.Core.Logger
@@ -18,14 +20,21 @@ open Mirage.Patch.SyncConfig
 open Mirage.Patch.RemovePenalty
 open Mirage.Patch.RecordAudio
 open Mirage.Patch.SpawnMaskedEnemy
-open Compatibility
-open LobbyCompatibility.Features
-open LobbyCompatibility.Enums
+open BepInEx.Bootstrap
 
 [<BepInPlugin(pluginName, pluginId, pluginVersion)>]
 [<BepInDependency(LobbyCompatibility.PluginInfo.PLUGIN_GUID, BepInDependency.DependencyFlags.SoftDependency)>]
 type Plugin() =
     inherit BaseUnityPlugin()
+
+    /// Initializes support for <a href="https://thunderstore.io/c/lethal-company/p/BMX/LobbyCompatibility/">LobbyCompatibility</a>.
+    /// This is a soft dependency, and does not do anything if **LobbyCompatibility** is not present at runtime.
+    let initLobbyCompatibility () =
+        if Chainloader.PluginInfos.ContainsKey LobbyCompatibility.PluginInfo.PLUGIN_GUID then
+            // This looks weird, but is required to prevent an error from occuring if LobbyCompatibility is missing.
+            // If this isn't defined as a closure (or a separate function), it will still act as a hard dependency.
+            let register () = PluginHelper.RegisterPlugin(pluginName, Version.Parse pluginVersion, CompatibilityLevel.Everyone, VersionStrictness.Minor)
+            register()
 
     let onError () = logError "Failed to initialize Mirage. Plugin is disabled."
 

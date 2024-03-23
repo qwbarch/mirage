@@ -82,7 +82,7 @@ type MimicVoice() as self =
                 return! Async.Sleep delay
                 return! runMimicLoop
             }
-        runSync self.destroyCancellationToken runMimicLoop
+        runAsync_ self.destroyCancellationToken runMimicLoop
 
     let mute () =
         handleResult <| monad {
