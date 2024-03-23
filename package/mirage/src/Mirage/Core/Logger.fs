@@ -1,14 +1,40 @@
 module Mirage.Core.Logger
 
+#nowarn "40"
+
+open System
 open BepInEx
+open FSharpx.Control
 open Mirage.PluginInfo
 
-let private logger = Logging.Logger.CreateLogSource(pluginId)
+type private LogType = LogInfo | LogDebug | LogWarning | LogError
 
-let internal logInfo (message: string) = logger.LogInfo message
-let internal logDebug (message: string) = logger.LogDebug message
-let internal logWarning (message: string) = logger.LogWarning message
-let internal logError (message: string) = logger.LogError message
+let private logChannel = new BlockingQueueAgent<Tuple<LogType, string>>(Int32.MaxValue)
+
+/// Run once on startup to allow log messages to be asynchronous dumped to a separate thread.
+let internal initAsyncLogger cancelToken =
+    let logger = Logging.Logger.CreateLogSource(pluginId)
+    let rec consumer =
+        async {
+            let! (logType, message) = logChannel.AsyncGet()
+            let logMessage =
+                match logType with
+                    | LogInfo -> logger.LogInfo
+                    | LogDebug -> logger.LogDebug
+                    | LogWarning -> logger.LogWarning
+                    | LogError -> logger.LogError
+            logMessage message
+            return! consumer
+        }
+    Async.Start(consumer, cancelToken)
+
+let private logMessage logType message =
+    Async.StartImmediate <| logChannel.AsyncAdd((logType, message))
+
+let internal logInfo = logMessage LogInfo
+let internal logDebug = logMessage LogDebug
+let internal logWarning = logMessage LogWarning
+let internal logError = logMessage LogError
 
 /// <summary>
 /// If the program results in an error, this function logs the error without rethrowing it.
@@ -16,7 +42,7 @@ let internal logError (message: string) = logger.LogError message
 let internal handleResultWith (onError: Unit -> Unit) (program: Result<Unit, string>) : Unit =
     match program with
         | Ok _ -> ()
-        | Error message ->
+        | Result.Error message ->
             logError message
             onError()
 

@@ -41,6 +41,7 @@ type Plugin() =
     member this.Awake() =
         handleResultWith onError <| monad' {
             initLobbyCompatibility()
+            initAsyncLogger this.destroyCancellationToken
             Logs.SetLogLevel(LogCategory.Recording, LogLevel.Error);
             initNetcodePatcher()
             return! initConfig this.Config

@@ -93,7 +93,7 @@ let sendAudio (sender: AudioSender) : Unit =
     try
         sender.channel.AsyncGet ChannelTimeout
             >>= consumer
-            |> runAsync_ sender.canceller.Token
+            |> runImmediate sender.canceller.Token
     with | error ->
         logError $"AudioSender consumer caught an exception: {error}"
         stopSender sender
