@@ -23,6 +23,7 @@ open Mirage.Patch.RemovePenalty
 open Mirage.Patch.RecordAudio
 open Mirage.Patch.SpawnMaskedEnemy
 
+
 [<BepInPlugin(pluginName, pluginId, pluginVersion)>]
 [<BepInDependency(LobbyCompatibility.PluginInfo.PLUGIN_GUID, BepInDependency.DependencyFlags.SoftDependency)>]
 type Plugin() =
@@ -46,11 +47,15 @@ type Plugin() =
 
     let onError () = logError "Failed to initialize Mirage. Plugin is disabled."
 
+    static member val internal Dissonance: DissonanceComms = null
+
     member this.Awake() =
         handleResultWith onError <| monad' {
+            let logCategories = Seq.cast<LogCategory> <| Enum.GetValues typeof<LogCategory>
+            let disableLogs (category: LogCategory) = Logs.SetLogLevel(category, LogLevel.Error)
+            iter disableLogs logCategories
             initAsyncLogger()
             initLobbyCompatibility()
-            Logs.SetLogLevel(LogCategory.Recording, LogLevel.Error);
             initNetcodePatcher()
             return! initConfig this.Config
             ignore <| LameDLL.LoadNativeDLL [|Path.GetDirectoryName this.Info.Location|]

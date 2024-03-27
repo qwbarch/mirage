@@ -7,7 +7,6 @@ open Dissonance
 open Dissonance.Audio.Playback
 open FSharpPlus
 open UnityEngine
-open System.Collections.Generic
 open Mirage.Core.Field
 open Mirage.Core.Logger
 open Mirage.Core.Monad
@@ -15,6 +14,7 @@ open Mirage.Core.Audio.Recording
 open Mirage.Core.Config
 open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicPlayer
+open FSharpPlus.Data
 
 let private get<'A> = getter<'A> "MimicVoice"
 
@@ -35,32 +35,15 @@ type MimicVoice() as self =
     let getAudioStream = get AudioStream "AudioStream"
     let getEnemyAI = get EnemyAI "EnemyAI"
 
-    let recordings = new List<string>()
-
-    let getRecording () =
-        match getConfig().imitateMode with
-            | ImitateRandom -> getRandomRecording random
-            | ImitateNoRepeat ->
-                if recordings.Count = 0 then
-                    recordings.AddRange <| getRecordings()
-                // Recordings can still be empty.
-                if recordings.Count = 0 then 
-                    None
-                else
-                    let index = random.Next recordings.Count
-                    let recording = recordings[index]
-                    recordings.RemoveAt index
-                    Some recording
-
     let startVoiceMimic (enemyAI: EnemyAI) =
         let mimicVoice () =
             handleResult <| monad' {
                 let methodName = "mimicVoice"
                 let! mimicPlayer = getMimicPlayer methodName
                 let! audioStream = getAudioStream methodName
-                ignore <| monad' {
-                    let! player = mimicPlayer.GetMimickingPlayer()
-                    let! recording = getRecording()
+                ignore << runAsync self.destroyCancellationToken << OptionT.run <| monad {
+                    let! player = OptionT << result <| mimicPlayer.GetMimickingPlayer()
+                    let! recording = OptionT getRecording
                     try
                         if player = StartOfRound.Instance.localPlayerController then
                             if player.IsHost then
