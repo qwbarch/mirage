@@ -10,10 +10,10 @@ open Mirage.Unity.AudioStream
 open Mirage.Unity.Network
 open Mirage.Unity.MimicPlayer
 
-let private init<'A when 'A : null and 'A :> EnemyAI> (networkPrefab: NetworkPrefab) =
-    let enemyAI = networkPrefab.Prefab.GetComponent<'A>()
+let private initPrefabs<'A when 'A : null and 'A :> EnemyAI> (networkPrefab: NetworkPrefab) =
+    let enemyAI = networkPrefab.Prefab.GetComponent<'A>() :> EnemyAI
     if not <| isNull enemyAI then
-        iter (ignore << (enemyAI :> EnemyAI).gameObject.AddComponent)
+        iter (ignore << enemyAI.gameObject.AddComponent)
             [   typeof<AudioStream>
                 typeof<MimicPlayer>
                 typeof<MimicVoice>
@@ -27,7 +27,7 @@ type RegisterPrefab() =
             let networkManager = __instance.GetComponent<NetworkManager>()
             flip iter networkManager.NetworkConfig.Prefabs.m_Prefabs <| fun prefab ->
                 if isPrefab<EnemyAI> prefab then
-                    init prefab
+                    initPrefabs prefab
             let! mirage =
                 findNetworkPrefab<MaskedPlayerEnemy> networkManager
                     |> Option.toResultWith "MaskedPlayerEnemy network prefab is missing. This is likely due to a mod incompatibility"

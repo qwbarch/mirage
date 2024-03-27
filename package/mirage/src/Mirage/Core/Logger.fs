@@ -12,24 +12,28 @@ type private LogType = LogInfo | LogDebug | LogWarning | LogError
 let private logChannel = new BlockingQueueAgent<Tuple<LogType, string>>(Int32.MaxValue)
 
 /// Run once on startup to allow log messages to be asynchronous dumped to a separate thread.
-let internal initAsyncLogger cancelToken =
-    let logger = Logging.Logger.CreateLogSource(pluginId)
-    let rec consumer =
+let internal initAsyncLogger () =
+    let asyncLogger =
         async {
-            let! (logType, message) = logChannel.AsyncGet()
-            let logMessage =
-                match logType with
-                    | LogInfo -> logger.LogInfo
-                    | LogDebug -> logger.LogDebug
-                    | LogWarning -> logger.LogWarning
-                    | LogError -> logger.LogError
-            logMessage message
-            return! consumer
+            let logger = Logging.Logger.CreateLogSource pluginId
+            let rec consumer =
+                async {
+                    let! (logType, message) = logChannel.AsyncGet()
+                    let logMessage =
+                        match logType with
+                            | LogInfo -> logger.LogInfo
+                            | LogDebug -> logger.LogDebug
+                            | LogWarning -> logger.LogWarning
+                            | LogError -> logger.LogError
+                    logMessage message
+                    return! consumer
+                }
+            Async.StartImmediate consumer
         }
-    Async.Start(consumer, cancelToken)
+    Async.Start asyncLogger
 
 let private logMessage logType message =
-    Async.StartImmediate <| logChannel.AsyncAdd((logType, message))
+    Async.StartImmediate << logChannel.AsyncAdd <| (logType, message)
 
 let internal logInfo = logMessage LogInfo
 let internal logDebug = logMessage LogDebug

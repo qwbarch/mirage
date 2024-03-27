@@ -2,6 +2,9 @@ module Mirage.Unity.MimicVoice
 
 #nowarn "40"
 
+open System
+open Dissonance
+open Dissonance.Audio.Playback
 open FSharpPlus
 open UnityEngine
 open System.Collections.Generic
@@ -27,6 +30,7 @@ type MimicVoice() as self =
     let MimicPlayer = field<MimicPlayer>()
     let AudioStream = field<AudioStream>()
     let EnemyAI = field()
+    let Playback = field()
     let getMimicPlayer = get MimicPlayer "MimicPlayer"
     let getAudioStream = get AudioStream "AudioStream"
     let getEnemyAI = get EnemyAI "EnemyAI"
@@ -82,28 +86,29 @@ type MimicVoice() as self =
                 return! Async.Sleep delay
                 return! runMimicLoop
             }
-        runImmediate self.destroyCancellationToken runMimicLoop
-
-    let mute () =
-        handleResult <| monad {
-            let! audioStream = getAudioStream "mute"
-            audioStream.GetAudioSource().mute <- true
-        }
+        runAsync self.destroyCancellationToken runMimicLoop
 
     member this.Awake() =
         setNullable MimicPlayer <| this.gameObject.GetComponent<MimicPlayer>()
-        setNullable AudioStream <| this.gameObject.GetComponent<AudioStream>()
         setNullable EnemyAI <| this.gameObject.GetComponent<EnemyAI>()
-        let audioStream = this.GetComponent<AudioStream>()
+        let audioStream = this.gameObject.GetComponent<AudioStream>()
         setNullable AudioStream audioStream
-        let audioSource = audioStream.GetAudioSource()
-        audioSource.dopplerLevel <- 0f
-        audioSource.maxDistance <- 50f
-        audioSource.minDistance <- 6f
-        audioSource.priority <- 0
-        audioSource.spread <- 30f
-        audioSource.spatialBlend <- 1f
-        audioSource.gameObject.AddComponent<OccludeAudio>().useReverb <- true
+
+        let dissonance = Object.FindObjectOfType<DissonanceComms>()
+        let playback = Object.Instantiate<GameObject> <| dissonance._playbackPrefab2
+        let removeComponent : Type -> unit = Object.Destroy << playback.GetComponent
+        iter removeComponent
+            [   typeof<VoicePlayback>
+                typeof<SamplePlaybackComponent>
+                typeof<PlayerVoiceIngameSettings>
+            ]
+        playback.transform.parent <- audioStream.transform
+        set Playback playback
+
+        let audioSource = playback.GetComponent<AudioSource>()
+        audioStream.SetAudioSource audioSource
+        audioSource.loop <- false
+        audioSource.gameObject.SetActive true
 
     member _.Start() =
         handleResult <| monad' {
@@ -111,7 +116,18 @@ type MimicVoice() as self =
             startVoiceMimic enemyAI
         }
 
+    member this.LateUpdate() =
+        // Update the playback component to always be on the same position as the parent.
+        // This ensures audio plays from the correct position.
+        flip iter Playback.Value <| fun playback ->
+            playback.transform.position <- this.transform.position
+
     member _.Update() =
+        let mute () =
+            handleResult <| monad {
+                let! audioStream = getAudioStream "mute"
+                audioStream.GetAudioSource().mute <- true
+            }
         handleResultWith mute <| monad' {
             let methodName = "Update"
             let! audioStream = getAudioStream methodName
@@ -142,5 +158,5 @@ type MimicVoice() as self =
                             || maskedEnemyIsHiding()
                             || isMimicLocalPlayerMuted()
                             || isNotHauntedOrDisappearedDressGirl()
-                            || not (spectatingPlayer.isInsideFactory <> enemyAI.isOutside)
+                            || spectatingPlayer.isInsideFactory = enemyAI.isOutside
         }

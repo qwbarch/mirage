@@ -403,3 +403,4 @@ patcher/plugins
 
 bin
 .config
+*.bak

@@ -15,19 +15,23 @@ let private get<'A> = getter<'A> "MimicPlayer"
 /// If the attached enemy is a <b>MaskedPlayerEnemy</b>, this will also copy its visuals.
 /// </summary>
 [<AllowNullLiteral>]
-type MimicPlayer() as self =
+type MimicPlayer() =
     inherit NetworkBehaviour()
 
     let random = new Random()
 
+    let MimicId = field()
     let MimickingPlayer = field()
     let EnemyAI = field()
+    let getMimicId = get MimicId "MimicId"
     let getEnemyAI = get EnemyAI "EnemyAI"
 
     let logInstance message =
         handleResult <| monad' {
-            let! enemyAI = getEnemyAI "logInstance"
-            logInfo $"{enemyAI.GetType().Name}({self.GetInstanceID()}) - {message}"
+            let methodName = "logInstance"
+            let! mimicId = getMimicId methodName
+            let! enemyAI = getEnemyAI methodName
+            logInfo $"{enemyAI.GetType().Name}({mimicId}) - {message}"
         }
 
     let randomPlayer () =
@@ -42,7 +46,6 @@ type MimicPlayer() as self =
             maskedEnemy.SetEnemyOutside(player.transform.position.y < -80f)
             maskedEnemy.SetVisibilityOfMaskedEnemy()
             if not (isNull player.deadBody) && not player.deadBody.deactivated then
-                logInstance $"Player #{maskedEnemy.mimickingPlayer.playerClientId} has died. Redirecting to enemy and attempting to deactivate dead body."
                 player.redirectToEnemy <- maskedEnemy
                 try player.deadBody.DeactivateBody false
                 with | _ -> () // This can fail due to a mod incompatibility.
@@ -82,6 +85,13 @@ type MimicPlayer() as self =
     member this.StartMimicking() =
         ignore <| monad' {
             if this.IsHost then
+                match MimicId.Value with
+                    | None ->
+                        let mimicId = Guid.NewGuid().ToString()
+                        set MimicId mimicId
+                        this.SetMimicIdClientRpc mimicId
+                    | Some _ -> ()
+
                 let! enemyAI = getValue EnemyAI
                 let maskedEnemy = this.GetComponent<MaskedPlayerEnemy>()
                 let! player =
@@ -122,6 +132,11 @@ type MimicPlayer() as self =
             this.ResetMimicPlayer()
 
     member _.GetMimickingPlayer() = getValue MimickingPlayer
+
+    [<ClientRpc>]
+    member this.SetMimicIdClientRpc(mimicId) =
+        if not this.IsHost then
+            set MimicId mimicId
 
     member this.Update() =
         ignore <| monad' {

@@ -4,7 +4,9 @@ open Dissonance
 open UnityEngine
 open System
 open System.IO
+open System.Runtime.CompilerServices
 open BepInEx
+open BepInEx.Bootstrap
 open FSharpPlus
 open HarmonyLib
 open Netcode
@@ -20,7 +22,6 @@ open Mirage.Patch.SyncConfig
 open Mirage.Patch.RemovePenalty
 open Mirage.Patch.RecordAudio
 open Mirage.Patch.SpawnMaskedEnemy
-open BepInEx.Bootstrap
 
 [<BepInPlugin(pluginName, pluginId, pluginVersion)>]
 [<BepInDependency(LobbyCompatibility.PluginInfo.PLUGIN_GUID, BepInDependency.DependencyFlags.SoftDependency)>]
@@ -29,19 +30,26 @@ type Plugin() =
 
     /// Initializes support for <a href="https://thunderstore.io/c/lethal-company/p/BMX/LobbyCompatibility/">LobbyCompatibility</a>.
     /// This is a soft dependency, and does not do anything if **LobbyCompatibility** is not present at runtime.
+    [<MethodImpl(MethodImplOptions.NoOptimization)>]
     let initLobbyCompatibility () =
         if Chainloader.PluginInfos.ContainsKey LobbyCompatibility.PluginInfo.PLUGIN_GUID then
             // This looks weird, but is required to prevent an error from occuring if LobbyCompatibility is missing.
-            // If this isn't defined as a closure (or a separate function), it will still act as a hard dependency.
-            let register () = PluginHelper.RegisterPlugin(pluginName, Version.Parse pluginVersion, CompatibilityLevel.Everyone, VersionStrictness.Minor)
+            // Note: If this isn't defined as a closure, it will still act as a hard dependency.
+            let register () = 
+                PluginHelper.RegisterPlugin(
+                    pluginName,
+                    Version.Parse pluginVersion,
+                    CompatibilityLevel.Everyone,
+                    VersionStrictness.Minor
+                )
             register()
 
     let onError () = logError "Failed to initialize Mirage. Plugin is disabled."
 
     member this.Awake() =
         handleResultWith onError <| monad' {
+            initAsyncLogger()
             initLobbyCompatibility()
-            initAsyncLogger this.destroyCancellationToken
             Logs.SetLogLevel(LogCategory.Recording, LogLevel.Error);
             initNetcodePatcher()
             return! initConfig this.Config

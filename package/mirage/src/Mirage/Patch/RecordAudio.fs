@@ -9,7 +9,9 @@ open System.IO
 open Mirage.Core.Field
 open Mirage.Core.Audio.Recording
 open Mirage.Core.Config
+open System
 
+let [<Literal>] private AmplifyFactor = 1.5f // Save the recordings 10% louder.
 let private get<'A> (field: Field<'A>) = field.Value
 
 type RecordAudio() =
@@ -68,6 +70,7 @@ type RecordAudio() =
                         recording
                     let recording = Option.defaultWith defaultRecording <| get Recording
                     recording.WriteSamples buffer
+                    //recording.WriteSamples <| new ArraySegment<float32>(map (fun sample -> sample * AmplifyFactor) buffer.Array)
                 else
                     ignore <| monad' {
                         let! recording = getValue Recording
