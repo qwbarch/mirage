@@ -6,6 +6,7 @@ open System
 open Dissonance
 open Dissonance.Audio.Playback
 open FSharpPlus
+open FSharpPlus.Data
 open UnityEngine
 open Mirage.Core.Field
 open Mirage.Core.Logger
@@ -14,7 +15,6 @@ open Mirage.Core.Audio.Recording
 open Mirage.Core.Config
 open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicPlayer
-open FSharpPlus.Data
 
 let private get<'A> = getter<'A> "MimicVoice"
 
@@ -79,11 +79,13 @@ type MimicVoice() as self =
 
         let dissonance = Object.FindObjectOfType<DissonanceComms>()
         let playback = Object.Instantiate<GameObject> <| dissonance._playbackPrefab2
+        //ignore <| playback.AddComponent<VoiceFilter>()
         let removeComponent : Type -> unit = Object.Destroy << playback.GetComponent
         iter removeComponent
             [   typeof<VoicePlayback>
                 typeof<SamplePlaybackComponent>
                 typeof<PlayerVoiceIngameSettings>
+                //typeof<OccludeAudio>
             ]
         playback.transform.parent <- audioStream.transform
         set Playback playback

@@ -1,9 +1,9 @@
 module Mirage.Patch.SpawnMaskedEnemy
 
-open System.Collections.Generic
 open FSharpPlus
 open HarmonyLib
 open GameNetcodeStuff
+open System.Collections.Generic
 open Unity.Netcode
 open UnityEngine
 open UnityEngine.AI
@@ -61,8 +61,8 @@ type SpawnMaskedEnemy() =
         bodyVelocity: Vector3
     ) =
         if __instance.IsHost && killedPlayers.Add __instance.playerClientId then
-            let isOnNavMesh () =
-                let playerPosition = __instance.transform.position
+            let playerPosition = __instance.transform.position
+            let isOnNavMesh =
                 let mutable meshHit = new NavMeshHit()
                 NavMesh.SamplePosition(playerPosition, &meshHit, 1f, NavMesh.AllAreas)
                     && Mathf.Approximately(playerPosition.x, meshHit.position.x)
@@ -77,7 +77,9 @@ type SpawnMaskedEnemy() =
             let config = getConfig()
             let isPlayerAloneRequired = not config.spawnOnlyWhenPlayerAlone || __instance.isPlayerAlone
             let spawnRateSuccess () = random.Next(1, 101) <= config.spawnOnPlayerDeath
-            if (__instance.isInHangarShipRoom && StartOfRound.Instance.shipHasLanded || isOnNavMesh()) // isOnNavMesh is false while on the ship.
+
+            // isOnNavMesh is false while on the ship.
+            if (isOnNavMesh || __instance.isInHangarShipRoom && StartOfRound.Instance.shipHasLanded)
                 && not playerKilledByMaskItem
                 && not playerKilledByMaskedEnemy
                 && spawnBody

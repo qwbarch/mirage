@@ -31,14 +31,14 @@ let private manager =
     }
 
 /// Create a recording file with a random name.
-let createRecording format =
+let internal createRecording format =
     let filePath = Path.Join(manager.directory, $"{DateTime.UtcNow.ToFileTime()}.wav")
     let recording = new AudioFileWriter(filePath, format)
     (filePath, recording)
 
 /// Whether or not samples should still be recorded.<br />
 /// If false, the recording should be disposed.
-let isRecording (dissonance: DissonanceComms) (speechDetected: bool) =
+let internal isRecording (dissonance: DissonanceComms) (speechDetected: bool) =
     let isPlayerDead =
         not (isNull GameNetworkManager.Instance)
             && not (isNull GameNetworkManager.Instance.localPlayerController)
@@ -50,7 +50,7 @@ let isRecording (dissonance: DissonanceComms) (speechDetected: bool) =
 
 /// Delete the recordings of the local player. Any exception found is ignored.
 /// Note: This runs on a separate thread, but is not a true non-blocking function, and will cause the other thread to block.
-let deleteRecordings () =
+let internal deleteRecordings () =
     Async.StartImmediate <|
         async {
             if not <| getLocalConfig().IgnoreRecordingsDeletion.Value then
