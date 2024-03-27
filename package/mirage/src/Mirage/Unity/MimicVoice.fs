@@ -79,13 +79,11 @@ type MimicVoice() as self =
 
         let dissonance = Object.FindObjectOfType<DissonanceComms>()
         let playback = Object.Instantiate<GameObject> <| dissonance._playbackPrefab2
-        //ignore <| playback.AddComponent<VoiceFilter>()
         let removeComponent : Type -> unit = Object.Destroy << playback.GetComponent
         iter removeComponent
             [   typeof<VoicePlayback>
                 typeof<SamplePlaybackComponent>
                 typeof<PlayerVoiceIngameSettings>
-                //typeof<OccludeAudio>
             ]
         playback.transform.parent <- audioStream.transform
         set Playback playback

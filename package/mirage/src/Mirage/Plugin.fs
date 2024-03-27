@@ -23,7 +23,6 @@ open Mirage.Patch.RemovePenalty
 open Mirage.Patch.RecordAudio
 open Mirage.Patch.SpawnMaskedEnemy
 
-
 [<BepInPlugin(pluginName, pluginId, pluginVersion)>]
 [<BepInDependency(LobbyCompatibility.PluginInfo.PLUGIN_GUID, BepInDependency.DependencyFlags.SoftDependency)>]
 type Plugin() =
@@ -46,8 +45,6 @@ type Plugin() =
             register()
 
     let onError () = logError "Failed to initialize Mirage. Plugin is disabled."
-
-    static member val internal Dissonance: DissonanceComms = null
 
     member this.Awake() =
         handleResultWith onError <| monad' {
