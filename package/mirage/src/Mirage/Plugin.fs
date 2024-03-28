@@ -17,7 +17,7 @@ open Mirage.PluginInfo
 open Mirage.Core.Config
 open Mirage.Core.Logger
 open Mirage.Core.Audio.Recording
-open Mirage.Patch.NetworkPrefab
+open Mirage.Patch.RegisterPrefab
 open Mirage.Patch.SyncConfig
 open Mirage.Patch.RemovePenalty
 open Mirage.Patch.RecordAudio

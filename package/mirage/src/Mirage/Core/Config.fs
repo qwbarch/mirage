@@ -233,12 +233,19 @@ type internal LocalConfig(config: ConfigFile) =
             true,
             "Whether the credits penalty should be applied during the end of a round. Set this to true to have the default vanilla behaviour."
         )
-    member val EnableNaturalSpawn =
+    member val EnableOverrideSpawnChance =
         config.Bind<bool>(
             maskedSection,
-            "EnableNaturalSpawn",
+            "EnableOverrideSpawnChance",
             true,
-            "Whether or not masked enemies should naturally spawn. Set this to false if you only want to spawn on player death. Set this to true if you want the vanilla spawning behaviour."
+            "Whether or not the OverrideSpawnChance value should be used. If false, masked enemy spawn weights will be untouched."
+        )
+    member val OverrideSpawnChance =
+        config.Bind<float>(
+            maskedSection,
+            "OverrideSpawnChance",
+            15.0,
+            "The percentage chance a masked enemy should naturally spawn. Spawn weights are internally calculated and modified based on this value."
         )
     member val SpawnOnPlayerDeath =
         config.Bind<int>(
@@ -305,7 +312,8 @@ type internal SyncedConfig =
         enableThumper: bool
         enableModdedEnemies: bool
         enablePenalty: bool
-        enableNaturalSpawn: bool
+        enableOverrideSpawnChance: bool
+        overrideSpawnChance: float
         spawnOnPlayerDeath: int
         spawnOnlyWhenPlayerAlone: bool
         enableMask: bool
@@ -345,7 +353,8 @@ let private toSyncedConfig (config: LocalConfig) =
         enableThumper = config.EnableThumper.Value
         enableModdedEnemies = config.EnableModdedEnemies.Value
         enablePenalty = config.EnablePenalty.Value
-        enableNaturalSpawn = config.EnableNaturalSpawn.Value
+        enableOverrideSpawnChance = config.EnableOverrideSpawnChance.Value
+        overrideSpawnChance = config.OverrideSpawnChance.Value
         spawnOnPlayerDeath = config.SpawnOnPlayerDeath.Value
         spawnOnlyWhenPlayerAlone = config.SpawnOnlyWhenPlayerAlone.Value
         enableMask = config.EnableMask.Value
