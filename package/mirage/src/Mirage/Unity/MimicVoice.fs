@@ -80,6 +80,7 @@ type MimicVoice() as self =
         let dissonance = Object.FindObjectOfType<DissonanceComms>()
         let playback = Object.Instantiate<GameObject> <| dissonance._playbackPrefab2
         let removeComponent : Type -> unit = Object.Destroy << playback.GetComponent
+        playback.GetComponent<AudioLowPassFilter>().enabled <- true
         iter removeComponent
             [   typeof<VoicePlayback>
                 typeof<SamplePlaybackComponent>
@@ -122,10 +123,11 @@ type MimicVoice() as self =
             match mimicPlayer.GetMimickingPlayer() with
                 | None -> audioSource.mute <- true
                 | Some mimickingPlayer ->
+                    let config = getConfig()
                     let isMimicLocalPlayerMuted () =
-                        let alwaysMute = getLocalConfig().AlwaysMuteLocalPlayer.Value
+                        let alwaysMute = getLocalConfig().LocalPlayerVolume.Value = 0f
                         let muteWhileNotDead =
-                            getConfig().muteLocalPlayerVoice
+                            config.muteLocalPlayerVoice
                                 && not mimickingPlayer.isPlayerDead
                         mimickingPlayer = localPlayer && (muteWhileNotDead || alwaysMute)
                     let isNotHauntedOrDisappearedDressGirl () =
@@ -136,6 +138,9 @@ type MimicVoice() as self =
                         )
                     let maskedEnemyIsHiding () =
                         enemyAI :? MaskedPlayerEnemy && Vector3.Distance(enemyAI.transform.position, (enemyAI :?> MaskedPlayerEnemy).shipHidingSpot) < 0.4f
+                    if mimickingPlayer = localPlayer then
+                        audioSource.volume <- config.localPlayerVolume
+                    audioSource.outputAudioMixerGroup <- SoundManager.Instance.playerVoiceMixers[int mimickingPlayer.playerClientId]
                     audioSource.mute <-
                         enemyAI.isEnemyDead
                             || maskedEnemyIsHiding()

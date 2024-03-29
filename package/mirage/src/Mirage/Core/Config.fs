@@ -77,14 +77,12 @@ type internal LocalConfig(config: ConfigFile) =
             "If true, you can't hear your own voice from mimicking enemies while you are alive, but others can. When you die and become a spectator, you can hear your voice again.\n"
                 + "If false, you will always be able to hear your own voice from mimicking enemies."
         )
-    member val AlwaysMuteLocalPlayer =
-        config.Bind<bool>(
+    member val LocalPlayerVolume =
+        config.Bind<float32>(
             imitateSection,
-            "AlwaysMuteLocalPlayer",
-            false,
-            "If true, you will never hear your own voice from mimicking enemies. When this is true, this will also ignore the value of MuteLocalPlayerVoice.\n"
-                + "If false, this setting does nothing (basically uses MuteLocalPlayerVoice instead).\n"
-                + "Note: This only applies to you, instead of all players (unlike other settings), since this setting exists for players who individually want to not hear their own voices."
+            "LocalPlayerVolume",
+            1f,
+            "The volume for the local player's mimicked voice. This is setting is not synced, since the volume you want to use is personal preference. Must have a value of 0-1."
         )
     member val EnableMaskedEnemy =
         config.Bind<bool>(
@@ -241,11 +239,11 @@ type internal LocalConfig(config: ConfigFile) =
             "Whether or not the OverrideSpawnChance value should be used. If false, masked enemy spawn weights will be untouched."
         )
     member val OverrideSpawnChance =
-        config.Bind<float>(
+        config.Bind<int>(
             maskedSection,
             "OverrideSpawnChance",
-            15.0,
-            "The percentage chance a masked enemy should naturally spawn. Spawn weights are internally calculated and modified based on this value."
+            15,
+            "The percentage chance a masked enemy should naturally spawn. Spawn weights are internally calculated and modified based on this value. Must have a value of 0-100"
         )
     member val SpawnOnPlayerDeath =
         config.Bind<int>(
@@ -290,6 +288,7 @@ type internal SyncedConfig =
         imitateMaxDelayNonMasked: int
         imitateMode: ImitateMode
         muteLocalPlayerVoice: bool
+        localPlayerVolume: float32
         deleteRecordingsPerRound: bool
         enableMaskedEnemy: bool
         enableBaboonHawk: bool
@@ -313,7 +312,7 @@ type internal SyncedConfig =
         enableModdedEnemies: bool
         enablePenalty: bool
         enableOverrideSpawnChance: bool
-        overrideSpawnChance: float
+        overrideSpawnChance: int
         spawnOnPlayerDeath: int
         spawnOnlyWhenPlayerAlone: bool
         enableMask: bool
@@ -331,6 +330,7 @@ let private toSyncedConfig (config: LocalConfig) =
                 | "norepeat" -> ImitateNoRepeat
                 | mode -> invalidOp $"Synced invalid ImitateMode value: {mode}"
         muteLocalPlayerVoice = config.MuteLocalPlayerVoice.Value
+        localPlayerVolume = config.LocalPlayerVolume.Value
         deleteRecordingsPerRound = config.DeleteRecordingsPerRound.Value
         enableMaskedEnemy = config.EnableMaskedEnemy.Value
         enableBaboonHawk = config.EnableBaboonHawk.Value
@@ -417,6 +417,10 @@ let initConfig (file: ConfigFile) =
                 return! Error $"{errorHeader}{config.ImitateMode.Definition.Key} is set to an invalid value. Refer to the config for possible values."
             if config.SpawnOnPlayerDeath.Value < 0 || config.SpawnOnPlayerDeath.Value > 100 then
                 return! Error $"{errorHeader}{spawnOnPlayerDeathKey} must have a value between 0-100."
+            if config.LocalPlayerVolume.Value < 0f || config.LocalPlayerVolume.Value > 1f then
+                return! Error $"{errorHeader}{config.LocalPlayerVolume.Definition.Key} must have a value between 0.0-1.0"
+            if config.OverrideSpawnChance.Value < 0 || config.OverrideSpawnChance.Value > 100 then
+                return! Error $"{errorHeader}{config.OverrideSpawnChance.Definition.Key} mut have a value between 0-100."
             set LocalConfig config
     }
 

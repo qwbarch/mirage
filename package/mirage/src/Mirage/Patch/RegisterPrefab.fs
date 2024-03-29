@@ -51,7 +51,7 @@ type RegisterPrefab() =
             let config = getConfig()
             if playerManager.IsHost && config.enableOverrideSpawnChance then
                 let! prefab = getPrefab "``modify natural spawns for masked enemies``"
-                let minSpawnChance = config.overrideSpawnChance
+                let minSpawnChance = float config.overrideSpawnChance
                 let isMaskedEnemy (enemy: SpawnableEnemyWithRarity) =
                     not << isNull <| enemy.enemyType.enemyPrefab.GetComponent<MaskedPlayerEnemy>()
                 let logs = new List<string>()

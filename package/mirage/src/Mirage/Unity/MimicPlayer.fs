@@ -20,9 +20,11 @@ type MimicPlayer() =
 
     let random = new Random()
 
+    let MimicVoice = field()
     let MimicId = field()
     let MimickingPlayer = field()
     let EnemyAI = field()
+    let getMimicVoice = get MimicVoice "MimicVoice"
     let getMimicId = get MimicId "MimicId"
     let getEnemyAI = get EnemyAI "EnemyAI"
 
