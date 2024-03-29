@@ -39,6 +39,7 @@ type RegisterPrefab() =
             let! prefab =
                 findNetworkPrefab<MaskedPlayerEnemy> networkManager
                     |> Option.toResultWith "MaskedPlayerEnemy network prefab is missing. This is likely due to a mod incompatibility"
+            prefab.enemyType.MaxCount <- 2
             set Prefab prefab
         }
 
