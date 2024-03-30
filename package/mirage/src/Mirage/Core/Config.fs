@@ -49,7 +49,7 @@ type internal LocalConfig(config: ConfigFile) =
         config.Bind<string>(
             imitateSection,
             "ImitateMode",
-            "Random",
+            "NoRepeat",
             "Possible values: Random, NoRepeat\n"
                 + "Random: Recordings are randomly picked.\n"
                 + "NoRepeat: Recordings are randomly picked, except the recording can only be played once until no more recordings remain, which can then be replayed."
