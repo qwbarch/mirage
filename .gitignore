@@ -406,3 +406,4 @@ bin
 **/build
 **/dist
 *.o
+*.bak

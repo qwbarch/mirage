@@ -10,6 +10,7 @@ _TASKS = ("transcribe", "translate")
 
 class Tokenizer:
     def __init__(self, tokenizer, multilingual, base_path):
+<<<<<<< Updated upstream
         with open(os.path.join(base_path, "assets/lang_codes.txt"), "r") as file:
             lang_codes = [_ for _ in file.read().split("\n") if _]
 
@@ -27,6 +28,20 @@ class Tokenizer:
             else:
                 self.task_to_token_id = None
                 self.lang_code_to_token_id = None
+=======
+        self.tokenizer = tokenizer
+        self.multilingual = multilingual
+
+        with open(os.path.join(base_path, "lang_codes.txt"), "r") as file:
+            lang_codes = [_ for _ in file.read().split("\n") if _]
+        
+        if self.multilingual:
+            self.task_to_token_id = {task: self.tokenizer.token_to_id(f"<|{task}|>") for task in _TASKS}
+            self.lang_code_to_token_id = {lang: self.tokenizer.token_to_id(f"<|{lang}|>") for lang in lang_codes}
+        else:
+            self.task_to_token_id = None
+            self.lang_code_to_token_id = None
+>>>>>>> Stashed changes
 
     @cached_property
     def transcribe(self) -> int:

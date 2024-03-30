@@ -11,7 +11,13 @@ import numpy as np
 
 def stitch_speech_segments(start_ends, max_len=27.0, max_silent_region=None):
     speech_duration = [end - start for start, end in start_ends]
+<<<<<<< Updated upstream
     stitched_speech_segments = []
+=======
+
+    stitched_speech_segments = []
+
+>>>>>>> Stashed changes
     curr_seg = [0]
     curr_dur = speech_duration[0]
     idx = 1
@@ -23,6 +29,10 @@ def stitch_speech_segments(start_ends, max_len=27.0, max_silent_region=None):
         else:
             curr_dur += speech_duration[idx]
             curr_seg.append(idx)
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
         idx += 1
 
     stitched_speech_segments.append([start_ends[_] for _ in curr_seg])
@@ -38,9 +48,13 @@ def stitch_speech_segments(start_ends, max_len=27.0, max_silent_region=None):
             if (segs[i][0] - curr_seg_end_time) >= max_silent_region:
                 _segs.append((curr_seg_start_time, curr_seg_end_time))
                 curr_seg_start_time = segs[i][0]
+
             curr_seg_end_time = segs[i][1]
+
         _segs.append((curr_seg_start_time, curr_seg_end_time))
+
         stitched_speech_segments_joined.append(_segs)
+
     return stitched_speech_segments_joined
 
 
@@ -49,8 +63,15 @@ class BasicSegmenter:
         self.max_seg_len = max_seg_len
         self.sampling_rate = sampling_rate
 
+<<<<<<< Updated upstream
     def __call__(self, audio_signal):
         audio_duration = len(audio_signal) / self.sampling_rate
+=======
+    def __call__(self, samples=None):
+        audio_signal, audio_duration = to_audio_signal(
+            samples, self.sampling_rate, return_duration=True
+        )
+>>>>>>> Stashed changes
 
         start_ends = []
         for i in range(0, int(audio_duration), int(self.max_seg_len)):
@@ -70,7 +91,11 @@ class WhisperDataset(torch.utils.data.Dataset):
         initial_prompts,
         tokenizer,
         max_initial_prompt_len,
+<<<<<<< Updated upstream
         device="cuda",
+=======
+        device="cpu",
+>>>>>>> Stashed changes
         dta_padding=48000,
         without_timestamps=True,
         use_dynamic_time_axis=False,
@@ -96,16 +121,28 @@ class WhisperDataset(torch.utils.data.Dataset):
         return len(self.audio_signals)
 
     def __getitem__(self, item):
-        audio = self.get_audio_signal(item)
+        audio = self.audio_signals[item]
         seq_len = audio.shape[-1]
 
         if self.initial_prompts[item]:
             initial_prompt = " " + self.initial_prompts[item].strip()
+<<<<<<< Updated upstream
             initial_prompt_tokens = self.tokenizer.encode(initial_prompt)[-self.max_initial_prompt_len :]
         else:
             initial_prompt_tokens = []
 
         prompt = self.tokenizer.sot_sequence(task=self.tasks[item], lang=self.lang_codes[item])
+=======
+            initial_prompt_tokens = self.tokenizer.encode(initial_prompt)[
+                -self.max_initial_prompt_len :
+            ]
+        else:
+            initial_prompt_tokens = []
+
+        prompt = self.tokenizer.sot_sequence(
+            task=self.tasks[item], lang=self.lang_codes[item]
+        )
+>>>>>>> Stashed changes
 
         if self.without_timestamps:
             prompt = prompt + [self.tokenizer.no_timestamps]
@@ -144,7 +181,12 @@ class WhisperDataLoader:
         else:
             max_len = N_SAMPLES
 
-        signal_batch = torch.stack([torch.from_numpy(pad_or_trim(_[0], length=max_len)).to(self.device) for _ in batch])
+        signal_batch = torch.stack(
+            [
+                torch.from_numpy(pad_or_trim(_[0], length=max_len)).to(self.device)
+                for _ in batch
+            ]
+        )
         seq_len = torch.tensor([_[3] for _ in batch]).to(self.device)
 
         prompt_batch = []
@@ -174,7 +216,13 @@ class WhisperDataLoader:
 
         if initial_prompt:
             initial_prompt = " " + initial_prompt.strip()
+<<<<<<< Updated upstream
             initial_prompt_tokens = self.tokenizer.encode(initial_prompt)[-self.max_initial_prompt_len :]
+=======
+            initial_prompt_tokens = self.tokenizer.encode(initial_prompt)[
+                -self.max_initial_prompt_len :
+            ]
+>>>>>>> Stashed changes
         else:
             initial_prompt_tokens = []
 
@@ -188,7 +236,9 @@ class WhisperDataLoader:
         segmented_audio_signal = []
 
         if self.merge_chunks:
-            stitched_speech_segments = stitch_speech_segments(start_ends, max_len=self.max_speech_len)
+            stitched_speech_segments = stitch_speech_segments(
+                start_ends, max_len=self.max_speech_len
+            )
             for stitched_seg in stitched_speech_segments:
                 audio = []
                 for st, et in stitched_seg:
@@ -203,7 +253,9 @@ class WhisperDataLoader:
                     "stitched_seg": stitched_seg,
                     "lang_code": lang,
                 }
-                segmented_audio_signal.append((audio, prompt, initial_prompt_tokens, seq_len, seg_metadata))
+                segmented_audio_signal.append(
+                    (audio, prompt, initial_prompt_tokens, seq_len, seg_metadata)
+                )
         else:
             for st, et in start_ends:
                 audio = audio_signal[int(st * sr) : int(et * sr)]
@@ -221,12 +273,29 @@ class WhisperDataLoader:
         return segmented_audio_signal
 
     def get_data_loader_with_vad(
+<<<<<<< Updated upstream
         self, samples_batch, lang_codes, tasks, initial_prompts, batch_size=16
     ):
         segmented_audio_signal = []
         for file_id, (samples, lang, task, initial_prompt) in enumerate(zip(samples_batch, lang_codes, tasks, initial_prompts)):
             start_ends, audio_signal = self.speech_segmenter(audio_signal=to_audio_signal(samples))
             new_segmented_audio_signal = self.get_segmented_audio_signal(start_ends, audio_signal, file_id, lang, task, initial_prompt)
+=======
+        self, audio_signals, lang_codes, tasks, initial_prompts, batch_size=16
+    ):
+
+        segmented_audio_signal = []
+        pbar_update_len = {}
+        for file_id, (audio_signal, lang, task, initial_prompt) in enumerate(zip(audio_signals, lang_codes, tasks, initial_prompts)):
+            print("before segment")
+            start_ends, audio_signal = self.speech_segmenter(audio_signal=audio_signal)
+            print("after segment")
+            new_segmented_audio_signal = self.get_segmented_audio_signal(
+                start_ends, audio_signal, file_id, lang, task, initial_prompt
+            )
+            pbar_update_len[file_id] = 1 / len(new_segmented_audio_signal)
+
+>>>>>>> Stashed changes
             segmented_audio_signal = segmented_audio_signal + new_segmented_audio_signal
 
             while len(segmented_audio_signal) > batch_size:
@@ -234,6 +303,7 @@ class WhisperDataLoader:
                 segmented_audio_signal = segmented_audio_signal[batch_size:]
                 (signal_batch, prompt_batch, seq_len, seg_metadata) = self.data_collate_fn(batch)
                 yield signal_batch, prompt_batch, seq_len, seg_metadata
+<<<<<<< Updated upstream
 
         signal_batch, prompt_batch, seq_len, seg_metadata = self.data_collate_fn(segmented_audio_signal)
         yield signal_batch, prompt_batch, seq_len, seg_metadata
@@ -245,6 +315,35 @@ class WhisperDataLoader:
         for file_id, (samples, lang, task, initial_prompt) in enumerate(zip(samples_batch, lang_codes, tasks, initial_prompts)):
             start_ends, audio_signal = self.basic_segmenter(audio_signal=to_audio_signal(samples))
             new_segmented_audio_signal = self.get_segmented_audio_signal(start_ends, audio_signal, file_id, lang, task, initial_prompt)
+=======
+        signal_batch, prompt_batch, seq_len, seg_metadata = self.data_collate_fn(
+            segmented_audio_signal
+        )
+        yield signal_batch, prompt_batch, seq_len, seg_metadata
+
+    def get_data_loader(
+        self, audio_signals, lang_codes, tasks, initial_prompts, batch_size=16
+    ):
+
+        # dataset = WhisperDataset(audio_files, lang_codes, tasks, initial_prompts, self.tokenizer,
+        #                          without_timestamps=self.without_timestamps,
+        #                          max_initial_prompt_len=self.max_initial_prompt_len,
+        #                          use_dynamic_time_axis=self.use_dynamic_time_axis)
+
+        # data_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, collate_fn=self.data_collate_fn)
+
+        # return tqdm(data_loader, desc=f"Transcribing")
+
+        segmented_audio_signal = []
+        pbar_update_len = {}
+        for audio_id, (audio_signal, lang, task, initial_prompt) in enumerate(zip(audio_signals, lang_codes, tasks, initial_prompts)):
+            start_ends, audio_signal = self.basic_segmenter(audio_signal=audio_signal)
+            new_segmented_audio_signal = self.get_segmented_audio_signal(
+                start_ends, audio_signal, audio_id, lang, task, initial_prompt
+            )
+            pbar_update_len[audio_id] = 1 / len(new_segmented_audio_signal)
+
+>>>>>>> Stashed changes
             segmented_audio_signal = segmented_audio_signal + new_segmented_audio_signal
 
             while len(segmented_audio_signal) > batch_size:
@@ -258,7 +357,11 @@ class WhisperDataLoader:
 
     def __call__(
         self,
+<<<<<<< Updated upstream
         samples_batch,
+=======
+        audio_signals,
+>>>>>>> Stashed changes
         lang_codes,
         tasks,
         initial_prompts,
@@ -266,6 +369,16 @@ class WhisperDataLoader:
         use_vad=True,
     ):
         if use_vad:
+<<<<<<< Updated upstream
             return self.get_data_loader_with_vad(samples_batch, lang_codes, tasks, initial_prompts, batch_size=batch_size)
         else:
             return self.get_data_loader(samples_batch, lang_codes, tasks, initial_prompts, batch_size=batch_size)
+=======
+            return self.get_data_loader_with_vad(
+                audio_signals, lang_codes, tasks, initial_prompts, batch_size=batch_size
+            )
+        else:
+            return self.get_data_loader(
+                audio_signals, lang_codes, tasks, initial_prompts, batch_size=batch_size
+            )
+>>>>>>> Stashed changes

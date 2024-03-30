@@ -21,12 +21,21 @@ def run_request(request):
                 num_workers=body["workers"],
             )
         case "transcribe":
+<<<<<<< Updated upstream
             samples_batch = body["samplesBatch"]
             batch_size = len(samples_batch)
             return model.transcribe_with_vad(
                 samples_batch=list(map(bytes, samples_batch)),
                 lang_codes=[body["language"]] * batch_size,
                 batch_size=32, # Taken from the WhisperS2T example. I'm assuming this is optimal for CTranslate2.
+=======
+            batchSize = len(body["samplesBatch"])
+            return transcribe_samples(
+                model,
+                samples_batch=list(map(bytes, body["samplesBatch"])),
+                lang_codes=[body["language"]] * batchSize,
+                batch_size=32,
+>>>>>>> Stashed changes
             )
 
 def read_null_terminated_utf_string(input_stream):
