@@ -16,8 +16,10 @@ Mirage is a mod that gives any enemy the ability to mimic a player's voice (full
 - Masked enemies use the mimicking player's suit
 - Remove the mask off of masked enemy
 - Remove the arms out animation off of masked enemy
-- Remove the post-round credits penalty (configurable)
 - Configuration is synced to all players (only the host's config is used)
+- Adjustable spawn chance for masked enemies
+   - Calculates the spawn weights for each moon internally
+   - Default is set to spawn masked enemies at 15% for each moon
 
 ## Discord
 
@@ -26,11 +28,6 @@ If you have questions, and/or want to stay up-to-date with the mod:
 1. Join the lethal company modding [discord](https://discord.gg/lcmod).
 2. Go to the mirage [release thread](https://discord.com/channels/1168655651455639582/1200695291972685926) and ask your question!
 3. Optional: If you'd like to see a sneakpeek on what's potentially coming in v2.0.0, click [here](https://discord.com/channels/1168655651455639582/1200695291972685926/1210038530160599060).
-
-## Why do players who disconnect no longer get their voice mimicked?
-
-Voices of each player are stored on the respective player's individual storage. Since
-the player is no longer connected, their client cannot send audio clips to other clients.
 
 ##  I have a suggestion for the mod, and/or have found a bug
 
@@ -65,14 +62,19 @@ Not currently, but it is currently a work in progress and will eventually come i
 
 By default, yes. You can configure to not be able to hear them while alive, and resume being able to hear them while spectating.  
 
+#### Why do players who disconnect no longer get their voice mimicked?
+
+Voices of each player are stored on the respective player's individual storage. Since
+the player is no longer connected, their client cannot send audio clips to other clients.
+
 ## Recommended mods
 
 - [StarlancerAIFix](https://thunderstore.io/c/lethal-company/p/AudioKnight/StarlancerAIFix/) - Fixes a vanilla error referencing ``EnableEnemyMesh``.
 - [LCMaskedFix](https://thunderstore.io/c/lethal-company/p/kuba6000/LC_Masked_Fix/) - Fixes vanilla issues with masked enemies.
-- [FixRPCLag](https://thunderstore.io/c/lethal-company/p/Bobbie/FixRPCLag/) - Another lag fix mod that you should have.
 - [EnemyFix](https://thunderstore.io/c/lethal-company/p/SZAKI/EnemyFix/) - Failsafe for when mod conflicts occur, enemies will still gracefully despawn.
 - [GeneralImprovements](https://thunderstore.io/c/lethal-company/p/ShaosilGaming/GeneralImprovements/) - Quality of life, as well as the option to disable player name tags (to make it harder to spot masked enemies).
-- [LethalQuantities](https://thunderstore.io/c/lethal-company/p/BananaPuncher714/LethalQuantities/) - Spawn control. Use this to modify the masked enemy's spawn rate.
+- [AsyncLoggers](https://thunderstore.io/c/lethal-company/p/mattymatty/AsyncLoggers/) - Increases performance by making logs write to another thread. Mirage already
+   writes logs to a separate thread, but this is still good to have for other mods that you have.
 
 ## Can I reupload the mod to Thunderstore?
 
@@ -82,9 +84,10 @@ If you're making small changes for your friends, you will need to share the comp
 ## Acknowledgements
 
 - [RugbugRedfern](https://rugbug.net) - Mirage is heavily inspired by [Skinwalkers](https://thunderstore.io/c/lethal-company/p/RugbugRedfern/Skinwalkers/). Thank you for creating one of the best mods in the game!
-- [Evaisa](https://github.com/EvaisaDev) - For creating the amazing [UnityNetcodePatcher](https://github.com/EvaisaDev/UnityNetcodePatcher), which this mod uses during its build process.
+- [Evaisa](https://github.com/EvaisaDev) and [LordFireSpeed](https://github.com/Lordfirespeed) - For creating the amazing [UnityNetcodePatcher](https://github.com/EvaisaDev/UnityNetcodePatcher), which this mod uses during its build process.
 - [Owen3H](https://github.com/Owen3H) - For their synced configuration [implementation](https://gist.github.com/Owen3H/c73e09314ed71b254256cbb15fd8c51e/5f314116ccd2ba3e5a2a38f01cf889dc674f2cfa), as well as bringing up issues with the approach taken from the modding wiki.
 - [MartinEvans](https://github.com/martindevans) - Author of [dissonance](https://placeholder-software.co.uk/dissonance/docs/index.html), for helping me out with voice activity related issues.
+- [IAmBatby](https://github.com/IAmBatby) and [BananaPuncher714](https://github.com/BananaPuncher714) - For answering my spawn control related questions, regarding [LethalLevelLoader](https://thunderstore.io/c/lethal-company/p/IAmBatby/LethalLevelLoader/) and [LethalQuantities](https://thunderstore.io/c/lethal-company/p/BananaPuncher714/LethalQuantities/).
 
 ## Changelog
 
