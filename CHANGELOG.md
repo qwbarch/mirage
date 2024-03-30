@@ -1,5 +1,32 @@
 ## Changelog
 
+### 1.3.0
+
+Note: This update removes a couple config entries in favour of new ones. You can safely ignore any orphaned config entries.
+
+- Removed the config entry ``AlwaysMuteLocalPlayer`` in favour of ``LocalPlayerVolume``.
+- Removed the config entry ``EnableNaturalSpawn`` as it only made sense to have in the past.
+- Added the config entry ``LocalPlayerVolume``.
+    - Allows you to adjust the playback volume for voice mimics of the local player.
+    - Value must be between 0-1.
+    - Default is set to 1.
+    - This config entry is not synced to other players, as it's personal preference on what volume you want for your own "mimics".
+- Added the config entry ``EnableOverrideSpawnChance``, which allows you to enable/disable the ``OverrideSpawnChance`` config.
+    - Default is set to ``true``.
+    - If you want to use a different spawn control mod (such as [LethalQuantities](https://thunderstore.io/c/lethal-company/p/BananaPuncher714/LethalQuantities/)), simply set this to ``false``.
+- Added the config entry ``OverrideSpawnChance``, allowing you to control how often masked enemies should spawn.
+    - Value must be between 0-100 (as it's a percentage).
+    - Default is set to 15.
+    - Not to be confused with spawn weights. This will internally calculate the spawn weights for each moon to fit the desired percentage.
+    - This will overwrite the spawn weights set by [LethalQuantities](https://thunderstore.io/c/lethal-company/p/BananaPuncher714/LethalQuantities/) and [LethalLevelLoader](https://thunderstore.io/c/lethal-company/p/IAmBatby/LethalLevelLoader/). If you want to use those mods for spawn control, set ``EnableOverrideSpawnChance`` to ``false``.
+    - Masked enemies spawn this way is capped at 2 (this counter is not shared with the ``SpawnOnPlayerDeath`` feature).
+- Mimicking voices should *actually* sound like real player voices now.
+    - This was previously attempted by imitating all the settings/filters that dissonance uses.
+    - This is now replaced by using what dissonance uses internally.
+- Enemies that mimic non-player voices now adjust playback volume, if the mimicking player's volume has been adjusted.
+- Re-added support for [LobbyCompatibility](https://thunderstore.io/c/lethal-company/p/BMX/LobbyCompatibility/).
+- ``ImitationMode`` is now set to ``NoRepeat`` by default, to provide a better experience right out of the box.
+
 ### 1.2.1
 
 - Temporarily removed support for [LobbyCompatibility](https://thunderstore.io/c/lethal-company/p/BMX/LobbyCompatibility/).
