@@ -10,7 +10,7 @@
   <ItemGroup>
     <PackageReference Include="FSharp.Control.AsyncSeq" Version="3.2.1" />
     <Reference Include="FSharpx.Async">
-      <HintPath>../../../lib/FSharpx.Async.dll</HintPath>
+      <HintPath>../../../lib/FSharpx.Async/FSharpx.Async.dll</HintPath>
     </Reference>
     <PackageReference Include="FSharpPlus" Version="1.5.0" />
   </ItemGroup>

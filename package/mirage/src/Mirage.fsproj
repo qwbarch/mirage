@@ -19,6 +19,7 @@
     <PackageReference Include="LethalCompany.GameLibs.Steam" Version="49.0.0-alpha.1" Publicize="true" />
     <PackageReference Include="FSharpPlus" Version="1.6.1" />
     <PackageReference Include="FSharp.Control.AsyncSeq" Version="3.2.1" />
+    <ProjectReference Include="../../mirage-utilities/src/Utilities.fsproj" />
     <Reference Include="FSharpx.Async">
       <HintPath>../../../lib/FSharpx.Async/FSharpx.Async.dll</HintPath>
     </Reference>
@@ -37,6 +38,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Mirage/PluginInfo.fs" />
+    <Compile Include="Mirage/Core/Field.fs" />
+    <Compile Include="Mirage/Core/Logger.fs" />
+    <Compile Include="Mirage/Patch/RecordAudio.fs" />
     <Compile Include="Mirage/Plugin.fs" />
     <Compile Include="Properties/AssemblyInfo.fs" />
   </ItemGroup>
