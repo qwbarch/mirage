@@ -1,5 +1,10 @@
 ## Changelog
 
+### 1.3.1
+
+- Enemies mimicking a player now picks at a slightly less random way to avoid mimicking the same player multiple times in a row.
+- ``MuteLocalPlayerVoice`` is now set to ``false`` by default, due to users who are new to the mod being confused why they can't hear their mimicked voice.
+
 ### 1.3.0
 
 Note: This update removes a couple config entries in favour of new ones. You can safely ignore any orphaned config entries.
@@ -29,13 +34,12 @@ Note: This update removes a couple config entries in favour of new ones. You can
 
 ### 1.2.1
 
-- Temporarily removed support for [LobbyCompatibility](https://thunderstore.io/c/lethal-company/p/BMX/LobbyCompatibility/).
-    - It currently has a bug that makes it a required dependency, causing Mirage to error when starting/joining a lobby, if you don't have it installed.
+- Temporarily removed support for [LobbyCompatibility](https://thunderstore.io/c/lethal-company/p/BMX/LobbyCompatibility/). It currently has a bug that makes it a required dependency, causing Mirage to error when starting/joining a lobby, if you don't have it installed.
 
 ### 1.2.0
 
 - Add support for [LobbyCompatibility](https://thunderstore.io/c/lethal-company/p/BMX/LobbyCompatibility/)
-    - Compatibility level is set to minor version. E.g. Any ``1.2.X`` lobby is compatible with any other ``1.2.X`` version of Mirage.
+    - Compatibility level is set to minor version. E.g. any ``1.2.X`` lobby is compatible with any other ``1.2.X`` version of Mirage.
     - This only applies to ``v1.2.X`` and forward, as I did not follow proper versioning in the ``1.0.X`` versions.
 - Fixed issues of players not being able to hear voices mimicking them at times.
 
