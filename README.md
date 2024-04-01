@@ -45,6 +45,8 @@ MaskedEnemyOverhaul will cause the masked enemy's suit and mimicking voice to no
 Use [MaskedEnemyOverhaulFork](https://thunderstore.io/c/lethal-company/p/Coppertiel/MaskedEnemyOverhaulFork/) instead, with
 the ``Dont Touch MaskedPlayerEnemy.mimickingPlayer`` configuration set to ``true``.
 
+Unless you use the nameplate, fading mask, or zombie apocalypse feature(s), you probably don't need it though, since Mirage covers the rest of the features already.
+
 #### Do I need DissonanceLagFix installed?
 
 No. Mirage now applies the lag fix patch as of ``v1.0.16``.
@@ -62,10 +64,12 @@ Not currently, but it is currently a work in progress and will eventually come i
 
 By default, yes. You can configure to not be able to hear them while alive, and resume being able to hear them while spectating.  
 
-#### Why do players who disconnect no longer get their voice mimicked?
+#### Is using Mirage to override the masked enemy's spawn rate compatible with spawn control mods?
 
-Voices of each player are stored on the respective player's individual storage. Since
-the player is no longer connected, their client cannot send audio clips to other clients.
+While only [LethalQuantities](https://thunderstore.io/c/lethal-company/p/BananaPuncher714/LethalQuantities/) and [LethalLevelLoader](https://thunderstore.io/c/lethal-company/p/IAmBatby/LethalLevelLoader/) has been tested, Mirage ***will*** override the spawn weights for masked enemies, since its patches run after them.
+
+This means only masked enemy's spawn weights will be replaced with what Mirage calculates (based on the percentage you desire), and the rest of the enemies
+will remain untouched.
 
 ## Recommended mods
 
