@@ -1,5 +1,10 @@
 ## Changelog
 
+### 1.3.1
+
+- Enemies mimicking a player now picks at a slightly less random way to avoid mimicking the same player multiple times in a row.
+- ``MuteLocalPlayerVoice`` is now set to ``false`` by default, due to users who are new to the mod being confused why they can't hear their mimicked voice.
+
 ### 1.3.0
 
 Note: This update removes a couple config entries in favour of new ones. You can safely ignore any orphaned config entries.

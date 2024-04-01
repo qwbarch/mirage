@@ -73,7 +73,7 @@ type internal LocalConfig(config: ConfigFile) =
         config.Bind<bool>(
             imitateSection,
             "MuteLocalPlayerVoice",
-            true,
+            false,
             "If true, you can't hear your own voice from mimicking enemies while you are alive, but others can. When you die and become a spectator, you can hear your voice again.\n"
                 + "If false, you will always be able to hear your own voice from mimicking enemies."
         )

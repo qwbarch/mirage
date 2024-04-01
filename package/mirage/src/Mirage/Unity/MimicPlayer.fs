@@ -1,6 +1,7 @@
 module Mirage.Unity.MimicPlayer
 
 open System
+open System.Collections.Generic
 open FSharpPlus
 open Unity.Netcode
 open GameNetcodeStuff
@@ -9,6 +10,9 @@ open Mirage.Core.Config
 open Mirage.Core.Logger
 
 let private get<'A> = getter<'A> "MimicPlayer"
+
+/// Holds what players that can be mimicked, to avoid duplicates.
+let playerPool = new List<int>()
 
 /// <summary>
 /// A component that attaches to an <b>EnemyAI</b> to mimic a player.
@@ -20,11 +24,9 @@ type MimicPlayer() =
 
     let random = new Random()
 
-    let MimicVoice = field()
     let MimicId = field()
     let MimickingPlayer = field()
     let EnemyAI = field()
-    let getMimicVoice = get MimicVoice "MimicVoice"
     let getMimicId = get MimicId "MimicId"
     let getEnemyAI = get EnemyAI "EnemyAI"
 
@@ -38,7 +40,11 @@ type MimicPlayer() =
 
     let randomPlayer () =
         let round = StartOfRound.Instance
-        let playerId = random.Next <| round.connectedPlayersAmount + 1
+        if playerPool.Count = 0 then
+            playerPool.AddRange [0..round.connectedPlayersAmount]
+        let index = random.Next playerPool.Count
+        let playerId = playerPool[index]
+        playerPool.RemoveAt index
         round.allPlayerScripts[playerId]
 
     let mimicPlayer (player: PlayerControllerB) (maskedEnemy: MaskedPlayerEnemy) =
