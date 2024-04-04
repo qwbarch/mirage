@@ -11,28 +11,27 @@ open System.IO
 open System.Collections.Generic
 open Mirage.Core.Config
 open Mirage.Core.Monad
+open Mirage.Core.Logger
 
 /// The directory to save audio files in.
 let private RecordingDirectory = $"{Application.dataPath}/../Mirage"
 
 type RecordingManager =
     private
-        {   directory: string
-            /// Populated cache of recording file names.
+        {   /// Populated cache of recording file names.
             /// This is only used when imitation mode is set to <b>ImitateNoRepeat</b>.
             recordings: List<string>
             random: Random
         }
 
-let private manager =
-    {   directory = RecordingDirectory
-        recordings = new List<string>()
+let RecordingManager () =
+    {   recordings = new List<string>()
         random = new Random()
     }
 
 /// Create a recording file with a random name.
 let internal createRecording format =
-    let filePath = Path.Join(manager.directory, $"{DateTime.UtcNow.ToFileTime()}.wav")
+    let filePath = Path.Join(RecordingDirectory, $"{DateTime.UtcNow.ToFileTime()}.wav")
     let recording = new AudioFileWriter(filePath, format)
     (filePath, recording)
 
@@ -51,29 +50,21 @@ let internal isRecording (dissonance: DissonanceComms) (speechDetected: bool) =
 /// Delete the recordings of the local player. Any exception found is ignored.
 /// Note: This runs on a separate thread, but is not a true non-blocking function, and will cause the other thread to block.
 let internal deleteRecordings () =
-    Async.StartImmediate <|
-        async {
-            if not <| getLocalConfig().IgnoreRecordingsDeletion.Value then
-                try
-                    return! forkReturn <| async {
-                        try Directory.Delete(manager.directory, true)
-                        with _ -> ()
-                    }
-                finally
-                    manager.recordings.Clear()
-        }
+    if not <| getLocalConfig().IgnoreRecordingsDeletion.Value then
+        try Directory.Delete(RecordingDirectory, true)
+        with | _ -> ()
 
 /// Retrieve all the file names in the recordings directory.
 /// Note: This runs on a separate thread, but is not a true non-blocking function, and will cause the other thread to block.
 let private getRecordings =
     forkReturn <| async {
         return
-            try Directory.GetFiles manager.directory
+            try Directory.GetFiles RecordingDirectory
             with | _ -> zero
         }
 
 /// Get a recording's file name, depending on the configuration's current imitation mode.
-let internal getRecording =
+let internal getRecording manager =
     async {
         match getConfig().imitateMode with
             | ImitateRandom ->
@@ -86,12 +77,15 @@ let internal getRecording =
                     let! recordings = getRecordings
                     manager.recordings.Clear()
                     manager.recordings.AddRange recordings
+                logInfo $"recordings: {manager.recordings.Count}"
                 return
                     // Recordings can still be empty.
                     if manager.recordings.Count = 0 then None
                     else
                         let index = manager.random.Next manager.recordings.Count
+                        logInfo $"index: {index}"
                         let recording = manager.recordings[index]
                         manager.recordings.RemoveAt index
+                        logInfo $"recordings size after removed: {manager.recordings.Count}"
                         Some recording
         }

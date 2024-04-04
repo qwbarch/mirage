@@ -3,23 +3,23 @@
 Mirage is a mod that gives any enemy the ability to mimic a player's voice (fully synced to all players).  
 **This mod is required by the host and on all clients.** Clients that do not have the mod will run into desynchronization issues.
 
-## Features
+## Features (all features listed below are configurable)
 
-- Mimic the voice of a player for any enemy (such as bracken, dress girl, modded enemies, etc)
-   - Use the same player's voice every time it attempts to mimic their voice
-   - Voice is synced to all players, where everyone hears the same voice
-   - Only masked enemies mimic voices by default, other enemies can be enabled via config
-- Spawn a masked enemy on player death (like a player turning into a zombie)
-   - Chance to spawn on death can be configured
-   - Set this to 0 to disable the feature
-   - Can be configured to only spawn if the dying player is alone
-- Masked enemies use the mimicking player's suit
-- Remove the mask off of masked enemy
-- Remove the arms out animation off of masked enemy
-- Configuration is synced to all players (only the host's config is used)
-- Adjustable spawn chance for masked enemies
-   - Calculates the spawn weights for each moon internally
-   - Default is set to spawn masked enemies at 15% for each moon
+- Every enemy can mimic the voice of any player currently in the game.
+  - On spawn, each enemy chooses a player to always mimic the voice of.
+  - Voices are synced to all players. This means everyone hears the same voice, the same words, at the same time.
+  - Only masked enemies mimic voices by default, other enemies can be enabled via config.
+-  Spawns a masked enemy on player death, at player's death location (like a player turning into a zombie).
+  - Default is set to a 10% chance to spawn a masked enemy, set this to 0 to disable the feature.
+  - Can be configured to only spawn if the dying player is alone.
+  - Can spawn at the company building if [NavMeshInCompany](https://thunderstore.io/c/lethal-company/p/Kittenji/NavMeshInCompany/) is installed.
+- Masked enemies use the mimicking player's suit and cosmetics.
+- Remove the mask from masked enemies.
+- Remove the arms-out animation from masked enemies.
+- Configuration is synced to all players (only the host's config is used).
+- Adjustable spawn chance for masked enemies.
+  - Calculates the spawn weights for each moon internally.
+  - Default is set to spawn masked enemies at 15% for each moon.
 
 ## Discord
 
@@ -41,11 +41,15 @@ No, Mirage is a standalone mod. Installing both Mirage and Skinwalkers will resu
 
 #### Can I use MaskedEnemyOverhaul with this mod?
 
-MaskedEnemyOverhaul will cause the masked enemy's suit and mimicking voice to not match.  
-Use [MaskedEnemyOverhaulFork](https://thunderstore.io/c/lethal-company/p/Coppertiel/MaskedEnemyOverhaulFork/) instead, with
-the ``Dont Touch MaskedPlayerEnemy.mimickingPlayer`` configuration set to ``true``.
+You probably don't need MaskedEnemyOverhaul when using Mirage, since this mod already supports:
+- Removal of the mask texture and arms-out animation.
+- Naturally spawned masked enemies mimic a random player.
+- Cosmetics are supported (by the cosmetics mods themselves).
+- Spawn control for masked enemies is configurable.
 
-Unless you use the nameplate, fading mask, or zombie apocalypse feature(s), you probably don't need it though, since Mirage covers the rest of the features already.
+If you still want to use it anyways, make sure you use [MaskedEnemyOverhaulFork](https://thunderstore.io/c/lethal-company/p/Coppertiel/MaskedEnemyOverhaulFork/) instead,
+with the ``Dont Touch MaskedPlayerEnemy.mimickingPlayer`` configuration set to ``true``.  
+The original MaskedEnemyOverhaul will cause the masked enemy's suit and mimicking voice to not match.  
 
 #### Do I need DissonanceLagFix installed?
 
@@ -71,6 +75,10 @@ While only [LethalQuantities](https://thunderstore.io/c/lethal-company/p/BananaP
 This means only masked enemy's spawn weights will be replaced with what Mirage calculates (based on the percentage you desire), and the rest of the enemies
 will remain untouched.
 
+#### Why does SpawnOnPlayerDeath not work at the company building?
+
+You need to install [NavMeshInCompany](https://thunderstore.io/c/lethal-company/p/Kittenji/NavMeshInCompany/) to allow enemies to exist at the company building.
+
 ## Recommended mods
 
 - [StarlancerAIFix](https://thunderstore.io/c/lethal-company/p/AudioKnight/StarlancerAIFix/) - Fixes a vanilla error referencing ``EnableEnemyMesh``.
@@ -92,6 +100,7 @@ If you're making small changes for your friends, you will need to share the comp
 - [Owen3H](https://github.com/Owen3H) - For their synced configuration [implementation](https://gist.github.com/Owen3H/c73e09314ed71b254256cbb15fd8c51e/5f314116ccd2ba3e5a2a38f01cf889dc674f2cfa), as well as bringing up issues with the approach taken from the modding wiki.
 - [MartinEvans](https://github.com/martindevans) - Author of [dissonance](https://placeholder-software.co.uk/dissonance/docs/index.html), for helping me out with voice activity related issues.
 - [IAmBatby](https://github.com/IAmBatby) and [BananaPuncher714](https://github.com/BananaPuncher714) - For answering my spawn control related questions, regarding [LethalLevelLoader](https://thunderstore.io/c/lethal-company/p/IAmBatby/LethalLevelLoader/) and [LethalQuantities](https://thunderstore.io/c/lethal-company/p/BananaPuncher714/LethalQuantities/).
+- [TheDebbyCase](https://thunderstore.io/c/lethal-company/p/deB) - For the countless days spent helping me reproduce issues that other players were having.
 
 ## Changelog
 

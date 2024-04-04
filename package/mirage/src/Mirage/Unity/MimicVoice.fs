@@ -26,6 +26,7 @@ type MimicVoice() as self =
     inherit MonoBehaviour()
 
     let random = new System.Random()
+    let recordingManager = RecordingManager()
 
     let MimicPlayer = field<MimicPlayer>()
     let AudioStream = field<AudioStream>()
@@ -43,7 +44,7 @@ type MimicVoice() as self =
                 let! audioStream = getAudioStream methodName
                 ignore << runAsync self.destroyCancellationToken << OptionT.run <| monad {
                     let! player = OptionT << result <| mimicPlayer.GetMimickingPlayer()
-                    let! recording = OptionT getRecording
+                    let! recording = OptionT <| getRecording recordingManager
                     try
                         if player = StartOfRound.Instance.localPlayerController then
                             if player.IsHost then

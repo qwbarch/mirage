@@ -250,7 +250,7 @@ type internal LocalConfig(config: ConfigFile) =
             maskedSection,
             "SpawnOnPlayerDeath",
             10,
-            "The percent chance of a masked enemy spawning on player death (like a zombie). Must have a value of 0-100."
+            "The percent chance of a masked enemy spawning on player death (like a zombie). Must have a value of 0-100.\nSet this to 0 to disable this feature."
         )
     member val SpawnOnlyWhenPlayerAlone =
         config.Bind<bool>(

@@ -1,5 +1,10 @@
 ## Changelog
 
+### 1.3.2
+
+- Fixed a bug introduced in ``v1.3.0``, where some players didn't have their recordings folder deleted upon closing the game.
+- Fixed a bug introduced in ``v1.3.1``, where voice clips sometimes get repeated multiple times in a row.
+
 ### 1.3.1
 
 - Enemies mimicking a player now picks at a slightly less random way to avoid mimicking the same player multiple times in a row.
