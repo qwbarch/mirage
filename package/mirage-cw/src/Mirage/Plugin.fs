@@ -3,6 +3,6 @@ namespace Mirage
 open BepInEx
 open Mirage.PluginInfo
 
-[<BepInPlugin(pluginName, pluginId, pluginVersion)>]
+[<BepInPlugin(pluginId, pluginName, pluginVersion)>]
 type Plugin() =
-    member this.Awake() = ()
+    member _.Awake() = ()

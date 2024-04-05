@@ -19,6 +19,7 @@
     <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=</PathMap>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="ContentWarning.GameLibs.Steam" Version="0.1.7-a-ngd.0" />
     <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1" PrivateAssets="all" ExcludeAssets="runtime" />
     <PackageReference Include="BepInEx.Core" Version="5.4.21" />
     <PackageReference Include="UnityEngine.Modules" Version="2022.3.10" IncludeAssets="compile"/>
@@ -41,18 +42,24 @@
     <Reference Include="NAudio.Lame">
       <HintPath>../../../lib/NAudio.Lame/NAudio.Lame.dll</HintPath>
     </Reference>
+    <Reference Include="Mycelium">
+      <HintPath>../../../lib/Mycelium/Mycelium.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Mirage/PluginInfo.fs" />
     <Compile Include="Mirage/Core/Field.fs" />
     <Compile Include="Mirage/Core/Logger.fs" />
     <Compile Include="Mirage/Core/Monad.fs" />
+    <Compile Include="Mirage/Networking.fs" />
     <Compile Include="Mirage/Core/Audio/Data.fs" />
     <Compile Include="Mirage/Core/Audio/Format.fs" />
     <Compile Include="Mirage/Core/Audio/Recording.fs" />
     <Compile Include="Mirage/Core/Audio/Network/Receiver.fs" />
     <Compile Include="Mirage/Core/Audio/Network/Stream.fs" />
     <Compile Include="Mirage/Core/Audio/Network/Sender.fs" />
+    <Compile Include="Mirage/Unity/RpcBehaviour.fs" />
+    <Compile Include="Mirage/Unity/AudioStream.fs" />
     <Compile Include="Mirage/Plugin.fs" />
     <Compile Include="Properties/AssemblyInfo.fs" />
   </ItemGroup>
