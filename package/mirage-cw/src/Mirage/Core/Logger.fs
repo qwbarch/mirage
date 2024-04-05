@@ -1,16 +1,15 @@
-/// A module providing logging functions that write to another thread.
 module Mirage.Core.Logger
 
 #nowarn "40"
 
-open BepInEx
 open System
+open BepInEx
+open FSharpx.Control
 open Mirage.PluginInfo
-open Mirage.Core.Field
 
 type private LogType = LogInfo | LogDebug | LogWarning | LogError
 
-let private channel = new FSharpx.Control.BlockingQueueAgent<Tuple<LogType, string>>(Int32.MaxValue)
+let private logChannel = new BlockingQueueAgent<Tuple<LogType, string>>(Int32.MaxValue)
 
 /// Run once on startup to allow log messages to be asynchronous dumped to a separate thread.
 let internal initAsyncLogger () =
@@ -19,7 +18,7 @@ let internal initAsyncLogger () =
             let logger = Logging.Logger.CreateLogSource pluginId
             let rec consumer =
                 async {
-                    let! (logType, message) = channel.AsyncGet()
+                    let! (logType, message) = logChannel.AsyncGet()
                     let logMessage =
                         match logType with
                             | LogInfo -> logger.LogInfo
@@ -34,20 +33,24 @@ let internal initAsyncLogger () =
     Async.Start asyncLogger
 
 let private logMessage logType message =
-    Async.StartImmediate << channel.AsyncAdd <| (logType, message)
+    Async.StartImmediate << logChannel.AsyncAdd <| (logType, message)
 
 let internal logInfo = logMessage LogInfo
 let internal logDebug = logMessage LogDebug
 let internal logWarning = logMessage LogWarning
 let internal logError = logMessage LogError
 
-/// Logs the error if an error message is found within the result, and runs the <b>onError</b> callback.
-let logOnErrorWith (onError: Unit -> Unit) (program: Result<Unit, ErrorMessage>) =
+/// <summary>
+/// If the program results in an error, this function logs the error without rethrowing it.
+/// </summary>
+let internal handleResultWith (onError: Unit -> Unit) (program: Result<Unit, string>) : Unit =
     match program with
-        | Ok () -> ()
-        | Error message ->
-            logError $"Tried to retrieve the value of a field while it contains nothing:\n{message()}"
+        | Ok _ -> ()
+        | Result.Error message ->
+            logError message
             onError()
 
-/// Logs the error if an error message is found within the result.
-let logOnError : Result<Unit, ErrorMessage> -> Unit = logOnErrorWith id
+/// <summary>
+/// If the program results in an error, this function logs the error without rethrowing it.
+/// </summary>
+let internal handleResult : Result<Unit, string> -> Unit = handleResultWith id
