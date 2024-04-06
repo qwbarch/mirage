@@ -6,20 +6,16 @@
     <NetcodePatch Include="$(TargetPath)" />
   </ItemGroup>
   <PropertyGroup>
-    <RestoreAdditionalProjectSources>
-      https://api.nuget.org/v3/index.json;
-      https://nuget.bepinex.dev/v3/index.json
-    </RestoreAdditionalProjectSources>
     <TargetFramework>netstandard2.1</TargetFramework>
     <RootNamespace>Mirage</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <DebugType>embedded</DebugType>
     <Optimize>true</Optimize>
-    <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=</PathMap>
+    <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=.</PathMap>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="ContentWarning.GameLibs.Steam" Version="0.1.7-a-ngd.0" />
+    <PackageReference Include="ContentWarning.GameLibs.Steam" Version="0.1.7-a-ngd.0" Publicize="true" />
     <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1" PrivateAssets="all" ExcludeAssets="runtime" />
     <PackageReference Include="BepInEx.Core" Version="5.4.21" />
     <PackageReference Include="UnityEngine.Modules" Version="2022.3.10" IncludeAssets="compile"/>
@@ -51,7 +47,6 @@
     <Compile Include="Mirage/Core/Field.fs" />
     <Compile Include="Mirage/Core/Logger.fs" />
     <Compile Include="Mirage/Core/Monad.fs" />
-    <Compile Include="Mirage/Networking.fs" />
     <Compile Include="Mirage/Core/Audio/Data.fs" />
     <Compile Include="Mirage/Core/Audio/Format.fs" />
     <Compile Include="Mirage/Core/Audio/Recording.fs" />
@@ -60,6 +55,8 @@
     <Compile Include="Mirage/Core/Audio/Network/Sender.fs" />
     <Compile Include="Mirage/Unity/RpcBehaviour.fs" />
     <Compile Include="Mirage/Unity/AudioStream.fs" />
+    <Compile Include="Mirage/Unity/MimicVoice.fs" />
+    <Compile Include="Mirage/Patch/RegisterPrefab.fs" />
     <Compile Include="Mirage/Plugin.fs" />
     <Compile Include="Properties/AssemblyInfo.fs" />
   </ItemGroup>

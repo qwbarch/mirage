@@ -147,7 +147,7 @@ type AudioStream() =
         if not this.IsHost then
             iter stopTimeout AudioReceiver.Value
 
-     /// Stream the given audio file to the host and all clients.<br />
+    /// Stream the given audio file to the host and all clients.<br />
     /// Audio is only streamed if the client id matches the sender.
     /// Note: This can only be invoked by a non-host.
     member this.UploadAndStreamAudioFromFile(clientId: int, filePath: string) =
@@ -174,14 +174,14 @@ type AudioStream() =
                 set AudioUploader sender
             }
 
-    /// Initialize the audio upload by sending the server the required pcm header.<br />
+    /// Initialize the audio upload by sending the server the required pcm header.
     [<CustomRPC>]
     member _.InitializeUploadServerRpc(clientId) =
         if clientId = Player.localPlayer.refs.view.ViewID then
             iter (dispose << snd) CurrentUpload.Value
             set CurrentUpload (clientId, new MemoryStream())
 
-    /// Initialize the audio upload by sending the server the required pcm header.<br />
+    /// Initialize the audio upload by sending the server the required pcm header.
     [<CustomRPC>]
     member this.UploadFrameServerRpc(frameData: array<byte>) =
         ignore <| monad' {
@@ -216,3 +216,6 @@ type AudioStream() =
 
                     streamAudioFromHost this <| new Mp3FileReader(new MemoryStream(audioData))
             }
+
+    member _.SetAudioSource(audioSource) = set AudioSource audioSource
+    member _.GetAudioSource() = get AudioSource "GetAudioSource"
