@@ -11,9 +11,10 @@ open Mirage.Core.Logger
 open Mirage.Core.Monad
 open Mirage.Core.Field
 open Mirage.Core.Audio.Format
-open Mirage.Unity.RpcBehaviour
+open Mirage.Core.Audio.Data
 open Mirage.Core.Audio.Network.Sender
 open Mirage.Core.Audio.Network.Receiver
+open Mirage.Unity.RpcBehaviour
 
 let [<Literal>] ReceiverTimeout = 30<second>
 let private get<'A> : Getter<'A> = getter "AudioStream"
@@ -67,7 +68,11 @@ type AudioStream() =
     let streamAudioFromHost (this: AudioStream) (audioReader: Mp3FileReader)  =
         handleResultWith stopAll <| monad' {
             stopAudioSender()
-            let sendFrameClientRpc frameData = clientRpc' this ReliableType.UnreliableNoDelay "SendFrameClientRpc" [|frameData|]
+            let sendFrameClientRpc (frameData: FrameData) =
+                clientRpc' this ReliableType.UnreliableNoDelay "SendFrameClientRpc"
+                    [|  frameData.rawData
+                        frameData.sampleIndex
+                    |]
             let finishAudioClientRpc () = clientRpc this "FinishAudioClientRpc" zero
             let (audioSender, pcmHeader) = startSender sendFrameClientRpc finishAudioClientRpc audioReader
             set AudioSender audioSender
@@ -82,7 +87,13 @@ type AudioStream() =
             // it will play silent noise until it reaches the earliest frame it receives.
             let! audioSender = getAudioSender "streamAudioFromHost"
             runAsync canceller.Token <| async {
-                clientRpc this "InitializeAudioClientRpc" [|pcmHeader|]
+                clientRpc this "InitializeAudioClientRpc"
+                    [|  pcmHeader.samples
+                        pcmHeader.channels
+                        pcmHeader.frequency
+                        pcmHeader.blockSize
+                        pcmHeader.bitRate
+                    |]
                 do! Async.Sleep 1000 // Wait a second for the clients to initialize its audio clip.
                 sendAudio audioSender
             }
@@ -107,39 +118,45 @@ type AudioStream() =
         }
 
     member this.StreamAudioFromFile(filePath) =
-        handleResult <| monad' {
-            if this.IsHost then
-                runAsync canceller.Token <| async {
-                    let! audioReader =
-                        forkReturn <| async {
-                            use audio = new AudioFileReader(filePath)
-                            return compressAudio audio
-                        }
-                    streamAudioFromHost this audioReader
-                    return! playAudio filePath
-                }
-        }
+        if this.IsHost then
+            runAsync canceller.Token <| async {
+                let! audioReader =
+                    forkReturn <| async {
+                        use audio = new AudioFileReader(filePath)
+                        return compressAudio audio
+                    }
+                streamAudioFromHost this audioReader
+                return! playAudio filePath
+            }
 
     /// Initialize the client by sending it the required pcm header.<br />
     /// This is followed by the starting the stream on the server.
     [<CustomRPC>]
-    member this.InitializeAudioClientRpc(pcmHeader) =
+    member this.InitializeAudioClientRpc(samples, channels, frequency, blockSize, bitRate) =
         handleResultWith stopAll <| monad' {
             if not this.IsHost then
                 stopAudioReciever()
                 let! audioSource = getAudioSource "InitializeAudioClientRpc"
-                let receiver = startReceiver audioSource pcmHeader
+                let receiver =
+                    startReceiver audioSource
+                        {   samples = samples
+                            channels = channels
+                            frequency = frequency
+                            blockSize = blockSize
+                            bitRate = bitRate
+                        }
                 set AudioReceiver receiver
                 runAsync this.destroyCancellationToken <| startTimeout receiver ReceiverTimeout
         }
 
      /// Send audio frame data to the client to play.
     [<CustomRPC>]
-    member this.SendFrameClientRpc(frameData) =
+    member this.SendFrameClientRpc(rawData, sampleIndex) =
         handleResult <| monad' {
+            //logInfo $"rawData: {(rawData: byte[]).Length} sampleIndex: {sampleIndex}"
             if not this.IsHost then
                 let! audioReceiver = getAudioReceiver "SendFrameClientRpc"
-                setFrameData audioReceiver frameData 
+                setFrameData audioReceiver { rawData = rawData; sampleIndex = sampleIndex }
         }
 
     [<CustomRPC>]

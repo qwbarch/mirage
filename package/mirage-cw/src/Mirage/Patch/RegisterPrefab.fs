@@ -11,6 +11,8 @@ open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicVoice
 
 type RegisterPrefab() =
+    static let mutable registered = false
+
     [<HarmonyPostfix>]
     [<HarmonyPatch(typeof<Player>, "Start")>]
     static member ``save playback prefab``(__instance: Player) =
@@ -30,10 +32,12 @@ type RegisterPrefab() =
     [<HarmonyPostfix>]
     [<HarmonyPatch(typeof<RoundSpawner>, "Start")>]
     static member ``register prefabs for enemies``(__instance: RoundSpawner) =
-        for prefab in __instance.possibleSpawns do
-            let group = prefab.GetComponent<MonsterGroupClose>()
-            if isNull group then
-                iter (ignore << prefab.AddComponent)
-                    [   typeof<AudioStream>
-                        typeof<MimicVoice>
-                    ]
+        if not registered then
+            registered <- true
+            for prefab in __instance.possibleSpawns do
+                let group = prefab.GetComponent<MonsterGroupClose>()
+                if isNull group then
+                    iter (ignore << prefab.AddComponent)
+                        [   typeof<AudioStream>
+                            typeof<MimicVoice>
+                        ]

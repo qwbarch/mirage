@@ -1,6 +1,5 @@
 module Mirage.Core.Audio.Data
 
-open Unity.Netcode
 open NAudio.Wave
 
 /// <summary>
@@ -11,10 +10,6 @@ type FrameData =
     {   mutable rawData: array<byte>
         mutable sampleIndex: int
     }
-    interface INetworkSerializable with
-        member this.NetworkSerialize(serializer: BufferSerializer<'T>) : unit =
-            serializer.SerializeValue(&this.rawData)
-            serializer.SerializeValue(&this.sampleIndex)
 
 /// <summary>
 /// All the necessary information for PCM data to be read.
@@ -27,13 +22,6 @@ type PcmHeader =
         mutable blockSize: int
         mutable bitRate: int
     }
-    interface INetworkSerializable with
-        member this.NetworkSerialize(serializer: BufferSerializer<'T>) : unit = 
-            serializer.SerializeValue(&this.samples)
-            serializer.SerializeValue(&this.channels)
-            serializer.SerializeValue(&this.frequency)
-            serializer.SerializeValue(&this.blockSize)
-            serializer.SerializeValue(&this.bitRate)
 
 /// <summary>
 /// Extracts the pcm header information of an <b>Mp3FileReader</b>.

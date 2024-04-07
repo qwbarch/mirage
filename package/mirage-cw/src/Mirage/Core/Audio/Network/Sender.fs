@@ -1,12 +1,12 @@
 module Mirage.Core.Audio.Network.Sender
 
+open System
+open System.Threading
 open NAudio.Wave
 open FSharpPlus
 open FSharpx.Control
-open System
-open System.Threading
-open Stream
 open Mirage.Core.Audio.Data
+open Mirage.Core.Audio.Network.Stream
 open Mirage.Core.Logger
 open Mirage.Core.Monad
 
@@ -68,9 +68,11 @@ let sendAudio (sender: AudioSender) : Unit =
     let producer =
         async {
             try
+                logInfo "before streamAudio"
                 return!
                     streamAudio sender.audioReader <| fun frameData ->
                         sender.channel.AsyncAdd(frameData, ChannelTimeout)
+                logInfo "after streamAudio"
             with | error ->
                 logError $"AudioSender producer caught an exception: {error}"
                 stopSender sender
