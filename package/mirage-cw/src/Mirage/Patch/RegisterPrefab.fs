@@ -1,6 +1,7 @@
 module Mirage.Patch.RegisterPrefab
 
 open System
+open SteamAudio
 open UnityEngine
 open FSharpPlus
 open HarmonyLib
@@ -28,6 +29,9 @@ type RegisterPrefab() =
                     typeof<Recorder>
                     typeof<PlayerVoiceHandler>
                 ]
+            // Disabling occlusion because every time a monster slightly turns, its audio becomes quiet.
+            // This is less realistic compared to an actual player's voice, but it sounds less "buggy".
+            PlaybackPrefab.GetComponent<SteamAudioSource>().occlusion <- false
 
     [<HarmonyPostfix>]
     [<HarmonyPatch(typeof<RoundSpawner>, "Start")>]
@@ -37,7 +41,11 @@ type RegisterPrefab() =
             for prefab in __instance.possibleSpawns do
                 let group = prefab.GetComponent<MonsterGroupClose>()
                 if isNull group then
-                    iter (ignore << prefab.AddComponent)
-                        [   typeof<AudioStream>
-                            typeof<MimicVoice>
-                        ]
+                    let parentTransform =
+                        prefab.GetComponentsInChildren<Transform>()
+                            |> tryFind _.name.StartsWith("Bot")
+                    flip iter parentTransform <| fun parent ->
+                        iter (ignore << parent.gameObject.AddComponent)
+                            [   typeof<AudioStream>
+                                typeof<MimicVoice>
+                            ]
