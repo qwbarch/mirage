@@ -1,0 +1,242 @@
+module Mirage.Core.Config
+
+open System
+open BepInEx.Configuration
+open FSharpPlus
+open Mirage.Core.Field
+
+type internal LocalConfig(config: ConfigFile) =
+    let [<Literal>] voiceMimicSection = "Mimic voice"
+    let [<Literal>] enemySection = "Enemy"
+
+    member val MimicMinDelay =
+        config.Bind<int>(
+            voiceMimicSection,
+            "MinimumDelay",
+            7000,
+            "The minimum amount of time in between voice playbacks (in milliseconds)."
+        )
+    member val MimicMaxDelay =
+        config.Bind<int>(
+            voiceMimicSection,
+            "MaximumDelay",
+            12000,
+            "The maximum amount of time in between voice playbacks (in milliseconds).\nThis only applies for masked enemies."
+        )
+    member val ImitateMode =
+        config.Bind<string>(
+            voiceMimicSection,
+            "ImitateMode",
+            "NoRepeat",
+            "Possible values: Random, NoRepeat\n"
+                + "Random: Recordings are randomly picked.\n"
+                + "NoRepeat: Recordings are randomly picked, except the recording can only be played once until no more recordings remain, which can then be replayed."
+        )
+    member val ToolkitWhisk =
+        config.Bind<bool>(
+            enemySection,
+            "Toolkit_Whisk",
+            false
+        )
+    member val Zombe =
+        config.Bind<bool>(
+            enemySection,
+            "Zombe",
+            true
+        )
+    member val Flicker =
+        config.Bind<bool>(
+            enemySection,
+            "Flicker",
+            false
+        )
+    member val Slurper =
+        config.Bind<bool>(
+            enemySection,
+            "Slurper",
+            false
+        )
+    member val Spider =
+        config.Bind<bool>(
+            enemySection,
+            "Spider",
+            false
+        )
+    member val BigSlap =
+        config.Bind<bool>(
+            enemySection,
+            "BigSlap",
+            false
+        )
+    member val BigSlapSmall =
+        config.Bind<bool>(
+            enemySection,
+            "BigSlap_Small",
+            false
+        )
+    member val Ear =
+        config.Bind<bool>(
+            enemySection,
+            "Ear",
+            false
+        )
+    member val Jello =
+        config.Bind<bool>(
+            enemySection,
+            "Jello",
+            true
+        )
+    member val Knifo =
+        config.Bind<bool>(
+            enemySection,
+            "Knifo",
+            false
+        )
+    member val Mouthe =
+        config.Bind<bool>(
+            enemySection,
+            "Mouthe",
+            false
+        )
+    member val Snatcho =
+        config.Bind<bool>(
+            enemySection,
+            "Snatcho",
+            false
+        )
+    member val Weeping =
+        config.Bind<bool>(
+            enemySection,
+            "Weeping",
+            false
+        )
+    member val BarnacleBall =
+        config.Bind<bool>(
+            enemySection,
+            "BarnacleBall",
+            false
+        )
+    member val Dog =
+        config.Bind<bool>(
+            enemySection,
+            "Dog",
+            false
+        )
+    member val EyeGuy =
+        config.Bind<bool>(
+            enemySection,
+            "EyeGuy",
+            false
+        )
+    member val Bombs =
+        config.Bind<bool>(
+            enemySection,
+            "Bombs",
+            false
+        )
+    member val Larva =
+        config.Bind<bool>(
+            enemySection,
+            "Larva",
+            false
+        )
+
+type ImitateMode = ImitateRandom | ImitateNoRepeat
+
+/// <summary>
+/// Network synchronized configuration values. This is taken from the wiki:
+/// https://lethal.wiki/dev/intermediate/custom-config-syncing
+/// </summary>
+[<Serializable>]
+type internal SyncedConfig =
+    {   mimicMinDelay: int
+        mimicMaxDelay: int
+        imitateMode: ImitateMode
+        toolkitWhisk: bool
+        zombe: bool
+        flicker: bool
+        slurper: bool
+        spider: bool
+        bigSlap: bool
+        bigSlapSmall: bool
+        ear: bool
+        jello: bool
+        knifo: bool
+        mouthe: bool
+        snatcho: bool
+        weeping: bool
+        barnacleBall: bool
+        dog: bool
+        eyeGuy: bool
+        bombs: bool
+        larva: bool
+    }
+
+let private toSyncedConfig (config: LocalConfig) =
+    {   mimicMinDelay = config.MimicMinDelay.Value
+        mimicMaxDelay = config.MimicMaxDelay.Value
+        imitateMode =
+            match config.ImitateMode.Value.ToLower() with
+                | "random" -> ImitateRandom
+                | "norepeat" -> ImitateNoRepeat
+                | mode -> invalidOp $"Synced invalid ImitateMode value: {mode}"
+        toolkitWhisk = config.ToolkitWhisk.Value
+        zombe = config.Zombe.Value
+        flicker = config.Flicker.Value
+        slurper = config.Slurper.Value
+        spider = config.Spider.Value
+        bigSlap = config.BigSlap.Value
+        bigSlapSmall = config.BigSlapSmall.Value
+        ear = config.Ear.Value
+        jello = config.Jello.Value
+        knifo = config.Knifo.Value
+        mouthe = config.Mouthe.Value
+        snatcho = config.Snatcho.Value
+        weeping = config.Weeping.Value
+        barnacleBall = config.BarnacleBall.Value
+        dog = config.Dog.Value
+        eyeGuy = config.EyeGuy.Value
+        bombs = config.EyeGuy.Value
+        larva = config.Larva.Value
+    }
+
+/// <summary>
+/// An action for synchronizing the <b>SyncedConfig</b>.
+/// </summary>
+type internal SyncAction = RequestSync | ReceiveSync
+
+let private LocalConfig = field<LocalConfig>()
+let internal SyncedConfig = field<SyncedConfig>()
+
+/// <summary>
+/// Retrieves a <b>LocalConfig</b>, containing the local player's configuration.<br />
+/// If you need a syned config, use <b>getConfig()</b>.
+/// </summary>
+let internal getLocalConfig () =
+    let errorIfMissing () =
+        invalidOp "Failed to retrieve local config. This is probably due to not running initConfig."
+    Option.defaultWith errorIfMissing  <| getValue LocalConfig
+
+/// <summary>
+/// Retrieves a <b>SyncedConfig</b>, either from being synced with the host, or taken by the local config.<br />
+/// This requires <b>initConfig</b> to be invoked to work.
+/// </summary>
+let internal getConfig () = Option.defaultWith (toSyncedConfig << getLocalConfig) <| getValue SyncedConfig
+
+let initConfig (file: ConfigFile) =
+    monad' {
+        if Option.isNone LocalConfig.Value then
+            let config = new LocalConfig(file)
+            let minDelayKey = config.MimicMinDelay.Definition.Key
+            let maxDelayKey = config.MimicMaxDelay.Definition.Key
+            let errorHeader = "Configuration is invalid. "
+            if config.MimicMinDelay.Value < 0 then
+                return! Error $"{errorHeader}{minDelayKey} cannot have a value smaller than 0."
+            if config.MimicMaxDelay.Value < 0 then
+                return! Error $"{errorHeader}{maxDelayKey} cannot have a value smaller than 0."
+            if config.MimicMinDelay.Value > config.MimicMaxDelay.Value then
+                return! Error $"{errorHeader}{minDelayKey} must have a value smaller than {maxDelayKey}"
+            if not <| exists ((=) (String.toLower config.ImitateMode.Value)) ["random"; "norepeat"] then
+                return! Error $"{errorHeader}{config.ImitateMode.Definition.Key} is set to an invalid value. Refer to the config for possible values."
+            set LocalConfig config
+    }

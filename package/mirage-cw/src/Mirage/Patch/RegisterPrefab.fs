@@ -10,6 +10,7 @@ open Photon.Voice.PUN
 open Photon.Voice.Unity
 open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicVoice
+open Mirage.Core.Logger
 
 type RegisterPrefab() =
     static let mutable registered = false

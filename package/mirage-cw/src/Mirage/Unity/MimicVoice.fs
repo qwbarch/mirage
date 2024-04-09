@@ -1,11 +1,11 @@
 module Mirage.Unity.MimicVoice
 
+open System.IO
 open FSharpPlus
 open UnityEngine
 open Mirage.Core.Field
 open Mirage.Unity.AudioStream
-open System.IO
-open RpcBehaviour
+open Mirage.Unity.RpcBehaviour
 open Mirage.Core.Logger
 
 let mutable internal PlaybackPrefab: GameObject = null
