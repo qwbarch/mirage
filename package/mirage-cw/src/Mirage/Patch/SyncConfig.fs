@@ -9,7 +9,7 @@ type SyncConfig() =
     [<HarmonyPostfix>]
     [<HarmonyPatch(typeof<SurfaceNetworkHandler>, "Awake")>]
     static member ``add config handler to surface network handler``(__instance: SurfaceNetworkHandler) =
-        __instance.gameObject.AddComponent<ConfigHandler>()
+        ignore <| __instance.gameObject.AddComponent<ConfigHandler>()
 
     [<HarmonyPostfix>]
     [<HarmonyPatch(typeof<SurfaceNetworkHandler>, "RPCM_StartGame")>]

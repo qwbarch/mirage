@@ -1,35 +1,85 @@
 module Mirage.Unity.MimicVoice
 
+#nowarn "40"
+
+open System
 open System.IO
 open FSharpPlus
+open FSharpPlus.Data
 open UnityEngine
+open Mirage.Core.Monad
+open Mirage.Core.Logger
+open Mirage.Core.Config
 open Mirage.Core.Field
+open Mirage.Core.Audio.Recording
 open Mirage.Unity.AudioStream
 open Mirage.Unity.RpcBehaviour
-open Mirage.Core.Logger
+open Mirage.Unity.MimicPlayer
 
 let mutable internal PlaybackPrefab: GameObject = null
+let private get<'A> = getter<'A> "MimicVoice"
 
-type MimicVoice() =
+[<AllowNullLiteral>]
+type MimicVoice() as self =
     inherit RpcBehaviour()
 
+    let random = Random()
+    let recordingManager = RecordingManager()
     let Playback = field()
+
+    let MimicPlayer = field<MimicPlayer>()
+    let AudioStream = field<AudioStream>()
+    let getMimicPlayer = get MimicPlayer "MimicPlayer"
+    let getAudioStream = get AudioStream "AudioStream"
+
+    let startVoiceMimic () =
+        let mimicVoice () =
+            handleResult <| monad' {
+                let methodName = "mimicVoice"
+                let! mimicPlayer = getMimicPlayer methodName
+                let! audioStream = getAudioStream methodName
+                ignore << runAsync self.destroyCancellationToken << OptionT.run <| monad {
+                    let! player = OptionT << result <| mimicPlayer.GetMimickingPlayer()
+                    let! recording = OptionT <| getRecording recordingManager
+                    try
+                        if player = Player.localPlayer then
+                            if self.IsHost then
+                                audioStream.StreamAudioFromFile recording
+                            else
+                                audioStream.UploadAndStreamAudioFromFile(
+                                    player.refs.view.ViewID,
+                                    recording
+                                )
+                    with | error ->
+                        logError $"Failed to mimic voice: {error}"
+                }
+            }
+        let rec runMimicLoop =
+            let config = getConfig()
+            let delay = random.Next(config.mimicMinDelay, config.mimicMaxDelay + 1)
+            async {
+                mimicVoice()
+                return! Async.Sleep delay
+                return! runMimicLoop
+            }
+        runAsync self.destroyCancellationToken runMimicLoop
 
     override this.Start() =
         base.Start()
         let playback = Object.Instantiate<GameObject> PlaybackPrefab
         playback.transform.parent <- this.transform
-        set Playback playback
+        setNullable Playback playback
         playback.SetActive true
         let audioStream = this.GetComponent<AudioStream>()
         audioStream.SetAudioSource <| playback.GetComponent<AudioSource>()
-        
+        setNullable AudioStream audioStream
+        setNullable MimicPlayer <| this.gameObject.GetComponent<MimicPlayer>()
+
         let filePath = $"{Application.dataPath}/../Mirage/speech.wav"
-        logInfo $"filePath: {filePath}"
-        logInfo $"isHost: {this.IsHost}"
-        logInfo $"File.Exists: {File.Exists filePath}"
         if this.IsHost && File.Exists filePath then
             audioStream.StreamAudioFromFile filePath
+
+        startVoiceMimic()
 
     member this.LateUpdate() =
         // Update the playback component to always be on the same position as the parent.

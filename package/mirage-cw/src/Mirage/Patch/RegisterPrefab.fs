@@ -11,6 +11,7 @@ open Photon.Voice.Unity
 open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicVoice
 open Mirage.Core.Logger
+open Mirage.Unity.MimicPlayer
 
 type RegisterPrefab() =
     static let mutable registered = false
@@ -48,5 +49,6 @@ type RegisterPrefab() =
                     flip iter parentTransform <| fun parent ->
                         iter (ignore << parent.gameObject.AddComponent)
                             [   typeof<AudioStream>
+                                typeof<MimicPlayer>
                                 typeof<MimicVoice>
                             ]

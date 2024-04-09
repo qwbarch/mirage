@@ -68,11 +68,9 @@ let sendAudio (sender: AudioSender) : Unit =
     let producer =
         async {
             try
-                logInfo "before streamAudio"
                 return!
                     streamAudio sender.audioReader <| fun frameData ->
                         sender.channel.AsyncAdd(frameData, ChannelTimeout)
-                logInfo "after streamAudio"
             with | error ->
                 logError $"AudioSender producer caught an exception: {error}"
                 stopSender sender

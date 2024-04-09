@@ -153,7 +153,6 @@ type AudioStream() =
     [<CustomRPC>]
     member this.SendFrameClientRpc(rawData, sampleIndex) =
         handleResult <| monad' {
-            //logInfo $"rawData: {(rawData: byte[]).Length} sampleIndex: {sampleIndex}"
             if not this.IsHost then
                 let! audioReceiver = getAudioReceiver "SendFrameClientRpc"
                 setFrameData audioReceiver { rawData = rawData; sampleIndex = sampleIndex }

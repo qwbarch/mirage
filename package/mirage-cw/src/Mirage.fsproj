@@ -52,12 +52,14 @@
     <Compile Include="Mirage/Core/Audio/Data.fs" />
     <Compile Include="Mirage/Core/Audio/Format.fs" />
     <Compile Include="Mirage/Core/Audio/Resampler.fs" />
+    <Compile Include="Mirage/Core/Audio/Recording.fs" />
     <Compile Include="Mirage/Core/Audio/Network/Receiver.fs" />
     <Compile Include="Mirage/Core/Audio/Network/Stream.fs" />
     <Compile Include="Mirage/Core/Audio/Network/Sender.fs" />
     <Compile Include="Mirage/Unity/RpcBehaviour.fs" />
     <Compile Include="Mirage/Unity/ConfigHandler.fs" />
     <Compile Include="Mirage/Unity/AudioStream.fs" />
+    <Compile Include="Mirage/Unity/MimicPlayer.fs" />
     <Compile Include="Mirage/Unity/MimicVoice.fs" />
     <Compile Include="Mirage/Patch/RegisterPrefab.fs" />
     <Compile Include="Mirage/Patch/RecordAudio.fs" />

@@ -16,7 +16,6 @@ type ConfigHandler() =
             clientRpc this "SyncConfigClientRpc"
                 [|  config.mimicMinDelay
                     config.mimicMaxDelay
-                    config.imitateMode
                     config.toolkitWhisk
                     config.zombe
                     config.flicker
@@ -41,7 +40,6 @@ type ConfigHandler() =
     member this.SyncConfigClientRpc(
         mimicMinDelay,
         mimicMaxDelay,
-        imitateMode,
         toolkitWhisk,
         zombe,
         flicker,
@@ -65,7 +63,6 @@ type ConfigHandler() =
             set SyncedConfig
                 {   mimicMinDelay = mimicMinDelay
                     mimicMaxDelay = mimicMaxDelay
-                    imitateMode = imitateMode
                     toolkitWhisk = toolkitWhisk
                     zombe = zombe
                     flicker = flicker

@@ -6,12 +6,14 @@ open BepInEx
 open FSharpPlus
 open HarmonyLib
 open NAudio.Lame
+open UnityEngine
 open Mirage.PluginInfo
-open Mirage.Core.Config
-open Mirage.Core.Logger
 open Mirage.Patch.RegisterPrefab
 open Mirage.Patch.RecordAudio
 open Mirage.Patch.SyncConfig
+open Mirage.Core.Audio.Recording
+open Mirage.Core.Config
+open Mirage.Core.Logger
 
 [<BepInPlugin(pluginId, pluginName, pluginVersion)>]
 type Plugin() =
@@ -22,6 +24,7 @@ type Plugin() =
             initAsyncLogger()
             return! initConfig this.Config
             ignore <| LameDLL.LoadNativeDLL [|Path.GetDirectoryName this.Info.Location|]
+            Application.add_quitting deleteRecordings
             let harmony = new Harmony(pluginId)
             iter (unbox<Type> >> harmony.PatchAll)
                 [   typeof<RegisterPrefab>

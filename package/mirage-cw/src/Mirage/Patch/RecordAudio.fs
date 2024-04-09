@@ -5,7 +5,7 @@ module Mirage.Patch.RecordAudio
 open System
 open System.IO
 open System.Threading
-open UnityEngine
+open FSharpPlus
 open FSharpx.Control
 open HarmonyLib
 open Zorro.Recorder
@@ -17,10 +17,7 @@ open Mirage.Core.Monad
 open Mirage.Core.Audio.Format
 open Mirage.Core.Audio.Resampler
 open Mirage.Core.Field
-open FSharpPlus
-open Mirage.Core.Logger
-
-let private RecordingDirectory = $"{Application.dataPath}/../Mirage"
+open Mirage.Core.Audio.Recording
 
 type MicrophoneAudio =
     private

@@ -8,6 +8,7 @@ open Mirage.Core.Field
 type internal LocalConfig(config: ConfigFile) =
     let [<Literal>] voiceMimicSection = "Mimic voice"
     let [<Literal>] enemySection = "Enemy"
+    let [<Literal>] personalPreferenceSection = "Personal preferences"
 
     member val MimicMinDelay =
         config.Bind<int>(
@@ -23,14 +24,13 @@ type internal LocalConfig(config: ConfigFile) =
             12000,
             "The maximum amount of time in between voice playbacks (in milliseconds).\nThis only applies for masked enemies."
         )
-    member val ImitateMode =
-        config.Bind<string>(
-            voiceMimicSection,
-            "ImitateMode",
-            "NoRepeat",
-            "Possible values: Random, NoRepeat\n"
-                + "Random: Recordings are randomly picked.\n"
-                + "NoRepeat: Recordings are randomly picked, except the recording can only be played once until no more recordings remain, which can then be replayed."
+    member val NeverDeleteVoiceClips =
+        config.Bind<bool>(
+            personalPreferenceSection,
+            "NeverDeleteVoiceClips",
+            false,
+            "If set to false, voice clips will never get deleted. If set to false, voice clips are deleted upon closing the game.\n"
+                + "Since this setting is a personal preference, it is not synced to other players."
         )
     member val ToolkitWhisk =
         config.Bind<bool>(
@@ -120,7 +120,7 @@ type internal LocalConfig(config: ConfigFile) =
         config.Bind<bool>(
             enemySection,
             "Dog",
-            false
+            true
         )
     member val EyeGuy =
         config.Bind<bool>(
@@ -141,8 +141,6 @@ type internal LocalConfig(config: ConfigFile) =
             false
         )
 
-type ImitateMode = ImitateRandom | ImitateNoRepeat
-
 /// <summary>
 /// Network synchronized configuration values. This is taken from the wiki:
 /// https://lethal.wiki/dev/intermediate/custom-config-syncing
@@ -151,7 +149,6 @@ type ImitateMode = ImitateRandom | ImitateNoRepeat
 type internal SyncedConfig =
     {   mimicMinDelay: int
         mimicMaxDelay: int
-        imitateMode: ImitateMode
         toolkitWhisk: bool
         zombe: bool
         flicker: bool
@@ -175,11 +172,6 @@ type internal SyncedConfig =
 let private toSyncedConfig (config: LocalConfig) =
     {   mimicMinDelay = config.MimicMinDelay.Value
         mimicMaxDelay = config.MimicMaxDelay.Value
-        imitateMode =
-            match config.ImitateMode.Value.ToLower() with
-                | "random" -> ImitateRandom
-                | "norepeat" -> ImitateNoRepeat
-                | mode -> invalidOp $"Synced invalid ImitateMode value: {mode}"
         toolkitWhisk = config.ToolkitWhisk.Value
         zombe = config.Zombe.Value
         flicker = config.Flicker.Value
@@ -236,7 +228,5 @@ let initConfig (file: ConfigFile) =
                 return! Error $"{errorHeader}{maxDelayKey} cannot have a value smaller than 0."
             if config.MimicMinDelay.Value > config.MimicMaxDelay.Value then
                 return! Error $"{errorHeader}{minDelayKey} must have a value smaller than {maxDelayKey}"
-            if not <| exists ((=) (String.toLower config.ImitateMode.Value)) ["random"; "norepeat"] then
-                return! Error $"{errorHeader}{config.ImitateMode.Definition.Key} is set to an invalid value. Refer to the config for possible values."
             set LocalConfig config
     }

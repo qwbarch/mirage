@@ -1,16 +1,12 @@
 module Mirage.Core.Audio.Format
 
+open System
+open System.IO
 open FSharpPlus
 open UnityEngine
 open NAudio.Wave
 open NAudio.Lame
-open System
-open System.IO
 open Mirage.PluginInfo
-open NAudio.Wave.SampleProviders
-open Mirage.Core.Logger
-open WebRtcVadSharp
-open NAudio.Dsp
 
 /// <summary>
 /// Converts the given MP3 frame data to PCM format.
