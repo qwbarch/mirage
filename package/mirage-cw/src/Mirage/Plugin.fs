@@ -9,6 +9,7 @@ open NAudio.Lame
 open Mirage.PluginInfo
 open Mirage.Core.Logger
 open Mirage.Patch.RegisterPrefab
+open Mirage.Patch.RecordAudio
 
 [<BepInPlugin(pluginId, pluginName, pluginVersion)>]
 type Plugin() =
@@ -20,4 +21,5 @@ type Plugin() =
         let harmony = new Harmony(pluginId)
         iter (unbox<Type> >> harmony.PatchAll)
             [   typeof<RegisterPrefab>
+                typeof<RecordAudio>
             ]

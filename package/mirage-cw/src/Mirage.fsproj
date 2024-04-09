@@ -23,6 +23,7 @@
     <PackageReference Include="FSharpPlus" Version="1.5.0" />
     <PackageReference Include="HarmonyX" Version="2.12.0" />
     <PackageReference Include="FSharp.Control.AsyncSeq" Version="3.2.1" />
+    <PackageReference Include="WebRtcVadSharp" Version="1.3.2" />
     <Reference Include="FSharpx.Async">
       <HintPath>../../../lib/FSharpx.Async/FSharpx.Async.dll</HintPath>
     </Reference>
@@ -49,6 +50,7 @@
     <Compile Include="Mirage/Core/Monad.fs" />
     <Compile Include="Mirage/Core/Audio/Data.fs" />
     <Compile Include="Mirage/Core/Audio/Format.fs" />
+    <Compile Include="Mirage/Core/Audio/Resampler.fs" />
     <Compile Include="Mirage/Core/Audio/Recording.fs" />
     <Compile Include="Mirage/Core/Audio/Network/Receiver.fs" />
     <Compile Include="Mirage/Core/Audio/Network/Stream.fs" />
@@ -57,6 +59,7 @@
     <Compile Include="Mirage/Unity/AudioStream.fs" />
     <Compile Include="Mirage/Unity/MimicVoice.fs" />
     <Compile Include="Mirage/Patch/RegisterPrefab.fs" />
+    <Compile Include="Mirage/Patch/RecordAudio.fs" />
     <Compile Include="Mirage/Plugin.fs" />
     <Compile Include="Properties/AssemblyInfo.fs" />
   </ItemGroup>
