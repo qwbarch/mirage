@@ -18,6 +18,7 @@ open Mirage.Core.Audio.Format
 open Mirage.Core.Audio.Resampler
 open Mirage.Core.Field
 open Mirage.Core.Audio.Recording
+open Mirage.Core.Logger
 
 type MicrophoneAudio =
     private
@@ -60,6 +61,7 @@ type RecordAudio() =
                 if isRecording && vadDisabledFrames <= 8 then // 160ms of audio
                     let defaultRecording () =
                         framesWritten <- 0
+                        ignore <| Directory.CreateDirectory RecordingDirectory
                         let filePath = Path.Join(RecordingDirectory, $"{DateTime.UtcNow.ToFileTime()}.wav")
                         let recording = new WaveFileWriter(filePath, WaveFormat(audio.sampleRate, audio.channels))
                         set FilePath filePath

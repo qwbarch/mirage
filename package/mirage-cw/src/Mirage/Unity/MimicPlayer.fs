@@ -10,7 +10,7 @@ open FSharpPlus
 open Mirage.Core.Config
 
 /// Holds what players that can be mimicked, to avoid duplicates.
-let playerPool = new List<int>()
+let playerPool = new List<Player>()
 
 [<AllowNullLiteral>]
 type MimicPlayer() as self =
@@ -47,14 +47,12 @@ type MimicPlayer() as self =
         if this.IsHost && isEnemyEnabled() then
             let players = PlayerHandler.instance.players
             if playerPool.Count = 0 then
-                playerPool.AddRange [0..players.Count]
+                playerPool.AddRange players
             let index = random.Next playerPool.Count
-            let playerIndex = playerPool[index]
+            let mimickingPlayer = playerPool[index]
             playerPool.RemoveAt index
-            // If a player dc's and the player list is lower than the index in the player pool, cap it at the # of players instead.
-            let mimickingPlayer = players[if playerIndex + 1 > players.Count then players.Count - 1 else playerIndex]
             set MimickingPlayer mimickingPlayer
-            clientRpc this "MimicPlayerClientRpc" [|mimickingPlayer.refs.view.Owner.UserId|]
+            clientRpc this "MimicPlayerClientRpc" [|mimickingPlayer.refs.view.Owner.UserId|] // USERID is null for non local, use something else
 
     [<CustomRPC>]
     member this.MimicPlayerClientRpc(userId) =
