@@ -3,20 +3,24 @@ module Mirage.Patch.RecordAudio
 #nowarn "40"
 
 open System
+open System.IO
 open System.Threading
-open FSharpPlus
+open UnityEngine
 open FSharpx.Control
 open HarmonyLib
 open Zorro.Recorder
+open WebRtcVadSharp
 open Photon.Voice.PUN
-open Photon.Voice.Unity
+open NAudio.Wave
+open Microsoft.FSharp.Core
 open Mirage.Core.Monad
 open Mirage.Core.Audio.Format
-open Mirage.Core.Logger
-open WebRtcVadSharp
-open NAudio.Wave
 open Mirage.Core.Audio.Resampler
-open Microsoft.FSharp.Core.Option
+open Mirage.Core.Field
+open FSharpPlus
+open Mirage.Core.Logger
+
+let private RecordingDirectory = $"{Application.dataPath}/../Mirage"
 
 type MicrophoneAudio =
     private
@@ -25,30 +29,74 @@ type MicrophoneAudio =
             channels: int
         }
 
-type RecordAudio() =
-    static let mutable IsRecording = false
-    static let mutable Format = null
-    static let vad = new WebRtcVad()
+let private get<'A> (field: Field<'A>) = field.Value
 
-    //https://markheath.net/post/fully-managed-input-driven-resampling-wdl
+type RecordAudio() =
+    static let vad = new WebRtcVad()
+    static let mutable VoiceView: PhotonVoiceView = null
 
     static let audioChannel =
+        let mutable vadDisabledFrames = 0
+        let mutable framesWritten = 0
+        let Recording = field()
+        let FilePath = field()
         let channel = new BlockingQueueAgent<MicrophoneAudio>(Int32.MaxValue)
         let mutable resampler = None
         let rec consumer =
             async {
                 let! audio = channel.AsyncGet()
-                let waveFormat = WaveFormat.CreateIeeeFloatWaveFormat(audio.sampleRate, audio.channels)
-                if isNone resampler then
+                if Option.isNone resampler then
                     resampler <- Some <| defaultResampler audio.sampleRate 16000
-                let pcmData = toPCMBytes <| resample resampler.Value audio.samples
-                let speechDetected = vad.HasSpeech(pcmData, SampleRate.Is16kHz, FrameLength.Is20ms)
-                logInfo $"speechDetected: {speechDetected}"
+                let resampledPcm = toPCMBytes <| resample resampler.Value audio.samples
+                let speechDetected = vad.HasSpeech(resampledPcm, SampleRate.Is16kHz, FrameLength.Is20ms)
+                let isRecording =
+                    VoiceView.RecorderInUse.IsCurrentlyTransmitting // Only on when push-to-talk is enabled. Always on if voice activity is enabled.
+                        && not (isNull Player.localPlayer)
+                        && not Player.localPlayer.data.dead
+
+                if speechDetected then
+                    vadDisabledFrames <- 0
+                    framesWritten <- framesWritten + 1
+                else
+                    vadDisabledFrames <- vadDisabledFrames + 1
+
+                if isRecording && vadDisabledFrames <= 8 then // 160ms of audio
+                    let defaultRecording () =
+                        framesWritten <- 0
+                        let filePath = Path.Join(RecordingDirectory, $"{DateTime.UtcNow.ToFileTime()}.wav")
+                        let recording = new WaveFileWriter(filePath, WaveFormat(audio.sampleRate, audio.channels))
+                        set FilePath filePath
+                        set Recording recording
+                        recording
+                    let recording = Option.defaultWith defaultRecording <| get Recording
+                    do! recording.WriteAsync (toPCMBytes audio.samples)
+                        |> _.AsTask()
+                        |> Async.AwaitTask
+                else
+                    ignore <| monad' {
+                        let! recording = getValue Recording 
+                        let! filePath = getValue FilePath
+                        setNone Recording
+                        setNone FilePath
+                        dispose recording
+                        if framesWritten <= 16 then
+                            try
+                                File.Delete filePath
+                            with | _ -> ()
+                        vadDisabledFrames <- 0
+                        framesWritten <- 0
+                    }
                 return! consumer
             }
         let canceller = new CancellationTokenSource()
         forkAsync canceller.Token consumer
         channel
+
+    [<HarmonyPostfix>]
+    [<HarmonyPatch(typeof<PhotonVoiceView>, "Start")>]
+    static member ``save photon voice view for later use``(__instance: PhotonVoiceView) =
+        if not <| isNull __instance.RecorderInUse then
+            VoiceView <-  __instance
 
     [<HarmonyPostfix>]
     [<HarmonyPatch(typeof<RecorderAudioListener>, "SendMic")>]
