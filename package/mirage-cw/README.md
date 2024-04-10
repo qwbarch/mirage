@@ -1,7 +1,7 @@
 # Mirage
 
-Mirage is a mod that gives any enemy the ability to mimic a player's voice.
-**This mod is required by the host and on all clients.** Clients that do not have the mod will run into desynchronization issues.
+Mirage is a mod that gives any enemy the ability to mimic a player's voice.  This is a port of [Mirage](https://thunderstore.io/c/lethal-company/p/qwbarch/Mirage/) from Lethal Company.  
+**Mod is required by the host and on all clients.** Clients that do not have the mod will run into desynchronization issues.
 
 #### Note: Consider this an early release, and expect there to be bugs.
 
