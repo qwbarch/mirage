@@ -8,7 +8,7 @@ powershell Compress-Archive^
     -Path "../bin/BepInEx",^
           "../manifest.json",^
           "../icon.png",^
-          "../../../README.md",^
-          "../../../CHANGELOG.md",^
+          "../README.md",^
+          "../CHANGELOG.md",^
           "../../../LICENSE"^
     -DestinationPath "../bin/mirage.zip"
