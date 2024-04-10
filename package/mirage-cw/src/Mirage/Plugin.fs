@@ -7,13 +7,13 @@ open FSharpPlus
 open HarmonyLib
 open NAudio.Lame
 open UnityEngine
+open Mirage.Core.Audio.Recording
+open Mirage.Core.Config
+open Mirage.Core.Logger
 open Mirage.PluginInfo
 open Mirage.Patch.RegisterPrefab
 open Mirage.Patch.RecordAudio
 open Mirage.Patch.SyncConfig
-open Mirage.Core.Audio.Recording
-open Mirage.Core.Config
-open Mirage.Core.Logger
 
 [<BepInPlugin(pluginId, pluginName, pluginVersion)>]
 type Plugin() =

@@ -24,6 +24,14 @@ type RpcBehaviour() =
             this.PhotonView.ViewID
         )
 
+    abstract member OnDestroy : unit -> unit
+    default this.OnDestroy() =
+        MyceliumNetwork.DeregisterNetworkObject(
+            this,
+            NetworkId,
+            this.PhotonView.ViewID
+        )
+
 /// Run an rpc method on the server, using the specified reliability.
 let private serverRpc' (this: RpcBehaviour) reliability methodName payload =
     if this.IsHost then logError "serverRpc can only be invoked by a non-host."

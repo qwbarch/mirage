@@ -1,15 +1,26 @@
 module Mirage.Unity.ConfigHandler
 
-open FSharpPlus
+open UnityEngine
 open MyceliumNetworking
 open Mirage.Unity.RpcBehaviour
 open Mirage.Core.Config
 open Mirage.Core.Field
+open Mirage.Core.Logger
 
+[<AllowNullLiteral>]
 type ConfigHandler() =
     inherit RpcBehaviour()
 
-    /// Syncs the config to all clients. Should only be called by the host.
+    static member val internal Instance = null with get, set
+
+    member this.Awake() =
+        ConfigHandler.Instance <- this
+
+    override _.OnDestroy() =
+        base.OnDestroy()
+        ConfigHandler.Instance <- null
+
+    /// Syncs the config to all clients. This only has an effect when invoked by the host.
     member this.SyncToAllClients() =
         if this.IsHost then
             let config = getConfig()

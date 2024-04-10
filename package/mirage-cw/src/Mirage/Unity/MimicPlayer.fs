@@ -52,15 +52,15 @@ type MimicPlayer() as self =
             let mimickingPlayer = playerPool[index]
             playerPool.RemoveAt index
             set MimickingPlayer mimickingPlayer
-            clientRpc this "MimicPlayerClientRpc" [|mimickingPlayer.refs.view.Owner.UserId|] // USERID is null for non local, use something else
+            clientRpc this "MimicPlayerClientRpc" [|mimickingPlayer.refs.view.ViewID|]
 
     [<CustomRPC>]
-    member this.MimicPlayerClientRpc(userId) =
+    member this.MimicPlayerClientRpc(viewId) =
         if this.IsHost then
             PlayerHandler.instance.players
-                |> find (fun player -> player.refs.view.Owner.UserId = userId)
+                |> find (fun player -> player.refs.view.ViewID = viewId)
                 |> set MimickingPlayer
             if Option.isNone MimickingPlayer.Value then
-                logError $"Failed to set mimicking player: {userId}"
+                logError $"Failed to set mimicking player. ViewId: {viewId}"
 
     member _.GetMimickingPlayer() = getValue MimickingPlayer

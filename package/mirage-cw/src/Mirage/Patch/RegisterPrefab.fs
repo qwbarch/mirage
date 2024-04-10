@@ -10,7 +10,6 @@ open Photon.Voice.PUN
 open Photon.Voice.Unity
 open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicVoice
-open Mirage.Core.Logger
 open Mirage.Unity.MimicPlayer
 
 type RegisterPrefab() =
