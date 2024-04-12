@@ -1,11 +1,9 @@
 module Mirage.Unity.ConfigHandler
 
-open UnityEngine
 open MyceliumNetworking
 open Mirage.Unity.RpcBehaviour
 open Mirage.Core.Config
 open Mirage.Core.Field
-open Mirage.Core.Logger
 
 [<AllowNullLiteral>]
 type ConfigHandler() =
@@ -13,7 +11,8 @@ type ConfigHandler() =
 
     static member val internal Instance = null with get, set
 
-    member this.Awake() =
+    override this.Awake() =
+        base.Awake()
         ConfigHandler.Instance <- this
 
     override _.OnDestroy() =

@@ -13,10 +13,10 @@ type RpcBehaviour() =
 
     member val PhotonView: PhotonView = null with get, set
 
-    member val IsHost = MyceliumNetwork.IsHost
+    member val IsHost = PhotonNetwork.IsMasterClient
 
-    abstract member Start : unit -> unit
-    default this.Start() =
+    abstract member Awake : unit -> unit
+    default this.Awake() =
         this.PhotonView <- this.GetComponent<PhotonView>()
         MyceliumNetwork.RegisterNetworkObject(
             this,

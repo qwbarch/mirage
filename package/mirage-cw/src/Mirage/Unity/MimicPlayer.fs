@@ -1,12 +1,12 @@
 module Mirage.Unity.MimicPlayer
 
-open MyceliumNetworking
+open FSharpPlus
 open System
 open System.Collections.Generic
+open MyceliumNetworking
 open Mirage.Core.Field
 open Mirage.Unity.RpcBehaviour
 open Mirage.Core.Logger
-open FSharpPlus
 open Mirage.Core.Config
 
 /// Holds what players that can be mimicked, to avoid duplicates.
@@ -42,8 +42,7 @@ type MimicPlayer() as self =
             | "Larva" -> config.larva
             | _ -> false
 
-    override this.Start() =
-        base.Start()
+    member this.Start() =
         if this.IsHost && isEnemyEnabled() then
             let players = PlayerHandler.instance.players
             if playerPool.Count = 0 then
@@ -56,7 +55,7 @@ type MimicPlayer() as self =
 
     [<CustomRPC>]
     member this.MimicPlayerClientRpc(viewId) =
-        if this.IsHost then
+        if not this.IsHost then
             PlayerHandler.instance.players
                 |> find (fun player -> player.refs.view.ViewID = viewId)
                 |> set MimickingPlayer

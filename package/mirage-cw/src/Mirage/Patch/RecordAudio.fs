@@ -18,7 +18,6 @@ open Mirage.Core.Audio.Format
 open Mirage.Core.Audio.Resampler
 open Mirage.Core.Field
 open Mirage.Core.Audio.Recording
-open Mirage.Core.Logger
 
 type MicrophoneAudio =
     private

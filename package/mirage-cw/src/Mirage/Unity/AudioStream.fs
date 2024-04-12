@@ -40,7 +40,7 @@ type AudioStream() =
     /// <b>Host only.</b><br />
     /// The client id to accept audio bytes from, and
     /// the current upload bytes of compressed audio.
-    let CurrentUpload = field<int * MemoryStream>()
+    let CurrentUpload = field<Player * MemoryStream>()
 
     let getAudioSource = get AudioSource "AudioSource"
     let getAudioSender = get AudioSender "AudioSender"
@@ -180,40 +180,47 @@ type AudioStream() =
                             return compressAudio audioReader
                         }
                 serverRpc this "InitializeUploadServerRpc" [|clientId|]
-                let sendFrame frameData = serverRpc this "UploadFrameServerRpc" [|frameData|]
+                let sendFrame rawData =
+                    serverRpc this "UploadFrameServerRpc" [|rawData; clientId|]
                 sendFrame audioReader.xingHeader.frame.RawData
                 let onFinish () =
-                    serverRpc this "UploadAudioFinishedServerRpc" zero
+                    serverRpc this "UploadAudioFinishedServerRpc" [|clientId|]
                     setNone AudioUploader
-                let (sender, _) = startSender (sendFrame<< _.rawData) onFinish audioReader
+                let (sender, _) = startSender (sendFrame << _.rawData) onFinish audioReader
                 sendAudio sender
                 set AudioUploader sender
             }
 
     /// Initialize the audio upload by sending the server the required pcm header.
     [<CustomRPC>]
-    member _.InitializeUploadServerRpc(clientId) =
-        if clientId = Player.localPlayer.refs.view.ViewID then
-            iter (dispose << snd) CurrentUpload.Value
-            set CurrentUpload (clientId, new MemoryStream())
+    member this.InitializeUploadServerRpc(clientId) =
+        handleResult <| monad' {
+            if this.IsHost then
+                iter (dispose << snd) CurrentUpload.Value
+                let! uploader =
+                    PlayerHandler.instance.players
+                        |> tryFind (fun player -> player.refs.view.ViewID = clientId) 
+                        |> Option.toResultWith $"Uploading player viewId was not found: {clientId}"
+                set CurrentUpload (uploader, new MemoryStream())
+        }
 
     /// Initialize the audio upload by sending the server the required pcm header.
     [<CustomRPC>]
-    member this.UploadFrameServerRpc(frameData: array<byte>) =
+    member this.UploadFrameServerRpc(frameData: byte[], clientId) =
         ignore <| monad' {
             if this.IsHost then
-                let! (clientId, uploadStream) = getCurrentUpload "UploadFrameServerRpc"
-                if clientId = Player.localPlayer.refs.view.ViewID then
+                let! (player, uploadStream) = getCurrentUpload "UploadFrameServerRpc"
+                if clientId = player.refs.view.ViewID then
                     uploadStream.Write frameData
         }
 
     /// Broadcast the uploaded audio.
     [<CustomRPC>]
-    member this.UploadAudioFinishedServerRpc() =
+    member this.UploadAudioFinishedServerRpc(clientId) =
         handleResult <| monad' {
             if this.IsHost then
-                let! (clientId, uploadStream) = getCurrentUpload "StreamAudioFromUploadServerRpc"
-                if clientId = Player.localPlayer.refs.view.ViewID then
+                let! (player, uploadStream) = getCurrentUpload "StreamAudioFromUploadServerRpc"
+                if clientId = player.refs.view.ViewID then
                     uploadStream.Position <- 0
                     let audioData = uploadStream.ToArray()
                     uploadStream.Dispose()

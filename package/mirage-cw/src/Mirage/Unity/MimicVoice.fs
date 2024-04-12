@@ -3,7 +3,6 @@ module Mirage.Unity.MimicVoice
 #nowarn "40"
 
 open System
-open System.IO
 open FSharpPlus
 open FSharpPlus.Data
 open UnityEngine
@@ -39,10 +38,10 @@ type MimicVoice() as self =
                 let! mimicPlayer = getMimicPlayer methodName
                 let! audioStream = getAudioStream methodName
                 ignore << runAsync self.destroyCancellationToken << OptionT.run <| monad {
-                    let! player = OptionT << result <| mimicPlayer.GetMimickingPlayer()
-                    let! recording = OptionT <| getRecording recordingManager
                     try
+                        let! player = OptionT << result <| mimicPlayer.GetMimickingPlayer()
                         if player = Player.localPlayer then
+                            let! recording = OptionT <| getRecording recordingManager
                             if self.IsHost then
                                 audioStream.StreamAudioFromFile recording
                             else
@@ -64,8 +63,7 @@ type MimicVoice() as self =
             }
         runAsync self.destroyCancellationToken runMimicLoop
 
-    override this.Start() =
-        base.Start()
+    member this.Start() =
         let playback = Object.Instantiate<GameObject> PlaybackPrefab
         playback.transform.parent <- this.transform
         setNullable Playback playback
@@ -74,11 +72,6 @@ type MimicVoice() as self =
         audioStream.SetAudioSource <| playback.GetComponent<AudioSource>()
         setNullable AudioStream audioStream
         setNullable MimicPlayer <| this.gameObject.GetComponent<MimicPlayer>()
-
-        let filePath = $"{Application.dataPath}/../Mirage/speech.wav"
-        if this.IsHost && File.Exists filePath then
-            audioStream.StreamAudioFromFile filePath
-
         startVoiceMimic()
 
     member this.LateUpdate() =
