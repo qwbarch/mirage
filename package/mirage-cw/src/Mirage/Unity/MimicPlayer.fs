@@ -8,6 +8,7 @@ open Mirage.Core.Field
 open Mirage.Unity.RpcBehaviour
 open Mirage.Core.Logger
 open Mirage.Core.Config
+open Mirage.Core.Monad
 
 /// Holds what players that can be mimicked, to avoid duplicates.
 let playerPool = new List<Player>()
@@ -51,7 +52,11 @@ type MimicPlayer() as self =
             let mimickingPlayer = playerPool[index]
             playerPool.RemoveAt index
             set MimickingPlayer mimickingPlayer
-            clientRpc this "MimicPlayerClientRpc" [|mimickingPlayer.refs.view.ViewID|]
+            runAsync self.destroyCancellationToken <| async {
+                // Bandaid fix to wait for network objects to instantiate on clients, since Mycelium doesn't handle this edge-case yet.
+                do! Async.Sleep 2000
+                clientRpc this "MimicPlayerClientRpc" [|mimickingPlayer.refs.view.ViewID|]
+            }
 
     [<CustomRPC>]
     member this.MimicPlayerClientRpc(viewId) =

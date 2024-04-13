@@ -5,6 +5,7 @@ module Mirage.Patch.RecordAudio
 open System
 open System.IO
 open System.Threading
+open Cysharp.Threading.Tasks
 open FSharpPlus
 open FSharpx.Control
 open HarmonyLib
@@ -13,7 +14,6 @@ open WebRtcVadSharp
 open Photon.Voice.PUN
 open NAudio.Wave
 open Microsoft.FSharp.Core
-open Mirage.Core.Monad
 open Mirage.Core.Audio.Format
 open Mirage.Core.Audio.Resampler
 open Mirage.Core.Field
@@ -24,6 +24,7 @@ type MicrophoneAudio =
         {   samples: float32[]
             sampleRate: int
             channels: int
+            isRecording: bool
         }
 
 let private get<'A> (field: Field<'A>) = field.Value
@@ -45,19 +46,13 @@ type RecordAudio() =
                 if Option.isNone resampler then
                     resampler <- Some <| defaultResampler audio.sampleRate 16000
                 let resampledPcm = toPCMBytes <| resample resampler.Value audio.samples
-                let speechDetected = vad.HasSpeech(resampledPcm, SampleRate.Is16kHz, FrameLength.Is20ms)
-                let isRecording =
-                    VoiceView.RecorderInUse.IsCurrentlyTransmitting // Only on when push-to-talk is enabled. Always on if voice activity is enabled.
-                        && not (isNull Player.localPlayer)
-                        && not Player.localPlayer.data.dead
-
-                if speechDetected then
+                if vad.HasSpeech(resampledPcm, SampleRate.Is16kHz, FrameLength.Is20ms) then
                     vadDisabledFrames <- 0
                     framesWritten <- framesWritten + 1
                 else
                     vadDisabledFrames <- vadDisabledFrames + 1
 
-                if isRecording && vadDisabledFrames <= 8 then // 160ms of audio
+                if audio.isRecording && vadDisabledFrames <= 8 then // 160ms of audio
                     let defaultRecording () =
                         framesWritten <- 0
                         ignore <| Directory.CreateDirectory RecordingDirectory
@@ -67,9 +62,10 @@ type RecordAudio() =
                         set Recording recording
                         recording
                     let recording = Option.defaultWith defaultRecording <| get Recording
-                    do! recording.WriteAsync (toPCMBytes audio.samples)
-                        |> _.AsTask()
-                        |> Async.AwaitTask
+                    return!
+                        recording.WriteAsync (toPCMBytes audio.samples)
+                            |> _.AsTask()
+                            |> Async.AwaitTask
                 else
                     ignore <| monad' {
                         let! recording = getValue Recording 
@@ -78,16 +74,14 @@ type RecordAudio() =
                         setNone FilePath
                         dispose recording
                         if framesWritten <= 16 then
-                            try
-                                File.Delete filePath
+                            try File.Delete filePath
                             with | _ -> ()
                         vadDisabledFrames <- 0
                         framesWritten <- 0
                     }
                 return! consumer
             }
-        let canceller = new CancellationTokenSource()
-        forkAsync canceller.Token consumer
+        Async.Start consumer
         channel
 
     [<HarmonyPostfix>]
@@ -103,4 +97,8 @@ type RecordAudio() =
             {   samples = buffer
                 sampleRate = sampleRate
                 channels = channels
+                isRecording =
+                    VoiceView.RecorderInUse.IsCurrentlyTransmitting // Only on when push-to-talk is enabled. Always on if voice activity is enabled.
+                        && not (isNull Player.localPlayer)
+                        && not Player.localPlayer.data.dead
             }

@@ -29,9 +29,6 @@ type RegisterPrefab() =
                     typeof<Recorder>
                     typeof<PlayerVoiceHandler>
                 ]
-            // Disabling occlusion because every time a monster slightly turns, its audio becomes quiet.
-            // This is less realistic compared to an actual player's voice, but it sounds less "buggy".
-            //PlaybackPrefab.GetComponent<SteamAudioSource>().occlusion <- false
 
     [<HarmonyPostfix>]
     [<HarmonyPatch(typeof<RoundSpawner>, "Start")>]

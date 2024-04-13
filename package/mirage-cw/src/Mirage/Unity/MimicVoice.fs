@@ -61,7 +61,11 @@ type MimicVoice() as self =
                 return! Async.Sleep delay
                 return! runMimicLoop
             }
-        runAsync self.destroyCancellationToken runMimicLoop
+        runAsync self.destroyCancellationToken <| async {
+            // Bandaid fix to wait for network objects to instantiate on clients, since Mycelium doesn't handle this edge-case yet.
+            return! Async.Sleep 5000
+            return! runMimicLoop
+        }
 
     member this.Start() =
         let playback = Object.Instantiate<GameObject> PlaybackPrefab
