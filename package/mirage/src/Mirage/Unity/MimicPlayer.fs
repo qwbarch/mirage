@@ -38,14 +38,19 @@ type MimicPlayer() =
             logInfo $"{enemyAI.GetType().Name}({mimicId}) - {message}"
         }
 
-    let randomPlayer () =
+    let rec randomPlayer () =
         let round = StartOfRound.Instance
         if playerPool.Count = 0 then
             playerPool.AddRange [0..round.connectedPlayersAmount]
         let index = random.Next playerPool.Count
         let playerId = playerPool[index]
         playerPool.RemoveAt index
-        round.allPlayerScripts[playerId]
+        // If a disconnected, the index might be out of bounds. In that case, fetch a new id.
+        // This is a simple band-aid fix and isn't ideal, but this'll do for now.
+        if playerId >= round.connectedPlayersAmount then
+            randomPlayer()
+        else
+            round.allPlayerScripts[playerId]
 
     let mimicPlayer (player: PlayerControllerB) (maskedEnemy: MaskedPlayerEnemy) =
         if not (isNull maskedEnemy) then
