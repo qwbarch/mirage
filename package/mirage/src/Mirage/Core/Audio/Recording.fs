@@ -77,15 +77,12 @@ let internal getRecording manager =
                     let! recordings = getRecordings
                     manager.recordings.Clear()
                     manager.recordings.AddRange recordings
-                logInfo $"recordings: {manager.recordings.Count}"
                 return
                     // Recordings can still be empty.
                     if manager.recordings.Count = 0 then None
                     else
                         let index = manager.random.Next manager.recordings.Count
-                        logInfo $"index: {index}"
                         let recording = manager.recordings[index]
                         manager.recordings.RemoveAt index
-                        logInfo $"recordings size after removed: {manager.recordings.Count}"
                         Some recording
         }

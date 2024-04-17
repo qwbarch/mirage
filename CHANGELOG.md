@@ -3,6 +3,7 @@
 ### 1.4.0
 
 - Added a config entry for the new enemies (butler, butler bees, flower snake, old bird).
+- Removed debug logs that I previously left in by accident in ``v1.3.2``.
 
 ### 1.3.2
 

@@ -12,7 +12,7 @@ open Mirage.Core.Logger
 let private get<'A> = getter<'A> "MimicPlayer"
 
 /// Holds what players that can be mimicked, to avoid duplicates.
-let playerPool = new List<int>()
+let private playerPool = new List<int>()
 
 /// <summary>
 /// A component that attaches to an <b>EnemyAI</b> to mimic a player.
