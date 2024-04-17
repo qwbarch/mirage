@@ -217,6 +217,34 @@ type internal LocalConfig(config: ConfigFile) =
             false,
             "Whether or not the thumper should mimic voices."
         )
+    member val EnableButlerBees =
+        config.Bind<bool>(
+            imitateSection,
+            "EnableButlerBees",
+            false,
+            "Whether or not butler bees should mimic voices."
+        )
+    member val EnableButler =
+        config.Bind<bool>(
+            imitateSection,
+            "EnableButler",
+            false,
+            "Whether or not the butler should mimic voices."
+        )
+    member val EnableFlowerSnake =
+        config.Bind<bool>(
+            imitateSection,
+            "EnableFlowerSnake",
+            false,
+            "Whether or not the flower snake should mimic voices."
+        )
+    member val EnableOldBird =
+        config.Bind<bool>(
+            imitateSection,
+            "EnableOldBird",
+            false,
+            "Whether or not the old bird should mimic voices."
+        )
     member val EnableModdedEnemies =
         config.Bind<bool>(
             imitateSection,
@@ -309,6 +337,10 @@ type internal SyncedConfig =
         enableSnareFlea: bool
         enableSporeLizard: bool
         enableThumper: bool
+        enableButlerBees: bool
+        enableButler: bool
+        enableFlowerSnake: bool
+        enableOldBird: bool
         enableModdedEnemies: bool
         enablePenalty: bool
         enableOverrideSpawnChance: bool
@@ -351,6 +383,10 @@ let private toSyncedConfig (config: LocalConfig) =
         enableSnareFlea = config.EnableSnareFlea.Value
         enableSporeLizard = config.EnableSporeLizard.Value
         enableThumper = config.EnableThumper.Value
+        enableButlerBees = config.EnableButlerBees.Value
+        enableButler = config.EnableButler.Value
+        enableFlowerSnake = config.EnableFlowerSnake.Value
+        enableOldBird = config.EnableOldBird.Value
         enableModdedEnemies = config.EnableModdedEnemies.Value
         enablePenalty = config.EnablePenalty.Value
         enableOverrideSpawnChance = config.EnableOverrideSpawnChance.Value

@@ -1,5 +1,9 @@
 ## Changelog
 
+### 1.4.0
+
+- Added a config entry for the new enemies (butler, butler bees, flower snake, old bird).
+
 ### 1.3.2
 
 - Fixed a bug introduced in ``v1.3.0``, where some players didn't have their recordings folder deleted upon closing the game.

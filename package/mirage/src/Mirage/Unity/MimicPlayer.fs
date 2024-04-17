@@ -60,25 +60,29 @@ type MimicPlayer() =
 
     let mimicEnemyEnabled (enemyAI: EnemyAI) =
         let config = getConfig()
-        match enemyAI with
-            | :? DressGirlAI -> false // DressGirlAI sets the mimicking player after choosing who to haunt.
-            | :? BaboonBirdAI -> config.enableBaboonHawk
-            | :? FlowermanAI -> config.enableBracken
-            | :? SandSpiderAI -> config.enableSpider
-            | :? DocileLocustBeesAI -> config.enableLocustSwarm
-            | :? RedLocustBees -> config.enableBees
-            | :? SpringManAI -> config.enableCoilHead
-            | :? SandWormAI -> config.enableEarthLeviathan
-            | :? MouthDogAI -> config.enableEyelessDog
-            | :? ForestGiantAI -> config.enableForestKeeper
-            | :? HoarderBugAI -> config.enableHoardingBug
-            | :? BlobAI -> config.enableHygrodere
-            | :? JesterAI -> config.enableJester
-            | :? DoublewingAI -> config.enableManticoil
-            | :? NutcrackerEnemyAI -> config.enableNutcracker
-            | :? CentipedeAI -> config.enableSnareFlea
-            | :? PufferAI -> config.enableSporeLizard
-            | :? CrawlerAI -> config.enableThumper
+        match enemyAI.GetType().Name with
+            | "DressGirlAI" -> false // DressGirlAI sets the mimicking player after choosing who to haunt.
+            | "BaboonBirdAI" -> config.enableBaboonHawk
+            | "FlowermanAI" -> config.enableBracken
+            | "SandSpiderAI" -> config.enableSpider
+            | "DocileLocustBeesAI" -> config.enableLocustSwarm
+            | "RedLocustBees" -> config.enableBees
+            | "SpringManAI" -> config.enableCoilHead
+            | "SandWormAI" -> config.enableEarthLeviathan
+            | "MouthDogAI" -> config.enableEyelessDog
+            | "ForestGiantAI" -> config.enableForestKeeper
+            | "HoarderBugAI" -> config.enableHoardingBug
+            | "BlobAI" -> config.enableHygrodere
+            | "JesterAI" -> config.enableJester
+            | "DoublewingAI" -> config.enableManticoil
+            | "NutcrackerEnemyAI" -> config.enableNutcracker
+            | "CentipedeAI" -> config.enableSnareFlea
+            | "PufferAI" -> config.enableSporeLizard
+            | "CrawlerAI" -> config.enableThumper
+            | "ButlerBeesEnemyAI" -> config.enableButlerBees
+            | "ButlerEnemyAI" -> config.enableButler
+            | "FlowerSnakeEnemy" -> config.enableFlowerSnake
+            | "RadMechAI" -> config.enableOldBird
             | _ -> config.enableModdedEnemies
 
     member this.Awake() =
