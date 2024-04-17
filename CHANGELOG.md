@@ -4,6 +4,8 @@
 
 - Added a config entry for the new enemies (butler, butler bees, flower snake, old bird).
 - Removed debug logs that I previously left in by accident in ``v1.3.2``.
+- Fixed a bug that caused modded enemies that extends from a vanilla enemy type to share its config entry.
+- Fixed a bug that potentially caused an out-of-bounds error if a player dc'd when an enemy tries to mimic a player.
 
 ### 1.3.2
 
