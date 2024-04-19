@@ -1,5 +1,9 @@
 ## Changelog
 
+### 1.2.2
+
+- Fixed a performance issue that caused the game to stutter every couple seconds.
+
 ### 1.2.0
 
 - Fixed a bug that caused enemies to not play audio when mimicking non-host players.

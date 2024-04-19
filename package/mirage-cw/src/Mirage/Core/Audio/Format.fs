@@ -73,6 +73,9 @@ let fromPCMBytes (pcmData: byte[]) : float32[] =
 
 /// Converts pcm data represented as a float32 array to a byte array, assuming it contains 2 bytes per sample.
 let toPCMBytes (floatData: float32[]) : byte[] =
+    let buffer = Array.zeroCreate<byte> sizeof<int16>
     Array.init (floatData.Length * BytesPerSample) <| fun i ->
-        let bytes = BitConverter.GetBytes(int16 <| floatData.[i / BytesPerSample] * 32768.0f)
-        bytes.[i % BytesPerSample]
+        let value = int16 <| floatData[i / BytesPerSample] * 32768.0f
+        buffer[0] <- byte (value &&& 0xFFs)
+        buffer[1] <- byte (value >>> 8 &&& 0xFFs)
+        buffer[i % BytesPerSample]
