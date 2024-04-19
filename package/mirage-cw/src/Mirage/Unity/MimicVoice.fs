@@ -28,10 +28,8 @@ type MimicVoice() as self =
 
     let MimicPlayer = field<MimicPlayer>()
     let AudioStream = field<AudioStream>()
-    let HeadAudioSource = field<AudioSource>()
     let getMimicPlayer = get MimicPlayer "MimicPlayer"
     let getAudioStream = get AudioStream "AudioStream"
-    let getHeadAudioSource = get HeadAudioSource "HeadAudioSource"
 
     let startVoiceMimic () =
         let mimicVoice () =
@@ -80,8 +78,6 @@ type MimicVoice() as self =
         setNullable AudioStream audioStream
         let mimicPlayer = this.gameObject.GetComponent<MimicPlayer>()
         setNullable MimicPlayer mimicPlayer
-        flip iter (mimicPlayer.GetMimickingPlayer()) <| fun player  ->
-            audioSource.outputAudioMixerGroup <- player.transform.Find("HeadPosition/Voice").GetComponent<AudioSource>().outputAudioMixerGroup
         startVoiceMimic()
 
     member this.LateUpdate() =
@@ -95,6 +91,18 @@ type MimicVoice() as self =
             let methodName = "Update"
             let! audioStream = getAudioStream methodName
             let! audioSource = audioStream.GetAudioSource()
-            let! headAudioSource = getHeadAudioSource methodName
-            audioSource.outputAudioMixerGroup <- headAudioSource.outputAudioMixerGroup
+            let! mimicPlayer = getMimicPlayer methodName
+            match mimicPlayer.GetMimickingPlayer() with
+                | None -> audioSource.mute <- true
+                | Some mimickingPlayer ->
+                    let config = getConfig()
+                    if mimickingPlayer = Player.localPlayer then
+                        audioSource.volume <- getLocalConfig().LocalPlayerVolume.Value
+                    let isMimicLocalPlayerMuted () =
+                        let alwaysMute = getLocalConfig().LocalPlayerVolume.Value = 0f
+                        let muteWhileNotDead =
+                            config.muteLocalPlayerVoice
+                                && not mimickingPlayer.data.dead
+                        mimickingPlayer = Player.localPlayer && (muteWhileNotDead || alwaysMute)
+                    audioSource.mute <- isMimicLocalPlayerMuted()
         }

@@ -9,6 +9,8 @@ open Mirage.Unity.RpcBehaviour
 open Mirage.Core.Logger
 open Mirage.Core.Config
 open Mirage.Core.Monad
+open AudioStream
+open UnityEngine
 
 /// Holds what players that can be mimicked, to avoid duplicates.
 let playerPool = new List<Player>()
@@ -19,6 +21,14 @@ type MimicPlayer() as self =
 
     let random = Random()
     let MimickingPlayer = field()
+    let AudioStream = field<AudioStream>()
+
+    let setAudioMixer (player: Player) =
+        handleResult <| monad' {
+            let! audioStream = getter "MimicPlayer" AudioStream "AudioStream" "setAudioMixer"
+            let! audioSource = audioStream.GetAudioSource()
+            audioSource.outputAudioMixerGroup <- player.transform.Find("HeadPosition/Voice").GetComponent<AudioSource>().outputAudioMixerGroup
+        }
 
     let isEnemyEnabled () =
         let config = getConfig()
@@ -29,7 +39,7 @@ type MimicPlayer() as self =
             | "Slurper" -> config.slurper
             | "Spider" -> config.spider
             | "BigSlap" -> config.bigSlap
-            | "BigSlap_Small " -> config.bigSlapSmall
+            | "BigSlap_Small" -> config.bigSlapSmall
             | "Ear" -> config.ear
             | "Jello" -> config.jello
             | "Knifo" -> config.knifo
@@ -43,6 +53,10 @@ type MimicPlayer() as self =
             | "Larva" -> config.larva
             | _ -> false
 
+    override this.Awake() =
+        base.Awake()
+        set AudioStream <| this.GetComponent<AudioStream>()
+
     member this.Start() =
         if this.IsHost && isEnemyEnabled() then
             let players = PlayerHandler.instance.players
@@ -52,6 +66,7 @@ type MimicPlayer() as self =
             let mimickingPlayer = playerPool[index]
             playerPool.RemoveAt index
             set MimickingPlayer mimickingPlayer
+            setAudioMixer mimickingPlayer
             runAsync self.destroyCancellationToken <| async {
                 // Bandaid fix to wait for network objects to instantiate on clients, since Mycelium doesn't handle this edge-case yet.
                 do! Async.Sleep 2000
@@ -61,10 +76,12 @@ type MimicPlayer() as self =
     [<CustomRPC>]
     member this.MimicPlayerClientRpc(viewId) =
         if not this.IsHost then
-            PlayerHandler.instance.players
-                |> find (fun player -> player.refs.view.ViewID = viewId)
-                |> set MimickingPlayer
-            if Option.isNone MimickingPlayer.Value then
-                logError $"Failed to set mimicking player. ViewId: {viewId}"
+            let player =
+                PlayerHandler.instance.players
+                    |> tryFind (fun player -> player.refs.view.ViewID = viewId)
+            setOption MimickingPlayer player
+            match MimickingPlayer.Value with
+                | None -> logError $"Failed to set mimicking player. ViewId: {viewId}"
+                | Some player -> setAudioMixer player
 
     member _.GetMimickingPlayer() = getValue MimickingPlayer

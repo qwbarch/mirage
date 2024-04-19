@@ -44,6 +44,7 @@ type ConfigHandler() =
                     config.eyeGuy
                     config.bombs
                     config.larva
+                    config.muteLocalPlayerVoice
                 |]
 
     [<CustomRPC>]
@@ -67,7 +68,8 @@ type ConfigHandler() =
         dog,
         eyeGuy,
         bombs,
-        larva
+        larva,
+        muteLocalPlayerVoice
     ) =   
         if not this.IsHost then
             set SyncedConfig
@@ -91,4 +93,5 @@ type ConfigHandler() =
                     eyeGuy = eyeGuy
                     bombs = bombs
                     larva = larva
+                    muteLocalPlayerVoice = muteLocalPlayerVoice
                 }

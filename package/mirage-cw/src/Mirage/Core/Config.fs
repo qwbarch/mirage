@@ -24,6 +24,14 @@ type internal LocalConfig(config: ConfigFile) =
             12000,
             "The maximum amount of time in between voice playbacks (in milliseconds).\nThis only applies for masked enemies."
         )
+    member val MuteLocalPlayerVoice =
+        config.Bind<bool>(
+            voiceMimicSection,
+            "MuteLocalPlayerVoice",
+            false,
+            "If true, you can't hear your own voice from mimicking enemies while you are alive, but others can. When you die and become a spectator, you can hear your voice again.\n"
+                + "If false, you will always be able to hear your own voice from mimicking enemies."
+        )
     member val NeverDeleteVoiceClips =
         config.Bind<bool>(
             personalPreferenceSection,
@@ -31,6 +39,13 @@ type internal LocalConfig(config: ConfigFile) =
             false,
             "If set to false, voice clips will never get deleted. If set to false, voice clips are deleted upon closing the game.\n"
                 + "Since this setting is a personal preference, it is not synced to other players."
+        )
+    member val LocalPlayerVolume =
+        config.Bind<float32>(
+            personalPreferenceSection,
+            "LocalPlayerVolume",
+            1f,
+            "The volume for the local player's mimicked voice. This is setting is not synced, since the volume you want to use is personal preference. Must have a value of 0-1."
         )
     member val ToolkitWhisk =
         config.Bind<bool>(
@@ -167,6 +182,7 @@ type internal SyncedConfig =
         eyeGuy: bool
         bombs: bool
         larva: bool
+        muteLocalPlayerVoice: bool
     }
 
 let private toSyncedConfig (config: LocalConfig) =
@@ -190,6 +206,7 @@ let private toSyncedConfig (config: LocalConfig) =
         eyeGuy = config.EyeGuy.Value
         bombs = config.EyeGuy.Value
         larva = config.Larva.Value
+        muteLocalPlayerVoice = config.MuteLocalPlayerVoice.Value
     }
 
 /// <summary>
