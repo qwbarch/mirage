@@ -21,6 +21,7 @@ If you're making small changes for your friends, you will need to share the comp
 ## Acknowledgements
 
 - [RugbugRedfern](https://rugbug.net) - Mirage is heavily inspired by their Lethal Company mod, [Skinwalkers](https://thunderstore.io/c/lethal-company/p/RugbugRedfern/Skinwalkers/), and relies on [MyceliumNetworking](https://thunderstore.io/c/content-warning/p/RugbugRedfern/MyceliumNetworking/).
+- [Zaggy1024](https://github.com/Zaggy1024) - For pointing me towards setting up a debug build of the game, which is required for me to be able to run a performance profiler.
 
 ## Changelog
 
