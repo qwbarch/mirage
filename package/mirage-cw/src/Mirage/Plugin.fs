@@ -24,6 +24,7 @@ type Plugin() =
             initAsyncLogger()
             return! initConfig this.Config
             ignore <| LameDLL.LoadNativeDLL [|Path.GetDirectoryName this.Info.Location|]
+            deleteRecordings()
             Application.add_quitting deleteRecordings
             let harmony = new Harmony(pluginId)
             iter (unbox<Type> >> harmony.PatchAll)

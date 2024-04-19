@@ -9,7 +9,6 @@ open System.IO
 open System.Collections.Generic
 open Mirage.Core.Config
 open Mirage.Core.Monad
-open Mirage.Core.Logger
 
 /// The directory to save audio files in.
 let internal RecordingDirectory = $"{Application.dataPath}/../Mirage"

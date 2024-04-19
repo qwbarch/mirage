@@ -28,8 +28,10 @@ type MimicVoice() as self =
 
     let MimicPlayer = field<MimicPlayer>()
     let AudioStream = field<AudioStream>()
+    let HeadAudioSource = field<AudioSource>()
     let getMimicPlayer = get MimicPlayer "MimicPlayer"
     let getAudioStream = get AudioStream "AudioStream"
+    let getHeadAudioSource = get HeadAudioSource "HeadAudioSource"
 
     let startVoiceMimic () =
         let mimicVoice () =
@@ -73,13 +75,26 @@ type MimicVoice() as self =
         setNullable Playback playback
         playback.SetActive true
         let audioStream = this.GetComponent<AudioStream>()
-        audioStream.SetAudioSource <| playback.GetComponent<AudioSource>()
+        let audioSource = playback.GetComponent<AudioSource>()
+        audioStream.SetAudioSource audioSource
         setNullable AudioStream audioStream
-        setNullable MimicPlayer <| this.gameObject.GetComponent<MimicPlayer>()
+        let mimicPlayer = this.gameObject.GetComponent<MimicPlayer>()
+        setNullable MimicPlayer mimicPlayer
+        flip iter (mimicPlayer.GetMimickingPlayer()) <| fun player  ->
+            audioSource.outputAudioMixerGroup <- player.transform.Find("HeadPosition/Voice").GetComponent<AudioSource>().outputAudioMixerGroup
         startVoiceMimic()
 
     member this.LateUpdate() =
         // Update the playback component to always be on the same position as the parent.
         // This ensures audio plays from the correct position.
         flip iter Playback.Value <| fun playback ->
-        playback.transform.position <- this.transform.position
+            playback.transform.position <- this.transform.position
+
+    member _.Update() =
+        handleResult <| monad' {
+            let methodName = "Update"
+            let! audioStream = getAudioStream methodName
+            let! audioSource = audioStream.GetAudioSource()
+            let! headAudioSource = getHeadAudioSource methodName
+            audioSource.outputAudioMixerGroup <- headAudioSource.outputAudioMixerGroup
+        }

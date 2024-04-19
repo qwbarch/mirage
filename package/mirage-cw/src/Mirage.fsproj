@@ -15,7 +15,7 @@
     <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=.</PathMap>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="ContentWarning.GameLibs.Steam" Version="0.1.9-a-ngd.0" />
+    <PackageReference Include="ContentWarning.GameLibs.Steam" Version="0.1.9-b-ngd.0" />
     <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1" PrivateAssets="all" ExcludeAssets="runtime" />
     <PackageReference Include="BepInEx.Core" Version="5.4.21" />
     <PackageReference Include="UnityEngine.Modules" Version="2022.3.10" IncludeAssets="compile"/>

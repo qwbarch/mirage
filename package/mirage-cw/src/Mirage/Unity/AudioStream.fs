@@ -241,4 +241,4 @@ type AudioStream() =
             }
 
     member _.SetAudioSource(audioSource) = set AudioSource audioSource
-    member _.GetAudioSource() = get AudioSource "GetAudioSource"
+    member _.GetAudioSource() = getAudioSource "GetAudioSource"
