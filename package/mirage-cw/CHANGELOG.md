@@ -1,5 +1,17 @@
 ## Changelog
 
+### 1.3.0
+
+- Enemies mimicking voices now respects the volume slider for the player it mimics.
+- Added a config entry ``MuteLocalPlayerVoice``.
+    - When set to ``true``, enemies that mimic the local player cannot be heard until the player is dead (and spectating).
+    - When set to ``false``, enemies that mimic the local player can always be heard.
+    - Default value: ``false``.
+- Added a config entry ``LocalPlayerVolume``.
+    - A value between 0-1 that controls how loud enemies mimicking the local player should be.
+    - This setting personal preference, and is not synced to other players.
+    - Default value: ``1.0``.
+
 ### 1.2.2
 
 - Fixed a performance issue that caused the game to stutter every couple seconds.

@@ -45,7 +45,10 @@ type internal LocalConfig(config: ConfigFile) =
             personalPreferenceSection,
             "LocalPlayerVolume",
             1f,
-            "The volume for the local player's mimicked voice. This is setting is not synced, since the volume you want to use is personal preference. Must have a value of 0-1."
+            ConfigDescription(
+                "The volume for the local player's mimicked voice. This is setting is not synced, since the volume you want to use is personal preference.",
+                AcceptableValueRange<float32>(0f, 1f)
+            )
         )
     member val ToolkitWhisk =
         config.Bind<bool>(
