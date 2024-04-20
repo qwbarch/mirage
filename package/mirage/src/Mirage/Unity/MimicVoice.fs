@@ -135,7 +135,7 @@ type MimicVoice() as self =
                         enemyAI :? DressGirlAI && (
                             let dressGirlAI = enemyAI :?> DressGirlAI
                             let isVisible = dressGirlAI.staringInHaunt || dressGirlAI.moveTowardsDestination && dressGirlAI.movingTowardsTargetPlayer
-                            not <| dressGirlAI.hauntingLocalPlayer || not isVisible
+                            not dressGirlAI.hauntingLocalPlayer || not isVisible
                         )
                     let maskedEnemyIsHiding () =
                         enemyAI :? MaskedPlayerEnemy && Vector3.Distance(enemyAI.transform.position, (enemyAI :?> MaskedPlayerEnemy).shipHidingSpot) < 0.4f

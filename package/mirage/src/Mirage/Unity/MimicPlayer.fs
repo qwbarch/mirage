@@ -162,7 +162,7 @@ type MimicPlayer() =
                 // In singleplayer, the haunting player will always be the local player.
                 // In multiplayer, the haunting player will always be the non-local player.
                 let! enemyAI = getEnemyAI "Update" 
-                if (enemyAI : EnemyAI) :? DressGirlAI then
+                if (enemyAI : EnemyAI) :? DressGirlAI && getConfig().enableGhostGirl then
                     let dressGirlAI = enemyAI :?> DressGirlAI
                     let round = StartOfRound.Instance
 

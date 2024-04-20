@@ -1,8 +1,12 @@
 ## Changelog
 
-### 1.4.1
+### 1.5.0
 
 - Fixed ``LocalPlayerVolume`` being accidentally synced. Each player can now control the volume of their mimicked voices, as originally intended.
+- Fixed a bug that caused the ghost girl to mimic voices even with ``EnableGhostGirl`` set to ``false``.
+- Fixed a bug that caused the ghost girl to mimic voices at the wrong timings.
+- Recordings now also delete on game startup (previously only deleted when closing the game), while ``IgnoreRecordingsDeletion`` is set to ``false``.
+- Changed the way masked enemies disable the arms-out animation to hopefully get rid of the rare issue of it having its arms-out when it's not supposed to.
 
 ### 1.4.0
 

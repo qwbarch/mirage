@@ -92,7 +92,7 @@ type SpawnMaskedEnemy() =
     [<HarmonyPatch(typeof<MaskedPlayerEnemy>)>]
     [<HarmonyPatch("SetHandsOutServerRpc")>]
     [<HarmonyPatch("SetHandsOutClientRpc")>]
-    static member ``disable mirage hands out``() = getConfig().enableArmsOut
+    static member ``disable mirage hands out``(setOut: byref<bool>) = setOut <- getConfig().enableArmsOut
 
     [<HarmonyPrefix>]
     [<HarmonyPatch(typeof<MaskedPlayerEnemy>, "Start")>]
