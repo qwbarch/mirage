@@ -102,6 +102,7 @@ If you're making small changes for your friends, you will need to share the comp
 - [IAmBatby](https://github.com/IAmBatby) and [BananaPuncher714](https://github.com/BananaPuncher714) - For answering my spawn control related questions, regarding [LethalLevelLoader](https://thunderstore.io/c/lethal-company/p/IAmBatby/LethalLevelLoader/) and [LethalQuantities](https://thunderstore.io/c/lethal-company/p/BananaPuncher714/LethalQuantities/).
 - [TheDebbyCase](https://thunderstore.io/c/lethal-company/p/deB) - For the countless days spent helping me reproduce issues that other players were having.
 - [Zaggy1024](https://github.com/Zaggy1024) - For pointing me towards setting up a debug build of the game, which is required for me to be able to run a performance profiler.
+- [IAmBatby](https://github.com/IAmBatby) and [mattymatty](https://github.com/mattymatty97) - For their help/implementation on getting rid of the audio spatializer warning log spam.
 
 ## Changelog
 

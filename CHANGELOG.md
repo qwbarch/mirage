@@ -1,5 +1,12 @@
 ## Changelog
 
+### 1.5.1
+
+- Audio spatializer warning logs are now hidden.
+    - This is a vanilla bug that occured more often with Mirage, due to cloning audio sources used by the vanilla game.
+    - This log does not provide any value when debugging issues, so I opted to hide them instead.
+    - Thanks to [IAmBatby](https://github.com/IAmBatby) and [mattymatty](https://github.com/mattymatty97) for their help/implementation.
+
 ### 1.5.0
 
 - Fixed ``LocalPlayerVolume`` being accidentally synced. Each player can now control the volume of their mimicked voices, as originally intended.

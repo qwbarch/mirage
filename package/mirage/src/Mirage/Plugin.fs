@@ -17,6 +17,7 @@ open Mirage.PluginInfo
 open Mirage.Core.Config
 open Mirage.Core.Logger
 open Mirage.Core.Audio.Recording
+open Mirage.Patch.AudioSpatializer
 open Mirage.Patch.RegisterPrefab
 open Mirage.Patch.SyncConfig
 open Mirage.Patch.RemovePenalty
@@ -60,7 +61,8 @@ type Plugin() =
             Application.add_quitting deleteRecordings
             let harmony = new Harmony(pluginId)
             iter (unbox<Type> >> harmony.PatchAll) 
-                [   typeof<RegisterPrefab>
+                [   typeof<AudioSpatializer>
+                    typeof<RegisterPrefab>
                     typeof<RecordAudio>
                     typeof<SpawnMaskedEnemy>
                     typeof<SyncConfig>

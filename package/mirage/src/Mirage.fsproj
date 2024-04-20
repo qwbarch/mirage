@@ -57,6 +57,7 @@
     <Compile Include="Mirage/Unity/AudioStream.fs" />
     <Compile Include="Mirage/Unity/MimicPlayer.fs" />
     <Compile Include="Mirage/Unity/MimicVoice.fs" />
+    <Compile Include="Mirage/Patch/AudioSpatializer.fs" />
     <Compile Include="Mirage/Patch/RecordAudio.fs" />
     <Compile Include="Mirage/Patch/RegisterPrefab.fs" />
     <Compile Include="Mirage/Patch/SyncConfig.fs" />
