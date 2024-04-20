@@ -23,13 +23,6 @@ type MimicPlayer() as self =
     let MimickingPlayer = field()
     let AudioStream = field<AudioStream>()
 
-    let setAudioMixer (player: Player) =
-        handleResult <| monad' {
-            let! audioStream = getter "MimicPlayer" AudioStream "AudioStream" "setAudioMixer"
-            let! audioSource = audioStream.GetAudioSource()
-            audioSource.outputAudioMixerGroup <- player.transform.Find("HeadPosition/Voice").GetComponent<AudioSource>().outputAudioMixerGroup
-        }
-
     let isEnemyEnabled () =
         let config = getConfig()
         match self.transform.parent.gameObject.name.Replace("(Clone)", zero) with
@@ -66,7 +59,7 @@ type MimicPlayer() as self =
             let mimickingPlayer = playerPool[index]
             playerPool.RemoveAt index
             set MimickingPlayer mimickingPlayer
-            setAudioMixer mimickingPlayer
+            this.GetComponent<AudioStream>().SetAudioMixer mimickingPlayer
             runAsync self.destroyCancellationToken <| async {
                 // Bandaid fix to wait for network objects to instantiate on clients, since Mycelium doesn't handle this edge-case yet.
                 do! Async.Sleep 2000
@@ -75,13 +68,16 @@ type MimicPlayer() as self =
 
     [<CustomRPC>]
     member this.MimicPlayerClientRpc(viewId) =
-        if not this.IsHost then
-            let player =
-                PlayerHandler.instance.players
-                    |> tryFind (fun player -> player.refs.view.ViewID = viewId)
-            setOption MimickingPlayer player
-            match MimickingPlayer.Value with
-                | None -> logError $"Failed to set mimicking player. ViewId: {viewId}"
-                | Some player -> setAudioMixer player
+        handleResult <| monad' {
+            if not this.IsHost then
+                let player =
+                    PlayerHandler.instance.players
+                        |> tryFind (fun player -> player.refs.view.ViewID = viewId)
+                setOption MimickingPlayer player
+                let! audioStream = getter "MimicPlayer" AudioStream "AudioStream" "MimicPlayerClientRpc"
+                match MimickingPlayer.Value with
+                    | None -> logError $"Failed to set mimicking player. ViewId: {viewId}"
+                    | Some player -> audioStream.SetAudioMixer player
+        }
 
     member _.GetMimickingPlayer() = getValue MimickingPlayer

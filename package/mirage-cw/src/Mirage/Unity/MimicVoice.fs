@@ -67,7 +67,8 @@ type MimicVoice() as self =
             return! runMimicLoop
         }
 
-    member this.Start() =
+    override this.Awake() =
+        base.Awake()
         let playback = Object.Instantiate<GameObject> PlaybackPrefab
         playback.transform.parent <- this.transform
         setNullable Playback playback
@@ -78,7 +79,8 @@ type MimicVoice() as self =
         setNullable AudioStream audioStream
         let mimicPlayer = this.gameObject.GetComponent<MimicPlayer>()
         setNullable MimicPlayer mimicPlayer
-        startVoiceMimic()
+
+    member _.Start() = startVoiceMimic()
 
     member this.LateUpdate() =
         // Update the playback component to always be on the same position as the parent.

@@ -242,3 +242,9 @@ type AudioStream() =
 
     member _.SetAudioSource(audioSource) = set AudioSource audioSource
     member _.GetAudioSource() = getAudioSource "GetAudioSource"
+
+    member _.SetAudioMixer(player: Player) =
+        handleResult <| monad' {
+            let! audioSource = getAudioSource "SetAudioMixer"
+            audioSource.outputAudioMixerGroup <- player.transform.Find("HeadPosition/Voice").GetComponent<AudioSource>().outputAudioMixerGroup
+        }
