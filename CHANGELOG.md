@@ -1,5 +1,9 @@
 ## Changelog
 
+### 1.4.1
+
+- Fixed ``LocalPlayerVolume`` being accidentally synced. Each player can now control the volume of their mimicked voices, as originally intended.
+
 ### 1.4.0
 
 - Added a config entry for the new enemies (butler, butler bees, flower snake, old bird).

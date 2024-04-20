@@ -316,7 +316,6 @@ type internal SyncedConfig =
         imitateMaxDelayNonMasked: int
         imitateMode: ImitateMode
         muteLocalPlayerVoice: bool
-        localPlayerVolume: float32
         deleteRecordingsPerRound: bool
         enableMaskedEnemy: bool
         enableBaboonHawk: bool
@@ -362,7 +361,6 @@ let private toSyncedConfig (config: LocalConfig) =
                 | "norepeat" -> ImitateNoRepeat
                 | mode -> invalidOp $"Synced invalid ImitateMode value: {mode}"
         muteLocalPlayerVoice = config.MuteLocalPlayerVoice.Value
-        localPlayerVolume = config.LocalPlayerVolume.Value
         deleteRecordingsPerRound = config.DeleteRecordingsPerRound.Value
         enableMaskedEnemy = config.EnableMaskedEnemy.Value
         enableBaboonHawk = config.EnableBaboonHawk.Value

@@ -140,7 +140,7 @@ type MimicVoice() as self =
                     let maskedEnemyIsHiding () =
                         enemyAI :? MaskedPlayerEnemy && Vector3.Distance(enemyAI.transform.position, (enemyAI :?> MaskedPlayerEnemy).shipHidingSpot) < 0.4f
                     if mimickingPlayer = localPlayer then
-                        audioSource.volume <- config.localPlayerVolume
+                        audioSource.volume <- getLocalConfig().LocalPlayerVolume.Value
                     audioSource.outputAudioMixerGroup <- SoundManager.Instance.playerVoiceMixers[int mimickingPlayer.playerClientId]
                     audioSource.mute <-
                         enemyAI.isEnemyDead
