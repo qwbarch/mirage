@@ -4,9 +4,7 @@ open System
 open System.Threading
 open System.Collections.Generic
 
-/// <summary>
 /// A base type for transactional variables
-/// </summary>
 [<AbstractClass>]
 type TVar() =
     static let nextId = ref 0
@@ -15,9 +13,7 @@ type TVar() =
     interface IComparable<TVar> with
         member __.CompareTo(other) = _id.CompareTo(other.Id)
 
-/// <summary>
 /// A transactional variable.
-/// </summary>
 [<Sealed>]
 type TVar<'T> internal (value: 'T, cmp: IEqualityComparer<'T>) =
     inherit TVar()
@@ -74,9 +70,7 @@ type private RetryException() =
 type private CommitFailedException() =
     inherit Exception()
 
-/// <summary>
 /// A transactional memory log.
-/// </summary>
 [<Sealed; AllowNullLiteral>]
 type TLog private (outer) =
     static let locker = obj()

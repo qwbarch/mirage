@@ -16,54 +16,17 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1" PrivateAssets="all" />
-    <PackageReference Include="LethalCompany.GameLibs.Steam" Version="49.0.0-alpha.1" Publicize="true" />
-    <PackageReference Include="UniTask" Version="2.5.0" />
-    <PackageReference Include="FSharpPlus" Version="1.5.0" />
-    <PackageReference Include="HarmonyX" Version="2.12.0" />
-    <PackageReference Include="FSharp.Control.AsyncSeq" Version="3.2.1" />
-    <PackageReference Include="TeamBMX.LobbyCompatibility" Version="1.0.3" PrivateAssets="all" />
-    <Reference Include="FSharpx.Async">
-      <HintPath>../../../lib/FSharpx.Async.dll</HintPath>
+    <PackageReference Include="BepInEx.Core" Version="5.4.21" />
+    <PackageReference Include="LethalCompany.GameLibs.Steam" Version="50.0.1-ngd.0" Publicize="true" />
+    <Reference Include="MMHOOK_Assembly-CSharp">
+      <HintPath>../../../lib/MMHOOK/MMHOOK_Assembly-CSharp.dll</HintPath>
     </Reference>
-    <Reference Include="BepInEx">
-      <HintPath>../../../lib/BepInEx.dll</HintPath>
-    </Reference>
-    <Reference Include="NAudio">
-      <HintPath>../../../lib/NAudio/NAudio.dll</HintPath>
-    </Reference>
-    <Reference Include="NAudio.Core" Publicize="true">
-      <HintPath>../../../lib/NAudio/NAudio.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="NAudio.WinMM">
-      <HintPath>../../../lib/NAudio/NAudio.WinMM.dll</HintPath>
-    </Reference>
-    <Reference Include="NAudio.Lame">
-      <HintPath>../../../lib/NAudio.Lame/NAudio.Lame.dll</HintPath>
+    <Reference Include="MMHOOK_DissonanceVoip">
+      <HintPath>../../../lib/MMHOOK/MMHOOK_DissonanceVoip.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Mirage/PluginInfo.fs" />
-    <Compile Include="Mirage/Core/Monad.fs" />
-    <Compile Include="Mirage/Core/Logger.fs" />
-    <Compile Include="Mirage/Core/Field.fs" />
-    <Compile Include="Mirage/Core/Config.fs" />
-    <Compile Include="Mirage/Core/Audio/Data.fs" />
-    <Compile Include="Mirage/Core/Audio/Format.fs" />
-    <Compile Include="Mirage/Core/Audio/Recording.fs" />
-    <Compile Include="Mirage/Core/Audio/Network/Stream.fs" />
-    <Compile Include="Mirage/Unity/Network.fs" />
-    <Compile Include="Mirage/Core/Audio/Network/Receiver.fs" />
-    <Compile Include="Mirage/Core/Audio/Network/Sender.fs" />
-    <Compile Include="Mirage/Unity/AudioStream.fs" />
-    <Compile Include="Mirage/Unity/MimicPlayer.fs" />
-    <Compile Include="Mirage/Unity/MimicVoice.fs" />
-    <Compile Include="Mirage/Patch/RecordAudio.fs" />
-    <Compile Include="Mirage/Patch/RegisterPrefab.fs" />
-    <Compile Include="Mirage/Patch/SyncConfig.fs" />
-    <Compile Include="Mirage/Patch/RemovePenalty.fs" />
-    <Compile Include="Mirage/Patch/SpawnMaskedEnemy.fs" />
-    <Compile Include="Mirage/Netcode.fs" />
     <Compile Include="Mirage/Plugin.fs" />
-    <Compile Include="Properties/AssemblyInfo.fs" />
   </ItemGroup>
 </Project>
