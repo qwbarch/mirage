@@ -1,4 +1,4 @@
-module Mirage.Utilities.TVar
+module Mirage.Core.TVar
 
 open System
 open System.Threading

@@ -1,4 +1,5 @@
-module Mirage.Utilities.AtomicFile
+module Mirage.Core.AtomicFile
+
 open System.IO
 open System
 

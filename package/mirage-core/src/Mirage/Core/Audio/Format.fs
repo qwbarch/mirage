@@ -1,4 +1,4 @@
-module Mirage.Utilities.Audio.Format
+module Mirage.Core.Audio.Format
 
 open System
 

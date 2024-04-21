@@ -1,4 +1,5 @@
-module Mirage.Utilities.Print
+module Mirage.Core.Print
+
 open Lock
 
 let printSeq (v: 'T seq) =

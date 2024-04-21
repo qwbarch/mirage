@@ -1,4 +1,5 @@
-module Mirage.Utilities.BatchProcessor
+module Mirage.Core.BatchProcessor
+
 open FSharpx.Control
 open System.Collections.Generic
 open FSharpPlus

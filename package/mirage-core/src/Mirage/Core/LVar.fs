@@ -1,8 +1,8 @@
-module Mirage.Utilities.LVar
+module Mirage.Core.LVar
 
 open FSharpPlus
 open System
-open Mirage.Utilities.Lock
+open Mirage.Core.Lock
 
 // A locked variable
 type LVar<'T> =

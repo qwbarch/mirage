@@ -1,4 +1,4 @@
-module Mirage.Utilities.Async
+module Mirage.Core.Async
 
 open FSharpPlus
 open FSharpx.Control

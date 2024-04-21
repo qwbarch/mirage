@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <RootNamespace>Mirage.Core</RootNamespace>
+    <AssemblyName>mirage-core</AssemblyName>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="FSharp.Control.AsyncSeq" Version="3.2.1" />
+    <Reference Include="FSharpx.Async">
+      <HintPath>../../../lib/FSharpx.Async/FSharpx.Async.dll</HintPath>
+    </Reference>
+    <PackageReference Include="FSharpPlus" Version="1.5.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Mirage/Core/Async.fs" />
+    <Compile Include="Mirage/Core/Lock.fs" />
+    <Compile Include="Mirage/Core/MVar.fs" />
+    <Compile Include="Mirage/Core/TVar.fs" />
+    <Compile Include="Mirage/Core/BatchProcessor.fs" />
+    <Compile Include="Mirage/Core/LVar.fs" />
+    <Compile Include="Mirage/Core/Print.fs" />
+    <Compile Include="Mirage/Core/AtomicFile.fs" />
+    <Compile Include="Mirage/Core/Operator.fs" />
+    <Compile Include="Mirage/Core/Audio/Format.fs" />
+    <Compile Include="Mirage/Core/Audio/Speech.fs" />
+  </ItemGroup>
+</Project>

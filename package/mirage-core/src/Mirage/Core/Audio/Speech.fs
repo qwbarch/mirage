@@ -1,9 +1,9 @@
-module Mirage.Utilities.Audio.Speech
+module Mirage.Core.Audio.Speech
 
 open System
 open System.Threading
 open FSharpx.Control
-open Mirage.Utilities.Operator
+open Mirage.Core.Operator
 
 let [<Literal>] StartThreshold = 0.6f
 let [<Literal>] EndThreshold = 0.45f

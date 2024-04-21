@@ -1,4 +1,4 @@
-module Mirage.Utilities.Lock
+module Mirage.Core.Lock
 
 open Async
 open System
