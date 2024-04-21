@@ -15,14 +15,14 @@
     <PackageReference Include="FSharpPlus" Version="1.5.0" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Mirage/Core/Async.fs" />
-    <Compile Include="Mirage/Core/Lock.fs" />
-    <Compile Include="Mirage/Core/MVar.fs" />
-    <Compile Include="Mirage/Core/TVar.fs" />
-    <Compile Include="Mirage/Core/BatchProcessor.fs" />
-    <Compile Include="Mirage/Core/LVar.fs" />
-    <Compile Include="Mirage/Core/Print.fs" />
-    <Compile Include="Mirage/Core/AtomicFile.fs" />
+    <Compile Include="Mirage/Core/Async/AtomicFile.fs" />
+    <Compile Include="Mirage/Core/Async/BatchProcessor.fs" />
+    <Compile Include="Mirage/Core/Async/Lazy.fs" />
+    <Compile Include="Mirage/Core/Async/Lock.fs" />
+    <Compile Include="Mirage/Core/Async/LVar.fs" />
+    <Compile Include="Mirage/Core/Async/MVar.fs" />
+    <Compile Include="Mirage/Core/Async/Print.fs" />
+    <Compile Include="Mirage/Core/Async/TVar.fs" />
     <Compile Include="Mirage/Core/Operator.fs" />
     <Compile Include="Mirage/Core/Audio/Format.fs" />
     <Compile Include="Mirage/Core/Audio/Speech.fs" />

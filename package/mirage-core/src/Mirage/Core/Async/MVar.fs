@@ -1,4 +1,4 @@
-module Mirage.Core.MVar
+module Mirage.Core.Async.MVar
 
 open System.Collections.Generic
 open FSharpx.Control

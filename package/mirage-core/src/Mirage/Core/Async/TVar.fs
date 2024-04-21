@@ -1,4 +1,4 @@
-module Mirage.Core.TVar
+module Mirage.Core.Async.TVar
 
 open System
 open System.Threading

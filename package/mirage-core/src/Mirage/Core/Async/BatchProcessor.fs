@@ -1,7 +1,7 @@
-module Mirage.Core.BatchProcessor
+module Mirage.Core.Async.BatchProcessor
 
-open FSharpx.Control
 open System.Collections.Generic
+open FSharpx.Control
 open FSharpPlus
 
 // Take a function that processes batches and create a BatchProcessor out of it.

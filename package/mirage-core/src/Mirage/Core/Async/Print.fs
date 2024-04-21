@@ -1,6 +1,6 @@
-module Mirage.Core.Print
+module Mirage.Core.Async.Print
 
-open Lock
+open Mirage.Core.Async.Lock
 
 let printSeq (v: 'T seq) =
     let result = "[" + String.concat ", " (Seq.map (fun x -> x.ToString()) v) + "]"

@@ -1,9 +1,9 @@
-module Mirage.Core.Lock
+module Mirage.Core.Async.Lock
 
-open Async
 open System
 open System.Threading
 open FSharpPlus
+open Mirage.Core.Async.Lazy
 
 type Lock =
     private { semaphore: SemaphoreSlim }
