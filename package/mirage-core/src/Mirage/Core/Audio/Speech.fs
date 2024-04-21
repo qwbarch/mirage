@@ -3,7 +3,7 @@ module Mirage.Core.Audio.Speech
 open System
 open System.Threading
 open FSharpx.Control
-open Mirage.Core.Operator
+open Mirage.Prelude
 
 let [<Literal>] StartThreshold = 0.6f
 let [<Literal>] EndThreshold = 0.45f
@@ -57,18 +57,18 @@ let initSpeechDetector speechDetector : float32[] -> unit =
                         endSamples <- 0
                     if not speechDetected then
                         speechDetected <- true
-                        return! speechDetector.onSpeechDetected SpeechStart
-                    return! speechDetector.onSpeechDetected <| SpeechFound samples
+                        do! speechDetector.onSpeechDetected SpeechStart
+                    do! speechDetector.onSpeechDetected <| SpeechFound samples
                 else if probability < EndThreshold && speechDetected then
                     if endSamples = 0 then
                         endSamples <- currentSample
                     if float32 (currentSample - endSamples) < MinSilenceSamples then
-                        return! speechDetector.onSpeechDetected <| SpeechFound samples
+                        do! speechDetector.onSpeechDetected <| SpeechFound samples
                     else
                         endSamples <- 0
                         speechDetected <- false
-                        return! speechDetector.onSpeechDetected <| SpeechFound samples
-                        return! speechDetector.onSpeechDetected SpeechEnd
+                        do! speechDetector.onSpeechDetected <| SpeechFound samples
+                        do! speechDetector.onSpeechDetected SpeechEnd
         }
     Async.Start(consumer, speechDetector.canceller.Token)
     agent.Add
