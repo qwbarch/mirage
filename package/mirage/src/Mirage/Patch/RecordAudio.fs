@@ -53,7 +53,7 @@ type RecordAudio() =
             ignore <| monad' {
                 let! dissonance = get Dissonance
 
-                if voiceActivated then
+                if IngamePlayerSettings.Instance.settings.micEnabled && voiceActivated then
                     vadDisabledFrames <- 0
                     framesWritten <- framesWritten + 1
                 else
