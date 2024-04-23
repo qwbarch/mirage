@@ -1,4 +1,4 @@
-module Mirage.Core.Audio.Format
+module Mirage.Core.Audio.PCM
 
 open System
 

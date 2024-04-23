@@ -2,10 +2,12 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <RootNamespace>Mirage.Core</RootNamespace>
-    <AssemblyName>mirage-core</AssemblyName>
+    <AssemblyName>Mirage.Core</AssemblyName>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <Optimize>true</Optimize>
+    <DebugType>embedded</DebugType>
+    <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=.</PathMap>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="FSharp.Control.AsyncSeq" Version="3.2.1" />
@@ -24,7 +26,8 @@
     <Compile Include="Mirage/Core/Async/MVar.fs" />
     <Compile Include="Mirage/Core/Async/Print.fs" />
     <Compile Include="Mirage/Core/Async/TVar.fs" />
-    <Compile Include="Mirage/Core/Audio/Format.fs" />
+    <Compile Include="Mirage/Core/Audio/PCM.fs" />
     <Compile Include="Mirage/Core/Audio/Speech.fs" />
+    <Compile Include="Mirage/Core/Field.fs" />
   </ItemGroup>
 </Project>

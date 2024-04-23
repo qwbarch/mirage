@@ -1,8 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <PackageReference Include="Evaisa.NetcodePatcher.MSBuild" Version="3.3.4" PrivateAssets="all" />
-  </ItemGroup>
-  <ItemGroup>
     <NetcodePatch Include="$(TargetPath)" />
   </ItemGroup>
   <PropertyGroup>
@@ -11,14 +9,16 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <DebugType>embedded</DebugType>
-    <Optimize>false</Optimize>
-    <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=</PathMap>
+    <Optimize>true</Optimize>
+    <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=.</PathMap>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1" PrivateAssets="all" />
     <PackageReference Include="BepInEx.Core" Version="5.4.21" />
     <PackageReference Include="LethalCompany.GameLibs.Steam" Version="50.0.1-ngd.0" Publicize="true" />
     <PackageReference Include="NAudio.Lame" Version="2.1.0" />
+    <PackageReference Include="FSharpPlus" Version="1.6.1" />
+    <ProjectReference Include="../../mirage-core/src/Mirage.fsproj" />
     <Reference Include="FSharpx.Async">
       <HintPath>../../../lib/FSharpx.Async/FSharpx.Async.dll</HintPath>
     </Reference>
@@ -34,5 +34,6 @@
     <Compile Include="Mirage/Domain/Logger.fs" />
     <Compile Include="Mirage/Hook/RecordAudio.fs" />
     <Compile Include="Mirage/Plugin.fs" />
+    <Compile Include="Properties/AssemblyInfo.fs" />
   </ItemGroup>
 </Project>
