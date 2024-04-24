@@ -1,9 +1,11 @@
 module Mirage.Core.Audio.Speech
 
 open System
-open System.Threading
 open FSharpx.Control
 open Mirage.Prelude
+open Mirage.Core.Async.TVar
+open Mirage.Core.Async.LVar
+open FSharpPlus
 
 let [<Literal>] StartThreshold = 0.6f
 let [<Literal>] EndThreshold = 0.45f
@@ -18,20 +20,27 @@ type SpeechDetection
     | SpeechFound of float32[]
     | SpeechEnd
 
+/// A function that detects if speech is found.<br />
+/// Assumes the given pcm data is 16khz, and contains 30ms of audio.
+///
+/// Return value is a float32 in the range of 0f-1f.<br />
+/// The closer to 0f, the less likely speech is detected.
+/// The closer to 1f, the more likely speech is detected.
+type DetectSpeech = float32[] -> Async<float32>
+
+/// A function that executes whenever speech is detected.
+type OnSpeechDetected = SpeechDetection -> Async<unit>
+
 /// Detect if speech is found. All async functions are run on a separate thread.
 type SpeechDetector =
-    {   /// A function that detects if speech is found.<br />
-        /// Assumes the given pcm data is 16khz, and contains 30ms of audio.
-        ///
-        /// Return value is a float32 in the range of 0f-1f.<br />
-        /// The closer to 0f, the less likely speech is detected.
-        /// The closer to 1f, the more likely speech is detected.
-        detectSpeech: float32[] -> Async<float32>
-        /// A function that gets called when speech is detected.
-        onSpeechDetected: SpeechDetection -> Async<unit>
-        /// Token source for cancelling any async computations.
-        canceller: CancellationTokenSource
-    }
+    private
+        {   mutable running: LVar<bool>
+            agent: BlockingQueueAgent<float32[]>
+        }
+    interface IDisposable with
+        member this.Dispose() =
+            Async.StartImmediate << map ignore <| writeLVar this.running false
+            dispose this.agent
 
 /// <summary>
 /// Initialize a vad detector by providing a vad algorithm, an action to
@@ -41,34 +50,38 @@ type SpeechDetector =
 /// A producer function that should be invoked every time audio data is available.<br />
 /// This assumes the given audio data is 16khz and contains 30ms of audio.
 /// </returns>
-let initSpeechDetector speechDetector : float32[] -> unit =
+let initSpeechDetector (detectSpeech: DetectSpeech) (onSpeechDetected: OnSpeechDetected) =
     let agent = new BlockingQueueAgent<float32[]>(Int32.MaxValue)
+    let speechDetector = { running = newLVar true; agent = agent }
     let consumer =
         async {
             let mutable currentSample = 0
             let mutable endSamples = 0
             let mutable speechDetected = false
-            while true do
+            while! readLVar speechDetector.running do
                 let! samples = agent.AsyncGet()
                 &currentSample += samples.Length
-                let! probability = speechDetector.detectSpeech samples
+                let! probability = detectSpeech samples
                 if probability >= StartThreshold then
                     if endSamples <> 0 then
                         endSamples <- 0
                     if not speechDetected then
                         speechDetected <- true
-                        do! speechDetector.onSpeechDetected SpeechStart
-                    do! speechDetector.onSpeechDetected <| SpeechFound samples
+                        do! onSpeechDetected SpeechStart
+                    do! onSpeechDetected <| SpeechFound samples
                 else if probability < EndThreshold && speechDetected then
                     if endSamples = 0 then
                         endSamples <- currentSample
                     if float32 (currentSample - endSamples) < MinSilenceSamples then
-                        do! speechDetector.onSpeechDetected <| SpeechFound samples
+                        do! onSpeechDetected <| SpeechFound samples
                     else
                         endSamples <- 0
                         speechDetected <- false
-                        do! speechDetector.onSpeechDetected <| SpeechFound samples
-                        do! speechDetector.onSpeechDetected SpeechEnd
+                        do! onSpeechDetected <| SpeechFound samples
+                        do! onSpeechDetected SpeechEnd
         }
-    Async.Start(consumer, speechDetector.canceller.Token)
-    agent.Add
+    Async.Start consumer
+    speechDetector
+
+/// Add audio samples to be processed by the speech detector.
+let writeSamples speechDetector = speechDetector.agent.AsyncAdd

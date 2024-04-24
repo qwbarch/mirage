@@ -1,41 +1,30 @@
 module App
 
-open NAudio.Wave
-open System
-open Silero.API
-open Mirage.Utilities.Audio.Format
-open Mirage.Utilities.Audio.Speech
 open FSharpPlus
-open System.Threading
-open System.Collections.Generic
+open NAudio.Wave
+open Silero.API
+open System
+open Mirage.Core.Audio.PCM
+open Mirage.Core.Audio.Speech
 
 [<EntryPoint>]
 let main _ =
-    let silero =
-        initSilero
-            {   cpuThreads = 4
-                workers = 1
-            }
+    let silero = initSilero()
     let onSpeechDetected detection =
         match detection with
             | SpeechStart -> printfn "speech started"
             | SpeechEnd -> printfn "speech ended"
             | SpeechFound samples -> printfn $"sample count: {samples.Length}"
-    let writeSamples = 
-        initSpeechDetector
-            {   detectSpeech = result << detectSpeech silero
-                onSpeechDetected = result << onSpeechDetected
-                canceller = new CancellationTokenSource()
-            }
+    let speechDetector =  initSpeechDetector (result << detectSpeech silero) (result << onSpeechDetected)
     let waveIn = new WaveInEvent()
     waveIn.WaveFormat <- new WaveFormat(16000, 16, 1)
     waveIn.BufferMilliseconds <- int <| 1024.0 / 16000.0 * 1000.0
     let onDataAvailable _ (event: WaveInEventArgs) =
         let samples = fromPCMBytes <| event.Buffer
-        writeSamples samples
+        Async.RunSynchronously <| writeSamples speechDetector samples
     waveIn.DataAvailable.AddHandler <| new EventHandler<WaveInEventArgs>(onDataAvailable)
     waveIn.StartRecording()
-    for x in 0 .. 100 do
+    for _ in 0 .. 100 do
         printfn ""
     ignore <| Console.ReadLine()
     releaseSilero silero

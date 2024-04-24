@@ -5,6 +5,9 @@
     <AssemblyName>silero-vad</AssemblyName>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <DebugType>embedded</DebugType>
+    <Optimize>true</Optimize>
+    <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=.</PathMap>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="FSharpPlus" Version="1.5.0" />

@@ -13,20 +13,15 @@ type LogLevel
     | Error = 3
     | Fatal = 4
 
-type SileroInitParams =
-    {   cpuThreads: int
-        workers: int
-    }
-
 /// <summary>
 /// Initialize <b>SileroVAD</b> in order to detect if speech is found in audio.
 /// </summary>
-let initSilero initParams =
+let initSilero () =
     let vad =
         init_silero
             {   model_path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "model/silero-vad/silero_vad.onnx")
-                intra_threads = initParams.cpuThreads
-                inter_threads = initParams.workers
+                intra_threads = Environment.ProcessorCount
+                inter_threads = 1
                 log_level = int LogLevel.Error
             }
     SileroVAD vad

@@ -5,11 +5,14 @@
     <RootNamespace>App</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <DebugType>embedded</DebugType>
+    <Optimize>true</Optimize>
+    <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=.</PathMap>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="FSharpPlus" Version="1.5.0" />
+    <PackageReference Include="FSharpPlus" Version="1.6.1" />
     <ProjectReference Include="../src/Silero.fsproj" />
-    <ProjectReference Include="../../mirage-utilities/src/Utilities.fsproj" />
+    <ProjectReference Include="../../mirage-core/src/Mirage.fsproj" />
     <Reference Include="NAudio">
       <HintPath>../../../lib/NAudio/NAudio.dll</HintPath>
     </Reference>
