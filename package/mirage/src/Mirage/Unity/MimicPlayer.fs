@@ -24,6 +24,9 @@ type MimicPlayer() =
 
     let random = new Random()
 
+    /// Deactivate the mimicking player's dead body on start, if this component is attached to a masked enemy.
+    let mutable deactivateBodyOnStart = false
+
     let MimicId = field()
     let MimickingPlayer = field()
     let EnemyAI = field()
@@ -58,10 +61,9 @@ type MimicPlayer() =
             maskedEnemy.SetSuit player.currentSuitID
             maskedEnemy.SetEnemyOutside(player.transform.position.y < -80f)
             maskedEnemy.SetVisibilityOfMaskedEnemy()
-            if not (isNull player.deadBody) && not player.deadBody.deactivated then
+            if deactivateBodyOnStart && not (isNull player.deadBody) && not player.deadBody.deactivated then
                 player.redirectToEnemy <- maskedEnemy
-                try player.deadBody.DeactivateBody false
-                with | _ -> () // This can fail due to a mod incompatibility.
+                player.deadBody.DeactivateBody false
 
     let mimicEnemyEnabled (enemyAI: EnemyAI) =
         let config = getConfig()
@@ -185,3 +187,13 @@ type MimicPlayer() =
                             this.ResetMimicPlayer()
                         | _ -> ()
         }
+
+    member this.DeactivateBody() =
+        deactivateBodyOnStart <- true
+        if this.IsHost then
+            this.DeactivateBodyClientRpc()
+
+    [<ClientRpc>]
+    member this.DeactivateBodyClientRpc() =
+        if not this.IsHost then
+            this.DeactivateBody()

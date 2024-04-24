@@ -35,6 +35,7 @@ type SpawnMaskedEnemy() =
                 )
             maskedEnemy.GetComponent<MaskedPlayerEnemy>().mimickingPlayer <- player
             maskedEnemy.GetComponentInChildren<NetworkObject>().Spawn(destroyWithScene = true)
+            maskedEnemy.GetComponent<MimicPlayer>().DeactivateBody()
         }
 
     [<HarmonyPostfix>]

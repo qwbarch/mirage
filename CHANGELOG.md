@@ -1,5 +1,9 @@
 ## Changelog
 
+### 1.5.3
+
+- Fixed a bug that caused player dead bodies to disappear.
+
 ### 1.5.2
 
 - Voice clips are no longer created when [ToggleMute](https://thunderstore.io/c/lethal-company/p/quackandcheese/ToggleMute/) is toggled.
