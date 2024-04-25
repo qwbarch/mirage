@@ -12,6 +12,7 @@ open Mirage.Core.Field
 open Mirage.Core.Logger
 open Mirage.Unity.Network
 open Mirage.Unity.MimicPlayer
+open Mirage.Unity.PlayerReanimator
 
 let private get<'A> = getter<'A> "SpawnMaskedEnemy"
 
@@ -22,20 +23,46 @@ type SpawnMaskedEnemy() =
     static let MaskItem = field<HauntedMaskItem>()
     static let getMaskItem = get MaskItem "MaskItem"
 
-    static let spawnMaskedEnemy (player: PlayerControllerB) =
+    static let spawnMaskedEnemy (player: PlayerControllerB) causeOfDeath deathAnimation spawnBody bodyVelocity =
         handleResult <| monad' {
-            let methodName = "spawnMaskedEnemy"
-            let! maskItem = getMaskItem methodName
-            let rotationY = player.transform.eulerAngles.y
-            let maskedEnemy =
-                Object.Instantiate<GameObject>(
-                    maskItem.mimicEnemy.enemyPrefab,
-                    player.transform.position,
-                    Quaternion.Euler <| Vector3(0f, rotationY, 0f)
-                )
-            maskedEnemy.GetComponent<MaskedPlayerEnemy>().mimickingPlayer <- player
-            maskedEnemy.GetComponentInChildren<NetworkObject>().Spawn(destroyWithScene = true)
-            maskedEnemy.GetComponent<MimicPlayer>().DeactivateBody()
+            if killedPlayers.Add player.playerClientId then
+                let playerPosition = player.transform.position
+                let isOnNavMesh =
+                    let mutable meshHit = new NavMeshHit()
+                    NavMesh.SamplePosition(playerPosition, &meshHit, 1f, NavMesh.AllAreas)
+                        && Mathf.Approximately(playerPosition.x, meshHit.position.x)
+                        && Mathf.Approximately(playerPosition.z, meshHit.position.z)
+                let playerKilledByMaskItem = 
+                    causeOfDeath = int CauseOfDeath.Suffocation
+                        && spawnBody
+                        && bodyVelocity.Equals Vector3.zero
+                let playerKilledByMaskedEnemy =
+                    causeOfDeath = int CauseOfDeath.Strangulation
+                        && deathAnimation = 4
+                let config = getConfig()
+                let isPlayerAloneRequired = not config.spawnOnlyWhenPlayerAlone || player.isPlayerAlone
+                let spawnRateSuccess () = random.Next(1, 101) <= config.spawnOnPlayerDeath
+
+                // isOnNavMesh is false while on the ship.
+                if (isOnNavMesh || player.isInHangarShipRoom && StartOfRound.Instance.shipHasLanded)
+                    && not playerKilledByMaskItem
+                    && not playerKilledByMaskedEnemy
+                    && spawnBody
+                    && isPlayerAloneRequired
+                    && spawnRateSuccess()
+                then
+                    let! maskItem = getMaskItem "spawn a masked enemy on player death (if configuration is enabled)"
+                    let rotationY = player.transform.eulerAngles.y
+                    let maskedEnemy =
+                        Object.Instantiate<GameObject>(
+                            maskItem.mimicEnemy.enemyPrefab,
+                            player.transform.position,
+                            Quaternion.Euler <| Vector3(0f, rotationY, 0f)
+                        )
+                    let enemyAI = maskedEnemy.GetComponent<MaskedPlayerEnemy>()
+                    enemyAI.mimickingPlayer <- player
+                    maskedEnemy.GetComponentInChildren<NetworkObject>().Spawn(destroyWithScene = true)
+                    player.GetComponent<PlayerReanimator>().DeactivateBody enemyAI
         }
 
     [<HarmonyPostfix>]
@@ -54,40 +81,27 @@ type SpawnMaskedEnemy() =
 
     [<HarmonyPostfix>]
     [<HarmonyPatch(typeof<PlayerControllerB>, "KillPlayerServerRpc")>]
-    static member ``spawn a masked enemy on player death (if configuration is enabled)``(
+    static member ``spawn a masked enemy on player death (non-host player)``(
         __instance: PlayerControllerB,
         causeOfDeath: int,
         deathAnimation: int,
         spawnBody: bool,
         bodyVelocity: Vector3
     ) =
-        if __instance.IsHost && killedPlayers.Add __instance.playerClientId then
-            let playerPosition = __instance.transform.position
-            let isOnNavMesh =
-                let mutable meshHit = new NavMeshHit()
-                NavMesh.SamplePosition(playerPosition, &meshHit, 1f, NavMesh.AllAreas)
-                    && Mathf.Approximately(playerPosition.x, meshHit.position.x)
-                    && Mathf.Approximately(playerPosition.z, meshHit.position.z)
-            let playerKilledByMaskItem = 
-                causeOfDeath = int CauseOfDeath.Suffocation
-                    && spawnBody
-                    && bodyVelocity.Equals Vector3.zero
-            let playerKilledByMaskedEnemy =
-                causeOfDeath = int CauseOfDeath.Strangulation
-                    && deathAnimation = 4
-            let config = getConfig()
-            let isPlayerAloneRequired = not config.spawnOnlyWhenPlayerAlone || __instance.isPlayerAlone
-            let spawnRateSuccess () = random.Next(1, 101) <= config.spawnOnPlayerDeath
+        if __instance.IsHost && __instance <> StartOfRound.Instance.localPlayerController then
+            spawnMaskedEnemy __instance causeOfDeath deathAnimation spawnBody bodyVelocity
 
-            // isOnNavMesh is false while on the ship.
-            if (isOnNavMesh || __instance.isInHangarShipRoom && StartOfRound.Instance.shipHasLanded)
-                && not playerKilledByMaskItem
-                && not playerKilledByMaskedEnemy
-                && spawnBody
-                && isPlayerAloneRequired
-                && spawnRateSuccess()
-            then
-                spawnMaskedEnemy __instance
+    [<HarmonyPostfix>]
+    [<HarmonyPatch(typeof<PlayerControllerB>, "KillPlayer")>]
+    static member ``spawn a masked enemy on player death (host player)``(
+        __instance: PlayerControllerB,
+        causeOfDeath: int,
+        deathAnimation: int,
+        spawnBody: bool,
+        bodyVelocity: Vector3
+    ) =
+        if __instance.IsHost && __instance = StartOfRound.Instance.localPlayerController then
+            spawnMaskedEnemy __instance causeOfDeath deathAnimation spawnBody bodyVelocity
 
     [<HarmonyPrefix>]
     [<HarmonyPatch(typeof<MaskedPlayerEnemy>)>]

@@ -54,6 +54,7 @@
     <Compile Include="Mirage/Unity/Network.fs" />
     <Compile Include="Mirage/Core/Audio/Network/Receiver.fs" />
     <Compile Include="Mirage/Core/Audio/Network/Sender.fs" />
+    <Compile Include="Mirage/Unity/PlayerReanimator.fs" />
     <Compile Include="Mirage/Unity/AudioStream.fs" />
     <Compile Include="Mirage/Unity/MimicPlayer.fs" />
     <Compile Include="Mirage/Unity/MimicVoice.fs" />

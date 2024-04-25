@@ -1,8 +1,16 @@
 ## Changelog
 
+### 1.6.0
+
+- Fixed a bug that caused player dead bodies to disappaer.
+
+### 1.5.4
+
+- Temporarily reverted back to ``v1.5.2`` due to a new bug introduced in ``v1.5.3``.
+
 ### 1.5.3
 
-- Fixed a bug that caused player dead bodies to disappear.
+- ~~Fixed a bug that caused player dead bodies to disappear.~~
 
 ### 1.5.2
 

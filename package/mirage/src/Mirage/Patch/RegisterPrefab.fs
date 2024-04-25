@@ -1,9 +1,11 @@
 module Mirage.Patch.RegisterPrefab
 
+open System
+open System.Collections.Generic
 open FSharpPlus
 open HarmonyLib
 open Unity.Netcode
-open System.Collections.Generic
+open GameNetcodeStuff
 open Mirage.Core.Logger
 open Mirage.Core.Config
 open Mirage.Core.Field
@@ -11,7 +13,7 @@ open Mirage.Unity.MimicVoice
 open Mirage.Unity.AudioStream
 open Mirage.Unity.Network
 open Mirage.Unity.MimicPlayer
-open System
+open Mirage.Unity.PlayerReanimator
 
 let private initPrefabs<'A when 'A : null and 'A :> EnemyAI> (networkPrefab: NetworkPrefab) =
     let enemyAI = networkPrefab.Prefab.GetComponent<'A>() :> EnemyAI
@@ -72,3 +74,8 @@ type RegisterPrefab() =
                         level.Enemies.Add enemy
                 logInfo <| "Adjusting spawn weights for masked enemies:\n" + String.Join("\n", logs)
         }
+
+    [<HarmonyPostfix>]
+    [<HarmonyPatch(typeof<PlayerControllerB>, "Awake")>]
+    static member ``register player reanimator prefab``(__instance: PlayerControllerB) =
+        ignore <| __instance.gameObject.AddComponent<PlayerReanimator>()
