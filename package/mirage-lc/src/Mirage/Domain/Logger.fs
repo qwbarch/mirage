@@ -2,9 +2,10 @@ module Mirage.Domain.Logger
 
 #nowarn "40"
 
-open FSharpx.Control
 open System
+open FSharpx.Control
 open Mirage.PluginInfo
+open Mirage.Core.Field
 
 type private LogType = LogInfo | LogDebug | LogWarning | LogError
 
@@ -36,3 +37,14 @@ let internal logInfo = logMessage LogInfo
 let internal logDebug = logMessage LogDebug
 let internal logWarning = logMessage LogWarning
 let internal logError = logMessage LogError
+
+/// Run the program, logging the <b>FieldError</b> if found, as well as executing the <b>onError</b> callback.
+let internal handleFieldWith (onError: unit -> unit) (program: Result<Unit, FieldError>) =
+    match program with
+        | Ok _ -> ()
+        | Result.Error message ->
+            logError <| message()
+            onError()
+
+/// Run the program, logging the <b>FieldError</b> if found.
+let internal handleField : Result<unit, FieldError> -> unit = handleFieldWith id

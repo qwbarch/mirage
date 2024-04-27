@@ -15,6 +15,7 @@
       <HintPath>../../../lib/FSharpx.Async/FSharpx.Async.dll</HintPath>
     </Reference>
     <PackageReference Include="FSharpPlus" Version="1.5.0" />
+    <PackageReference Include="NAudio" Version="2.2.1" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Mirage/Prelude/Operator.fs" />
@@ -27,6 +28,7 @@
     <Compile Include="Mirage/Core/Async/Print.fs" />
     <Compile Include="Mirage/Core/Async/TVar.fs" />
     <Compile Include="Mirage/Core/Audio/PCM.fs" />
+    <Compile Include="Mirage/Core/Audio/Resampler.fs" />
     <Compile Include="Mirage/Core/Audio/Speech.fs" />
     <Compile Include="Mirage/Core/Field.fs" />
   </ItemGroup>

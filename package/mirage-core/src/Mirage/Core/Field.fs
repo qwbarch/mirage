@@ -5,9 +5,9 @@ open System.Diagnostics
 open FSharpPlus
 
 /// A lazily evaluated error message, containing a stack-trace.
-type ErrorMessage = unit -> string
+type FieldError = unit -> string
 
-type Getter<'A> = unit -> Result<'A, ErrorMessage>
+type Getter<'A> = unit -> Result<'A, FieldError>
 type Setter<'A> = 'A -> unit
 type OptionSetter<'A> = option<'A> -> unit
 
@@ -25,13 +25,13 @@ let useField_<'A> () : Tuple<Getter<'A>, OptionSetter<'A>> =
     (getter, setter)
 
 /// Create a field that provides improved error logs if the value is missing.<br />
-let useField<'A> () : Tuple<Getter<'A>, Setter<'A>> =
+let useField<'A when 'A : null> () : Tuple<Getter<'A>, Setter<'A>> =
   let (get, set) = useField_<'A>()
-  (get, set << Some)
+  (get, set << Option.ofObj)
 
 /// Create a field that provides improved error logs if the value is missing.<br />
 /// This is a variant of <b>useField</b> that allows you to set the initial state.
-let useFieldWith<'A> (initialState: 'A) : Tuple<Getter<'A>, Setter<'A>> =
+let useFieldWith<'A when 'A : null> (initialState: 'A) : Tuple<Getter<'A>, Setter<'A>> =
   let (get, set) = useField()
   set initialState
   (get, set)

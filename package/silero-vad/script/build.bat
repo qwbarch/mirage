@@ -1,8 +1,7 @@
 @echo off
 
-dotnet build ../src/Whisper.fsproj
+dotnet build ../src/Silero.fsproj
 rmdir /s /q "..\bin"
 mkdir "..\bin"
-move "..\src\bin\Debug\netstandard2.1\openai-whisper.dll" "..\bin\openai-whisper.dll"
-move "..\src\bin\Debug\netstandard2.1\whisper-cpp.dll" "..\bin\whisper-cpp.dll"
-move "..\src\bin\Debug\netstandard2.1\cublas64_12.dll" "..\bin\cublas64_12.dll"
+move "..\src\bin\Debug\netstandard2.1\SileroVAD.API.dll" "..\bin\SileroVAD.API.dll"
+move "..\src\bin\Debug\netstandard2.1\SileroVAD.dll" "..\bin\SileroVAD.dll"

@@ -3,7 +3,6 @@ module Mirage.Core.Audio.Speech
 open System
 open FSharpx.Control
 open Mirage.Prelude
-open Mirage.Core.Async.TVar
 open Mirage.Core.Async.LVar
 open FSharpPlus
 
@@ -33,14 +32,9 @@ type OnSpeechDetected = SpeechDetection -> Async<unit>
 
 /// Detect if speech is found. All async functions are run on a separate thread.
 type SpeechDetector =
-    private
-        {   mutable running: LVar<bool>
-            agent: BlockingQueueAgent<float32[]>
-        }
+    private { agent: BlockingQueueAgent<float32[]> }
     interface IDisposable with
-        member this.Dispose() =
-            Async.StartImmediate << map ignore <| writeLVar this.running false
-            dispose this.agent
+        member this.Dispose() = dispose this.agent
 
 /// <summary>
 /// Initialize a vad detector by providing a vad algorithm, an action to
@@ -52,13 +46,13 @@ type SpeechDetector =
 /// </returns>
 let initSpeechDetector (detectSpeech: DetectSpeech) (onSpeechDetected: OnSpeechDetected) =
     let agent = new BlockingQueueAgent<float32[]>(Int32.MaxValue)
-    let speechDetector = { running = newLVar true; agent = agent }
+    let speechDetector = { agent = agent }
     let consumer =
         async {
             let mutable currentSample = 0
             let mutable endSamples = 0
             let mutable speechDetected = false
-            while! readLVar speechDetector.running do
+            while true do
                 let! samples = agent.AsyncGet()
                 &currentSample += samples.Length
                 let! probability = detectSpeech samples

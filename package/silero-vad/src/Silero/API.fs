@@ -3,6 +3,7 @@ module Silero.API
 open System
 open Silero.Foreign
 open System.IO
+open System.Reflection
 
 type SileroVAD = private SileroVAD of IntPtr
 
@@ -16,10 +17,13 @@ type LogLevel
 /// <summary>
 /// Initialize <b>SileroVAD</b> in order to detect if speech is found in audio.
 /// </summary>
-let initSilero () =
+let SileroVAD () =
+    let x = "silero_vad.onnx"
+    let baseDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)
+    printf $"model_path: {Path.Combine(baseDirectory, x)}"
     let vad =
         init_silero
-            {   model_path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "model/silero-vad/silero_vad.onnx")
+            {   model_path = Path.Combine(baseDirectory, "silero_vad.onnx")
                 intra_threads = Environment.ProcessorCount
                 inter_threads = 1
                 log_level = int LogLevel.Error

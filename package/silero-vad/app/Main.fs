@@ -9,7 +9,7 @@ open Mirage.Core.Audio.Speech
 
 [<EntryPoint>]
 let main _ =
-    let silero = initSilero()
+    let silero = SileroVAD()
     let onSpeechDetected detection =
         match detection with
             | SpeechStart -> printfn "speech started"
@@ -18,7 +18,7 @@ let main _ =
     let speechDetector =  initSpeechDetector (result << detectSpeech silero) (result << onSpeechDetected)
     let waveIn = new WaveInEvent()
     waveIn.WaveFormat <- new WaveFormat(16000, 16, 1)
-    waveIn.BufferMilliseconds <- int <| 1024.0 / 16000.0 * 1000.0
+    waveIn.BufferMilliseconds <- 64
     let onDataAvailable _ (event: WaveInEventArgs) =
         let samples = fromPCMBytes <| event.Buffer
         Async.RunSynchronously <| writeSamples speechDetector samples

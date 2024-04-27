@@ -19,6 +19,7 @@
     <PackageReference Include="NAudio.Lame" Version="2.1.0" />
     <PackageReference Include="FSharpPlus" Version="1.6.1" />
     <ProjectReference Include="../../mirage-core/src/Mirage.fsproj" />
+    <ProjectReference Include="../../silero-vad/src/Silero.fsproj" />
     <Reference Include="FSharpx.Async">
       <HintPath>../../../lib/FSharpx.Async/FSharpx.Async.dll</HintPath>
     </Reference>

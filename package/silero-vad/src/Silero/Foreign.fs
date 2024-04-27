@@ -3,7 +3,7 @@ module Silero.Foreign
 open System
 open System.Runtime.InteropServices
 
-let [<Literal>] dll = "silero-vad-api.dll"
+let [<Literal>] dll = "SileroVAD.API.dll"
 
 [<Struct>]
 [<StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)>]

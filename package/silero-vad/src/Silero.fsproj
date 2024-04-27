@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <RootNamespace>Silero</RootNamespace>
-    <AssemblyName>silero-vad</AssemblyName>
+    <AssemblyName>SileroVAD</AssemblyName>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <DebugType>embedded</DebugType>
@@ -11,9 +11,9 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="FSharpPlus" Version="1.5.0" />
-    <ContentWithTargetPath Include="../bin/silero-vad-api.dll">
+    <ContentWithTargetPath Include="../bin/SileroVAD.API.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <TargetPath>silero-vad-api.dll</TargetPath>
+      <TargetPath>SileroVAD.API.dll</TargetPath>
     </ContentWithTargetPath>
     <ContentWithTargetPath Include="../../../lib/onnxruntime/lib/onnxruntime.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -22,7 +22,7 @@
     <Content
       Include="../../../model/silero-vad/**/*.*"
       CopyToOutputDirectory="PreserveNewest"
-      TargetPath="model/silero-vad/%(RecursiveDir)%(Filename)%(Extension)"
+      TargetPath="%(RecursiveDir)%(Filename)%(Extension)"
     />
   </ItemGroup>
   <ItemGroup>
