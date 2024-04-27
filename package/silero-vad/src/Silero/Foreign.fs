@@ -8,7 +8,8 @@ let [<Literal>] dll = "SileroVAD.API.dll"
 [<Struct>]
 [<StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)>]
 type internal SileroInitParams =
-    {   model_path: string
+    {   onnxruntime_path: string
+        model_path: string
         log_level: int
         inter_threads: int
         intra_threads: int

@@ -18,12 +18,11 @@ type LogLevel
 /// Initialize <b>SileroVAD</b> in order to detect if speech is found in audio.
 /// </summary>
 let SileroVAD () =
-    let x = "silero_vad.onnx"
     let baseDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)
-    printf $"model_path: {Path.Combine(baseDirectory, x)}"
     let vad =
         init_silero
-            {   model_path = Path.Combine(baseDirectory, "silero_vad.onnx")
+            {   onnxruntime_path = Path.Combine(baseDirectory, "onnxruntime.dll")
+                model_path = Path.Combine(baseDirectory, "silero_vad.onnx")
                 intra_threads = Environment.ProcessorCount
                 inter_threads = 1
                 log_level = int LogLevel.Error

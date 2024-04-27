@@ -24,6 +24,7 @@ struct SileroVAD
 
 struct SileroInitParams
 {
+    const wchar_t *onnxruntime_path;
     const wchar_t *model_path;
     OrtLoggingLevel log_level;
     int intra_threads;
@@ -35,8 +36,7 @@ typedef OrtApiBase *(ORT_API_CALL *OrtGetApiBaseFunc)();
 __declspec(dllexport) struct SileroVAD *init_silero(struct SileroInitParams init_params)
 {
     struct SileroVAD *vad = malloc(sizeof(struct SileroVAD));
-    // TODO: Change this to use LoadLibraryA to make it friendlier for non-english locales.
-    HMODULE onnxruntime = LoadLibraryA("C:\\Lethal Company - Mirage\\BepInEx\\plugins\\SileroVAD\\onnxruntime.dll");
+    HMODULE onnxruntime = LoadLibraryW(init_params.onnxruntime_path);
     OrtGetApiBaseFunc OrtGetApiBase = (OrtGetApiBaseFunc)GetProcAddress(onnxruntime, "OrtGetApiBase");
     vad->api = OrtGetApiBase()->GetApi(ORT_API_VERSION);
     vad->api->CreateEnv(init_params.log_level, "Mirage", &vad->env);
