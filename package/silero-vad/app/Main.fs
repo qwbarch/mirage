@@ -15,10 +15,10 @@ let main _ =
             | SpeechStart -> printfn "speech started"
             | SpeechEnd -> printfn "speech ended"
             | SpeechFound samples -> printfn $"sample count: {samples.Length}"
-    let speechDetector =  initSpeechDetector (result << detectSpeech silero) (result << onSpeechDetected)
+    let speechDetector =  SpeechDetector (result << detectSpeech silero) (result << onSpeechDetected)
     let waveIn = new WaveInEvent()
     waveIn.WaveFormat <- new WaveFormat(16000, 16, 1)
-    waveIn.BufferMilliseconds <- 64
+    waveIn.BufferMilliseconds <- int <| 1024.0 / 16000.0 * 1000.0
     let onDataAvailable _ (event: WaveInEventArgs) =
         let samples = fromPCMBytes <| event.Buffer
         Async.RunSynchronously <| writeSamples speechDetector samples

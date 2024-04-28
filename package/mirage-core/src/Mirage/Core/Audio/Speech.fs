@@ -44,7 +44,7 @@ type SpeechDetector =
 /// A producer function that should be invoked every time audio data is available.<br />
 /// This assumes the given audio data is 16khz and contains 30ms of audio.
 /// </returns>
-let initSpeechDetector (detectSpeech: DetectSpeech) (onSpeechDetected: OnSpeechDetected) =
+let SpeechDetector (detectSpeech: DetectSpeech) (onSpeechDetected: OnSpeechDetected) =
     let agent = new BlockingQueueAgent<float32[]>(Int32.MaxValue)
     let speechDetector = { agent = agent }
     let consumer =

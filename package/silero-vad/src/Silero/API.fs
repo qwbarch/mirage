@@ -36,10 +36,12 @@ let releaseSilero (SileroVAD vad) = release_silero vad
 
 /// <summary>
 /// Detects if speech is found in the given audio samples. This assumes the following:<br />
-/// - Pcm data contains a single frame containing 30ms of audio.
-/// - Sample rate is 16khz. If the audio isn't 16khz, this will result in undefined behaviour.
+/// - Pcm data contains WINDOW_SIZE samples (constant defined in the C source).
+/// - Sample rate is 16khz.
+/// - Audio is mono-channel.
+/// - Each sample contains 2 bytes.
 /// 
-/// While you <i>can</i> pass more than 30ms of audio, the resulting probability is only for the first frame.
+/// Not following these requirements results in undefined behaviour, and can potentially crash.
 /// </summary>
 /// <returns>
 /// A number within the range 0f-1f.<br />

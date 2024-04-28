@@ -1,7 +1,7 @@
 #include "../../../lib/onnxruntime/include/onnxruntime_c_api.h"
 #include <wtypes.h>
 
-#define WINDOW_SIZE 480
+#define WINDOW_SIZE 1536
 #define HC_LENGTH 2 * 1 * 64
 
 const int64_t input_shape[] = {1, WINDOW_SIZE};
@@ -67,7 +67,7 @@ __declspec(dllexport) void release_silero(struct SileroVAD *vad)
 
 /**
  * Detect if speech is found for the given pcm data. This assumes the following:
- * - Pcm data contains a single frame (30ms of audio), containing 480 samples (defined by the WINDOW_SIZE constant).
+ * - Pcm data contains WINDOW_SIZE samples.
  * - Sample rate is 16khz.
  * - Audio is mono-channel.
  * - Each sample contains 2 bytes.
