@@ -14,6 +14,7 @@ open Mirage.Unity.AudioStream
 open Mirage.Unity.Network
 open Mirage.Unity.MimicPlayer
 open Mirage.Unity.PlayerReanimator
+open UnityEngine
 
 let private initPrefabs<'A when 'A : null and 'A :> EnemyAI> (networkPrefab: NetworkPrefab) =
     let enemyAI = networkPrefab.Prefab.GetComponent<'A>() :> EnemyAI
@@ -53,6 +54,19 @@ type RegisterPrefab() =
             let config = getConfig()
             if playerManager.IsHost && config.enableOverrideSpawnChance then
                 let! prefab = getPrefab "``modify natural spawns for masked enemies``"
+
+                // Set custom spawn curve.
+                let enemyType = Object.Instantiate prefab.enemyType :?> EnemyType
+                let spawnCurve = enemyType.probabilityCurve
+                let addKey time value = ignore << spawnCurve.AddKey <| Keyframe(time, value)
+                spawnCurve.ClearKeys()
+                addKey 0f 0f
+                addKey 0.19f 0f
+                addKey 0.2f 0.5f
+                addKey 0.5f 10f
+                addKey 0.9f 15f
+                addKey 1f 1f
+
                 let minSpawnChance = float config.overrideSpawnChance
                 let isMaskedEnemy (enemy: SpawnableEnemyWithRarity) =
                     not << isNull <| enemy.enemyType.enemyPrefab.GetComponent<MaskedPlayerEnemy>()
@@ -62,7 +76,7 @@ type RegisterPrefab() =
                     let mutable totalWeight =
                         level.Enemies
                             |> map _.rarity
-                            |> fold (+) 0
+                            |> sum
                     if totalWeight <> 0 then
                         let weight = int << ceil <| float totalWeight * minSpawnChance / (100.0 - minSpawnChance)
                         totalWeight <- totalWeight + weight
@@ -70,7 +84,7 @@ type RegisterPrefab() =
                         logs.Add $"Level: {level.PlanetName}. Weight: {weight}. SpawnChance: {spawnChance:F2}%%"
                         let enemy = new SpawnableEnemyWithRarity()
                         enemy.rarity <- weight
-                        enemy.enemyType <- prefab.enemyType
+                        enemy.enemyType <- enemyType
                         level.Enemies.Add enemy
                 logInfo <| "Adjusting spawn weights for masked enemies:\n" + String.Join("\n", logs)
         }
