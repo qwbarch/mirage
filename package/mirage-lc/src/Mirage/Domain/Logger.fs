@@ -17,7 +17,7 @@ let internal initAsyncLogger () =
         let logger = BepInEx.Logging.Logger.CreateLogSource pluginId
         let rec consumer =
             async {
-                let! (logType, message) = channel .AsyncGet()
+                let! (logType, message) = channel.AsyncGet()
                 let logMessage =
                     match logType with
                         | LogInfo -> logger.LogInfo
