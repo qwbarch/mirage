@@ -28,6 +28,9 @@
     <Reference Include="MMHOOK_DissonanceVoip">
       <HintPath>../../../lib/MMHOOK/MMHOOK_DissonanceVoip.dll</HintPath>
     </Reference>
+    <Reference Include="MMHOOK_Unity.Netcode.Runtime">
+      <HintPath>../../../lib/MMHOOK/MMHOOK_Unity.Netcode.Runtime.dll</HintPath>
+    </Reference>
     <Reference Include="NAudio" Publicize="true">
       <HintPath>../../../lib/NAudio/NAudio.dll</HintPath>
     </Reference>
@@ -41,6 +44,7 @@
   <ItemGroup>
     <Compile Include="Mirage/PluginInfo.fs" />
     <Compile Include="Mirage/Domain/Logger.fs" />
+    <Compile Include="Mirage/Hook/AudioSpatializer.fs" />
     <Compile Include="Mirage/Hook/RecordAudio.fs" />
     <Compile Include="Mirage/Plugin.fs" />
     <Compile Include="Properties/AssemblyInfo.fs" />

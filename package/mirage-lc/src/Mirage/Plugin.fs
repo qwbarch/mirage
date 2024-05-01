@@ -6,6 +6,7 @@ open NAudio.Lame
 open Mirage.PluginInfo
 open Mirage.Domain.Logger
 open Mirage.Hook.RecordAudio
+open Mirage.Hook.AudioSpatializer
 
 [<BepInPlugin(pluginId, pluginName, pluginVersion)>]
 type Plugin() =
@@ -16,4 +17,5 @@ type Plugin() =
         ignore <| LameDLL.LoadNativeDLL [|Path.GetDirectoryName this.Info.Location|]
 
         // Hooks.
+        disableAudioSpatializer()
         recordAudio()
