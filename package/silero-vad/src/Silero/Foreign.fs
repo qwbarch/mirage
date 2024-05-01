@@ -13,6 +13,7 @@ type internal SileroInitParams =
         log_level: int
         inter_threads: int
         intra_threads: int
+        window_size: int
     }
 
 [<DllImport(dll)>]

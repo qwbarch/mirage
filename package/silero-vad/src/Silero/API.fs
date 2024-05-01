@@ -17,7 +17,7 @@ type LogLevel
 /// <summary>
 /// Initialize <b>SileroVAD</b> in order to detect if speech is found in audio.
 /// </summary>
-let SileroVAD () =
+let SileroVAD windowSize =
     let baseDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)
     let vad =
         init_silero
@@ -26,6 +26,7 @@ let SileroVAD () =
                 intra_threads = Environment.ProcessorCount
                 inter_threads = 1
                 log_level = int LogLevel.Error
+                window_size = windowSize
             }
     SileroVAD vad
 

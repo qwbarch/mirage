@@ -25,6 +25,14 @@
     <Reference Include="NAudio.Wasapi">
       <HintPath>../../../lib/NAudio/NAudio.Wasapi.dll</HintPath>
     </Reference>
+    <Reference Include="NAudio.Lame">
+      <HintPath>../../../lib/NAudio.Lame/NAudio.Lame.dll</HintPath>
+    </Reference>
+    <Content
+      Include="../../../lib/NAudio.Lame/libmp3lame.64.dll"
+      CopyToOutputDirectory="PreserveNewest"
+      TargetPath="libmp3lame.64.dll"
+    />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Main.fs" />

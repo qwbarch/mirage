@@ -10,12 +10,22 @@
     <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=.</PathMap>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1" PrivateAssets="all" />
+    <PackageReference Include="BepInEx.Core" Version="5.4.21" />
     <PackageReference Include="FSharp.Control.AsyncSeq" Version="3.2.1" />
+    <PackageReference Include="FSharpPlus" Version="1.5.0" />
     <Reference Include="FSharpx.Async">
       <HintPath>../../../lib/FSharpx.Async/FSharpx.Async.dll</HintPath>
     </Reference>
-    <PackageReference Include="FSharpPlus" Version="1.5.0" />
-    <PackageReference Include="NAudio" Version="2.2.1" />
+    <Reference Include="NAudio" Publicize="true">
+      <HintPath>../../../lib/NAudio/NAudio.dll</HintPath>
+    </Reference>
+    <Reference Include="NAudio.Core" Publicize="true">
+      <HintPath>../../../lib/NAudio/NAudio.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="NAudio.Lame" Publicize="true">
+      <HintPath>../../../lib/NAudio.Lame/NAudio.Lame.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Mirage/Prelude/Operator.fs" />
@@ -24,10 +34,13 @@
     <Compile Include="Mirage/Core/Async/Lazy.fs" />
     <Compile Include="Mirage/Core/Async/Lock.fs" />
     <Compile Include="Mirage/Core/Async/LVar.fs" />
+    <Compile Include="Mirage/Core/Async/Fork.fs" />
     <Compile Include="Mirage/Core/Async/MVar.fs" />
     <Compile Include="Mirage/Core/Async/Print.fs" />
     <Compile Include="Mirage/Core/Async/TVar.fs" />
     <Compile Include="Mirage/Core/Audio/PCM.fs" />
+    <Compile Include="Mirage/Core/Audio/File/Mp3Reader.fs" />
+    <Compile Include="Mirage/Core/Audio/File/Mp3Writer.fs" />
     <Compile Include="Mirage/Core/Audio/Resampler.fs" />
     <Compile Include="Mirage/Core/Audio/Speech.fs" />
     <Compile Include="Mirage/Core/Field.fs" />

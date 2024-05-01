@@ -3,7 +3,6 @@ module Mirage.Core.Audio.Speech
 open System
 open FSharpx.Control
 open Mirage.Prelude
-open Mirage.Core.Async.LVar
 open FSharpPlus
 
 let [<Literal>] StartThreshold = 0.6f
