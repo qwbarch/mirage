@@ -3,6 +3,10 @@
 Mirage is a mod that gives any enemy the ability to mimic a player's voice (fully synced to all players).  
 **This mod is required by the host and on all clients.** Clients that do not have the mod will run into desynchronization issues.
 
+<a href="https://youtu.be/yThkkWAOc6Q">
+  <img src="https://markdown-videos-api.jorgenkh.no/url?url=https%3A%2F%2Fyoutu.be%2FyThkkWAOc6Q" alt="Mirage Showcase" title="Mirage Showcase" width="40%"/>
+</a>
+
 ## Features (all features listed below are configurable)
 
 - Every enemy can mimic the voice of any player currently in the game.
