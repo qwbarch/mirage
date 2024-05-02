@@ -1,5 +1,11 @@
 ## Changelog
 
+### 1.6.1
+
+- Added a config entry ``UseCustomSpawnCurve``, that when enabled, changes masked enemies to spawn later in the day.
+    - Requires ``EnableOverrideSpawnChance = true`` in order to work.
+    - Credits: [TheDebbyCase](https://thunderstore.io/c/lethal-company/p/deB/) for explaining in-depth how spawn curves work.
+
 ### 1.6.0
 
 - Fixed a bug that caused player dead bodies to disappaer.

@@ -54,18 +54,21 @@ type RegisterPrefab() =
             let config = getConfig()
             if playerManager.IsHost && config.enableOverrideSpawnChance then
                 let! prefab = getPrefab "``modify natural spawns for masked enemies``"
-
-                // Set custom spawn curve.
-                let enemyType = Object.Instantiate prefab.enemyType :?> EnemyType
-                let spawnCurve = enemyType.probabilityCurve
-                let addKey time value = ignore << spawnCurve.AddKey <| Keyframe(time, value)
-                spawnCurve.ClearKeys()
-                addKey 0f 0f
-                addKey 0.19f 0f
-                addKey 0.2f 0.5f
-                addKey 0.5f 10f
-                addKey 0.9f 15f
-                addKey 1f 1f
+                let enemyType =
+                    if config.useCustomSpawnCurve then
+                        let enemy = Object.Instantiate prefab.enemyType :?> EnemyType
+                        let spawnCurve = enemy.probabilityCurve
+                        let addKey time value = ignore << spawnCurve.AddKey <| Keyframe(time, value)
+                        spawnCurve.ClearKeys()
+                        addKey 0f 0f
+                        addKey 0.19f 0f
+                        addKey 0.2f 0.5f
+                        addKey 0.5f 10f
+                        addKey 0.9f 15f
+                        addKey 1f 1f
+                        enemy
+                    else
+                        prefab.enemyType
 
                 let minSpawnChance = float config.overrideSpawnChance
                 let isMaskedEnemy (enemy: SpawnableEnemyWithRarity) =

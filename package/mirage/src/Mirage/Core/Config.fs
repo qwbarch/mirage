@@ -274,6 +274,13 @@ type internal LocalConfig(config: ConfigFile) =
             15,
             "The percentage chance a masked enemy should naturally spawn. Spawn weights are internally calculated and modified based on this value. Must have a value of 0-100"
         )
+    member val UseCustomSpawnCurve =
+        config.Bind<bool>(
+            maskedSection,
+            "UseCustomSpawnCurve",
+            true,
+            "Uses a custom spawn curve that makes masked enemies spawn later in the day, rather than the default way masked enemies spawn.\nNote: This is only used when EnableOverrideSpawnChance is enabled."
+        )
     member val SpawnOnPlayerDeath =
         config.Bind<int>(
             maskedSection,
@@ -345,6 +352,7 @@ type internal SyncedConfig =
         enablePenalty: bool
         enableOverrideSpawnChance: bool
         overrideSpawnChance: int
+        useCustomSpawnCurve: bool
         spawnOnPlayerDeath: int
         spawnOnlyWhenPlayerAlone: bool
         enableMask: bool
@@ -390,6 +398,7 @@ let private toSyncedConfig (config: LocalConfig) =
         enablePenalty = config.EnablePenalty.Value
         enableOverrideSpawnChance = config.EnableOverrideSpawnChance.Value
         overrideSpawnChance = config.OverrideSpawnChance.Value
+        useCustomSpawnCurve = config.UseCustomSpawnCurve.Value
         spawnOnPlayerDeath = config.SpawnOnPlayerDeath.Value
         spawnOnlyWhenPlayerAlone = config.SpawnOnlyWhenPlayerAlone.Value
         enableMask = config.EnableMask.Value
