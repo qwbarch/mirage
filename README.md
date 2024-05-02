@@ -1,10 +1,12 @@
 # Mirage
 
-Mirage is a mod that gives any enemy the ability to mimic a player's voice (fully synced to all players).  
-**This mod is required by the host and on all clients.** Clients that do not have the mod will run into desynchronization issues.
+Mirage is a mod that gives any enemy the ability to mimic a player's voice (fully synced to all players). **This mod is required by the host and on all clients.**  
+
+> ⚠️**Warning: This mod is not a drop-in replacement for Skinwalkers + MaskedEnemyOverhaul.**  
+> This mod comes with features you might not want by default (such as masked enemies spawning on every moon), and will require you to tweak the configuration.
 
 <a href="https://youtu.be/yThkkWAOc6Q">
-  <img src="https://markdown-videos-api.jorgenkh.no/url?url=https%3A%2F%2Fyoutu.be%2FyThkkWAOc6Q" alt="Mirage Showcase" title="Mirage Showcase" width="40%"/>
+  <img src="https://markdown-videos-api.jorgenkh.no/url?url=https%3A%2F%2Fyoutu.be%2FyThkkWAOc6Q" alt="Mod showcase" title="Mod showcase" width="40%"/>
 </a>
 
 ## Features (all features listed below are configurable)
@@ -39,9 +41,16 @@ Whether you have a suggestion or have a bug to report, please submit it as an is
 
 ## Frequently asked questions
 
-#### Do I need Skinwalkers for this mod to work?
+#### Why does this mod come with so many features? I only want skinwalkers, but with synced voices.
 
-No, Mirage is a standalone mod. Installing both Mirage and Skinwalkers will result in some voice clips to be unsynced.
+Mirage is not Skinwalkers, despite the overlap in many features. The main goal of this mod is to overhaul the masked enemy experience.  
+If you want an experience more similar to ``Skinwalkers`` while keeping everything else vanilla, you will need to modify these config values:
+- ``EnableOverrideSpawnChance = false``
+- ``SpawnOnPlayerDeath = 0``
+- ``EnableMask = true``
+- ``EnableArmsOut = true``
+
+Keep in mind only masked enemies mimic voices by default, so you will need to enable other enemies if you want them to mimic voices.
 
 #### Can I use MaskedEnemyOverhaul with this mod?
 
@@ -70,7 +79,7 @@ Not currently, but it is currently a work in progress and will eventually come i
 
 #### Can I hear my own voice from voice mimics?
 
-By default, yes. You can configure to not be able to hear them while alive, and resume being able to hear them while spectating.  
+By default, yes. If you don't want to hear your own voice while you're alive, set ``MuteLocalPlayerVoice`` to ``true``.
 
 #### Is using Mirage to override the masked enemy's spawn rate compatible with spawn control mods?
 
@@ -91,6 +100,7 @@ You need to install [NavMeshInCompany](https://thunderstore.io/c/lethal-company/
 - [GeneralImprovements](https://thunderstore.io/c/lethal-company/p/ShaosilGaming/GeneralImprovements/) - Quality of life, as well as the option to disable player name tags (to make it harder to spot masked enemies).
 - [AsyncLoggers](https://thunderstore.io/c/lethal-company/p/mattymatty/AsyncLoggers/) - Increases performance by making logs write to another thread. Mirage already
    writes logs to a separate thread, but this is still good to have for other mods that you have.
+- [DramaMask](https://thunderstore.io/c/lethal-company/p/necrowing/DramaMask/) - Allows you to hide from masked enemies, and if you have mask textures enabled, you can troll your friends by looking identical to a masked enemy.
 
 ## Can I reupload the mod to Thunderstore?
 
@@ -104,7 +114,7 @@ If you're making small changes for your friends, you will need to share the comp
 - [Owen3H](https://github.com/Owen3H) - For their synced configuration [implementation](https://gist.github.com/Owen3H/c73e09314ed71b254256cbb15fd8c51e/5f314116ccd2ba3e5a2a38f01cf889dc674f2cfa), as well as bringing up issues with the approach taken from the modding wiki.
 - [MartinEvans](https://github.com/martindevans) - Author of [dissonance](https://placeholder-software.co.uk/dissonance/docs/index.html), for helping me out with voice activity related issues.
 - [IAmBatby](https://github.com/IAmBatby) and [BananaPuncher714](https://github.com/BananaPuncher714) - For answering my spawn control related questions, regarding [LethalLevelLoader](https://thunderstore.io/c/lethal-company/p/IAmBatby/LethalLevelLoader/) and [LethalQuantities](https://thunderstore.io/c/lethal-company/p/BananaPuncher714/LethalQuantities/).
-- [TheDebbyCase](https://thunderstore.io/c/lethal-company/p/deB) - For the countless days spent helping me reproduce issues that other players were having.
+- [TheDebbyCase](https://thunderstore.io/c/lethal-company/p/deB) - For the countless days spent helping me reproduce issues that other players were having, as well as explaining how spawn curves work.
 - [Zaggy1024](https://github.com/Zaggy1024) - For pointing me towards setting up a debug build of the game, which is required for me to be able to run a performance profiler.
 - [IAmBatby](https://github.com/IAmBatby) and [mattymatty](https://github.com/mattymatty97) - For their help/implementation on getting rid of the audio spatializer warning log spam.
 

@@ -257,7 +257,8 @@ type internal LocalConfig(config: ConfigFile) =
             "Credits",
             "EnablePenalty",
             true,
-            "Whether the credits penalty should be applied during the end of a round. Set this to true to have the default vanilla behaviour."
+            "Whether the credits penalty should be applied during the end of a round. Set this to true to have the default vanilla behaviour.\n"
+                + "This setting is only left here for legacy reasons, and will be removed in a future release."
         )
     member val EnableOverrideSpawnChance =
         config.Bind<bool>(
