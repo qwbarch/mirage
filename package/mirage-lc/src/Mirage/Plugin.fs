@@ -9,6 +9,7 @@ open Mirage.Hook.AudioSpatializer
 open Mirage.Hook.RecordAudio
 open Mirage.Hook.RegisterPrefab
 open Mirage.Hook.Dissonance
+open Mirage.Hook.MaskedPlayerEnemy
 
 [<BepInPlugin(pluginId, pluginName, pluginVersion)>]
 type Plugin() =
@@ -23,3 +24,4 @@ type Plugin() =
         disableAudioSpatializer()
         recordAudio()
         fetchDissonance()
+        initMaskedEnemy()

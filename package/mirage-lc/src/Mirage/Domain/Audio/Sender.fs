@@ -13,7 +13,8 @@ open Mirage.Core.Audio.File.Mp3Reader
 /// </summary>
 type AudioSender =
     private
-        {   sendFrame: FrameData -> Unit
+        {   sendFrame: FrameData -> unit
+            onFinish: unit -> unit
             mp3Reader: Mp3Reader
             channel: BlockingQueueAgent<Option<FrameData>>
             canceller: CancellationTokenSource
@@ -27,6 +28,7 @@ type AudioSender =
                 dispose this.canceller
                 dispose this.mp3Reader
                 dispose this.channel
+                this.onFinish()
 
 /// <summary>
 /// Start the audio sender. This does not begin broadcasting audio.
@@ -34,12 +36,16 @@ type AudioSender =
 /// <param name="sendFrame">
 /// The RPC method for sending frame data to all clients.
 /// </param>
+/// <param name="onFinish">
+/// Function to run when all audio frames are finished sending.
+/// </param>
 /// <param name="filePath">
 /// Source audio to stream from, supporting only <b>.wav</b> audio files.
 /// </param>
-let AudioSender sendFrame mp3Reader =
+let AudioSender sendFrame onFinish mp3Reader =
     let sender =
         {   sendFrame = sendFrame
+            onFinish = onFinish
             mp3Reader = mp3Reader
             channel = new BlockingQueueAgent<Option<FrameData>>(Int32.MaxValue)
             canceller = new CancellationTokenSource()

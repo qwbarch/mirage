@@ -4,6 +4,7 @@ open FSharpPlus
 open Unity.Netcode
 open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicVoice
+open Mirage.Unity.MimicPlayer
 
 let mutable internal maskedPrefab: MaskedPlayerEnemy = null
 
@@ -17,6 +18,7 @@ let registerPrefab () =
             if not <| isNull enemyAI && enemyAI :? MaskedPlayerEnemy then
                 iter (ignore << enemyAI.gameObject.AddComponent)
                     [   typeof<AudioStream>
+                        typeof<MimicPlayer>
                         typeof<MimicVoice>
                     ]
                 if enemyAI :? MaskedPlayerEnemy then

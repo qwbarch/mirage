@@ -8,26 +8,28 @@ open FSharpPlus.Data
 open UnityEngine
 open Unity.Netcode
 open Dissonance.Audio.Playback
-open Mirage.Unity.AudioStream
 open Mirage.Hook.Dissonance
 open Mirage.Domain.Audio.Recording
 open Mirage.Domain.Logger
+open Mirage.Unity.AudioStream
+open Mirage.Unity.MimicPlayer
 
 type MimicVoice() as self =
     inherit NetworkBehaviour()
 
     let recordingManager = RecordingManager()
+    let mutable mimicPlayer: MimicPlayer = null
     let mutable audioStream: AudioStream = null
     let mutable voicePlayback: GameObject = null
 
     let startVoiceMimic () =
         let mimicVoice =
             map ignore << OptionT.run <| monad {
-                if self.IsHost then
-                    try
+                try
+                    if mimicPlayer.MimickingPlayer = StartOfRound.Instance.localPlayerController then
                         let! recording = OptionT <| getRecording recordingManager
                         do! lift <| audioStream.StreamAudioFromFile recording
-                    with | error -> logError $"Error occurred while mimicking voice: {error}"
+                with | error -> logError $"Error occurred while mimicking voice: {error}"
             }
         let rec runMimicLoop =
             async {
@@ -38,6 +40,7 @@ type MimicVoice() as self =
         Async.StartImmediate(runMimicLoop, self.destroyCancellationToken)
 
     member this.Awake() =
+        mimicPlayer <- this.GetComponent<MimicPlayer>()
         audioStream <- this.GetComponent<AudioStream>()
 
         voicePlayback <- Object.Instantiate<GameObject> dissonance._playbackPrefab2

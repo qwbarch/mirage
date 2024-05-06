@@ -42,7 +42,6 @@ let AudioReceiver (audioSource: AudioSource) (pcmHeader: PcmHeader) : AudioRecei
             pcmHeader.frequency,
             false
         )
-    ignore <| audioSource.clip.SetData(Array.zeroCreate(pcmHeader.samples * pcmHeader.channels), 0)
     let waveFormat =
         new Mp3WaveFormat(
             pcmHeader.frequency,
@@ -60,7 +59,7 @@ let AudioReceiver (audioSource: AudioSource) (pcmHeader: PcmHeader) : AudioRecei
 /// Set the audio receiver frame data, and play it if the audio source hasn't started yet.
 /// </summary>
 let onReceiveFrame (receiver: AudioReceiver) (frameData: FrameData) =
-    if not <| isNull receiver.audioSource.clip then
+    if not <| isNull receiver.audioSource.clip && not receiver.disposed then
         // TODO: decompress frame in separate thread.
         let pcmData = decompressFrame receiver.decompressor frameData.rawData
         if pcmData.Length > 0 then
