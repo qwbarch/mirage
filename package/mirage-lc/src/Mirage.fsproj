@@ -37,15 +37,28 @@
     <Reference Include="NAudio.Core" Publicize="true">
       <HintPath>../../../lib/NAudio/NAudio.Core.dll</HintPath>
     </Reference>
+    <Reference Include="NAudio.WinMM" Publicize="true">
+      <HintPath>../../../lib/NAudio/NAudio.WinMM.dll</HintPath>
+    </Reference>
     <Reference Include="NAudio.Lame" Publicize="true">
       <HintPath>../../../lib/NAudio.Lame/NAudio.Lame.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Mirage/PluginInfo.fs" />
+    <Compile Include="Mirage/Domain/Netcode.fs" />
     <Compile Include="Mirage/Domain/Logger.fs" />
+    <Compile Include="Mirage/Domain/Audio/Frame.fs" />
+    <Compile Include="Mirage/Domain/Audio/Stream.fs" />
+    <Compile Include="Mirage/Domain/Audio/Sender.fs" />
+    <Compile Include="Mirage/Domain/Audio/Receiver.fs" />
+    <Compile Include="Mirage/Domain/Audio/Recording.fs" />
+    <Compile Include="Mirage/Hook/Dissonance.fs" />
+    <Compile Include="Mirage/Unity/AudioStream.fs" />
+    <Compile Include="Mirage/Unity/MimicVoice.fs" />
     <Compile Include="Mirage/Hook/AudioSpatializer.fs" />
     <Compile Include="Mirage/Hook/RecordAudio.fs" />
+    <Compile Include="Mirage/Hook/RegisterPrefab.fs" />
     <Compile Include="Mirage/Plugin.fs" />
     <Compile Include="Properties/AssemblyInfo.fs" />
   </ItemGroup>

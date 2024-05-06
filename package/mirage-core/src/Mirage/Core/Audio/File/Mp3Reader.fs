@@ -4,6 +4,7 @@ open System
 open System.IO
 open FSharpPlus
 open NAudio.Wave
+open Mirage.Core.Async.Fork
 
 type Mp3Reader =
     { reader: Mp3FileReader }
@@ -12,8 +13,9 @@ type Mp3Reader =
             dispose this.reader.mp3Stream
             dispose this.reader
 
-let Mp3Reader filePath =
-    async {
+/// Loads the mp3 file from a background thread, and then passes it back to the caller thread.
+let readMp3File (filePath: string) =
+    forkReturn <| async {
         let! bytes = Async.AwaitTask <| File.ReadAllBytesAsync filePath
         return { reader = new Mp3FileReader(new MemoryStream(bytes)) }
     }

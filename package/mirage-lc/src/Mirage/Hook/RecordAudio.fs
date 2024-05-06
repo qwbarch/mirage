@@ -36,7 +36,7 @@ let private speechDetector =
                     logInfo "speech end"
                     do! closeMp3Writer writer.Value
                     writer <- None
-                | SpeechFound samples -> do! writeMp3 writer.Value samples
+                | SpeechFound samples -> do! writeMp3File writer.Value samples
         }
 
 type AudioFrame =
@@ -45,7 +45,7 @@ type AudioFrame =
             format: WaveFormat
         }
 
-let channel =
+let private channel =
     let agent = new BlockingQueueAgent<AudioFrame>(Int32.MaxValue)
     let buffer = new List<float32>()
     let rec consumer =
@@ -69,7 +69,10 @@ let channel =
 type private MicrophoneSubscriber() =
     interface Dissonance.Audio.Capture.IMicrophoneSubscriber with
         member _.ReceiveMicrophoneData(buffer, format) =
-            channel.Add { samples = buffer.ToArray(); format = WaveFormat(format.SampleRate, format.Channels) }
+            channel.Add {
+                samples = buffer.ToArray()
+                format = WaveFormat(format.SampleRate, format.Channels)
+            }
         member _.Reset() = ()
 
 let recordAudio () =

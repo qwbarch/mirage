@@ -5,19 +5,16 @@ module Mirage.Domain.Logger
 open System
 open FSharpx.Control
 open Mirage.PluginInfo
-open Mirage.Core.Field
 
 type private LogType = LogInfo | LogDebug | LogWarning | LogError
 
-let private channel = new BlockingQueueAgent<ValueTuple<LogType, string>>(Int32.MaxValue)
-
-/// Run once on startup to allow log messages to be asynchronous dumped to a separate thread.
-let internal initAsyncLogger () =
+let private channel =
+    let self = new BlockingQueueAgent<ValueTuple<LogType, string>>(Int32.MaxValue)
     Async.Start <| async {
         let logger = BepInEx.Logging.Logger.CreateLogSource pluginId
         let rec consumer =
             async {
-                let! (logType, message) = channel.AsyncGet()
+                let! (logType, message) = self.AsyncGet()
                 let logMessage =
                     match logType with
                         | LogInfo -> logger.LogInfo
@@ -29,6 +26,7 @@ let internal initAsyncLogger () =
             }
         Async.StartImmediate consumer
     }
+    self
 
 let private logMessage logType message =
     Async.StartImmediate << channel.AsyncAdd <| (logType, message)
@@ -37,14 +35,3 @@ let internal logInfo = logMessage LogInfo
 let internal logDebug = logMessage LogDebug
 let internal logWarning = logMessage LogWarning
 let internal logError = logMessage LogError
-
-/// Run the program, logging the <b>FieldError</b> if found, as well as executing the <b>onError</b> callback.
-let internal handleFieldWith (onError: unit -> unit) (program: Result<Unit, FieldError>) =
-    match program with
-        | Ok _ -> ()
-        | Result.Error message ->
-            logError <| message()
-            onError()
-
-/// Run the program, logging the <b>FieldError</b> if found.
-let internal handleField : Result<unit, FieldError> -> unit = handleFieldWith id

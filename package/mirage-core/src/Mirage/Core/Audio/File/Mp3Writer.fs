@@ -48,7 +48,7 @@ let createMp3Writer (filePath: string) inputFormat (preset: LAMEPreset) =
     }
 
 /// Write the given frame of pcm data into the mp3 file.
-let writeMp3 mp3Writer = mp3Writer.channel.AsyncAdd << WriteSamples
+let writeMp3File mp3Writer = mp3Writer.channel.AsyncAdd << WriteSamples
 
 /// Closes the mp3 file.
 let closeMp3Writer mp3Writer = mp3Writer.channel.AsyncAdd Dispose
