@@ -59,7 +59,7 @@ let AudioReceiver (audioSource: AudioSource) (pcmHeader: PcmHeader) : AudioRecei
 /// Set the audio receiver frame data, and play it if the audio source hasn't started yet.
 /// </summary>
 let onReceiveFrame (receiver: AudioReceiver) (frameData: FrameData) =
-    if not <| isNull receiver.audioSource.clip && not receiver.disposed then
+    if not <| isNull receiver.audioSource.clip then
         // TODO: decompress frame in separate thread.
         let pcmData = decompressFrame receiver.decompressor frameData.rawData
         if pcmData.Length > 0 then

@@ -1,10 +1,8 @@
 module Mirage.Unity.AudioStream
 
-open System.IO
 open FSharpPlus
 open UnityEngine
 open Unity.Netcode
-open NAudio.Wave
 open Mirage.Core.Audio.File.Mp3Reader
 open Mirage.Domain.Audio.Sender
 open Mirage.Domain.Audio.Receiver
@@ -15,7 +13,6 @@ open Mirage.Domain.Logger
 type AudioStream() as self =
     inherit NetworkBehaviour()
 
-    let mutable currentUpload: MemoryStream = null
     let mutable audioReceiver: Option<AudioReceiver> = None
 
     /// Run the callback if the sender client id matches the <b>AllowedSenderId</b> value.
@@ -33,8 +30,8 @@ type AudioStream() as self =
             let onFrameRead frameData =
                 onReceiveFrame audioReceiver.Value frameData
                 self.SendFrameClientRpc frameData
-            self.InitializeAudioClientRpc pcmHeader
-            use audioSender = AudioSender onFrameRead (konst ()) mp3Reader
+            self.InitializeAudioReceiverClientRpc pcmHeader
+            use audioSender = AudioSender onFrameRead mp3Reader
             sendAudio audioSender
             do! Async.Sleep(int mp3Reader.reader.TotalTime.TotalMilliseconds)
         }
@@ -43,12 +40,11 @@ type AudioStream() as self =
     let streamAudioClient mp3Reader =
         async {
             logInfo "streamAudioClient running"
+            let pcmHeader = PcmHeader mp3Reader
             let serverRpcParams = ServerRpcParams()
             let sendFrame frameData = self.SendFrameServerRpc(frameData, serverRpcParams)
-            self.InitializeAudioServerRpc serverRpcParams
-            sendFrame <| mp3Reader.reader.XingHeader.frame.RawData
-            let onFinish () = self.FinishUploadServerRpc serverRpcParams
-            use audioSender = AudioSender (sendFrame << _.rawData) onFinish mp3Reader
+            self.InitializeAudioReceiverServerRpc(pcmHeader, serverRpcParams)
+            use audioSender = AudioSender sendFrame mp3Reader
             sendAudio audioSender
             logInfo $"total seconds: {mp3Reader.reader.TotalTime.TotalSeconds}"
             logInfo $"total ms as seconds: {int <| mp3Reader.reader.TotalTime.TotalMilliseconds / 1000.0}"
@@ -63,8 +59,6 @@ type AudioStream() as self =
     override _.OnDestroy() =
         base.OnDestroy()
         iter dispose audioReceiver
-        if not <| isNull currentUpload then
-            dispose currentUpload
 
     /// Stream audio from the player (can be host or non-host) to all other players.
     member this.StreamAudioFromFile(filePath) =
@@ -80,26 +74,28 @@ type AudioStream() as self =
                     do! streamAudioClient mp3Reader
         }
 
-    /// Initialize host by creating a new memory stream to write to.
-    [<ServerRpc(RequireOwnership = false)>]
-    member this.InitializeAudioServerRpc(serverRpcParams) =
-        onValidSender this serverRpcParams <| fun () ->
-            if not <| isNull currentUpload then
-                dispose currentUpload
-            currentUpload <- new MemoryStream()
+    /// Initialize the audio receiver to playback audio when audio frames are received.
+    member this.InitializeAudioReceiver(pcmHeader) =
+        iter dispose audioReceiver
+        audioReceiver <- Some <| AudioReceiver this.AudioSource pcmHeader
 
-    /// Initialize clients by setting the pcm header on each client.
+    [<ServerRpc(RequireOwnership = false)>]
+    member this.InitializeAudioReceiverServerRpc(pcmHeader, serverRpcParams) =
+        onValidSender this serverRpcParams <| fun () ->
+            this.InitializeAudioReceiver pcmHeader
+            this.InitializeAudioReceiverClientRpc pcmHeader
+
     [<ClientRpc>]
-    member this.InitializeAudioClientRpc(pcmHeader) =
+    member this.InitializeAudioReceiverClientRpc(pcmHeader) =
         if not this.IsHost then
-            iter dispose audioReceiver
-            audioReceiver <- Some <| AudioReceiver this.AudioSource pcmHeader
+            this.InitializeAudioReceiver pcmHeader
 
     /// Send the current frame data to the host, to eventually broadcast to all other clients.
     [<ServerRpc(RequireOwnership = false)>]
-    member this.SendFrameServerRpc(rawData: byte[], serverRpcParams) =
+    member this.SendFrameServerRpc(frameData, serverRpcParams) =
         onValidSender this serverRpcParams <| fun () ->
-            currentUpload.Write rawData
+            onReceiveFrame audioReceiver.Value frameData
+            this.SendFrameClientRpc frameData
 
     /// Send the current frame data to each client.
     [<ClientRpc(Delivery = RpcDelivery.Unreliable)>]
@@ -107,16 +103,3 @@ type AudioStream() as self =
         if not this.IsHost then
             onReceiveFrame audioReceiver.Value frameData
             if not this.AudioSource.isPlaying then this.AudioSource.Play()
-
-    /// Start broadcasting the uploaded audio to all other clients.
-    [<ServerRpc(RequireOwnership = false)>]
-    member this.FinishUploadServerRpc(serverRpcParams) =
-        logInfo "finished upload server rpc (outside)"
-        onValidSender this serverRpcParams <| fun () ->
-            logInfo "finished upload server rpc (inside)"
-            currentUpload.Position <- 0
-            let mp3Stream = new MemoryStream(currentUpload.ToArray())
-            dispose currentUpload
-            currentUpload <- null
-            let mp3Reader = { reader = new Mp3FileReader(mp3Stream) }
-            Async.StartImmediate <| streamAudioHost mp3Reader
