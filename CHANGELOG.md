@@ -1,5 +1,10 @@
 ## Changelog
 
+### 1.7.0
+
+- Added a config entry ``RecordWhileDead``, that continues to record a player's voice while they're dead. Default value: ``false``.
+- Fixed a bug that caused monsters to try to mimic disconnected players (resulting in no sound, since players must be connected in order to send their voices to others).
+
 ### 1.6.1
 
 - Added a config entry ``UseCustomSpawnCurve``, that when enabled, changes masked enemies to spawn later in the day.
