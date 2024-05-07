@@ -44,10 +44,11 @@ type MimicPlayer() =
             playerPool.AddRange [0..round.connectedPlayersAmount]
         let index = random.Next playerPool.Count
         let playerId = playerPool[index]
+        let player = StartOfRound.Instance.allPlayerScripts[playerId]
         playerPool.RemoveAt index
         // If a disconnected, the index might be out of bounds. In that case, fetch a new id.
         // This is a simple band-aid fix and isn't ideal, but this'll do for now.
-        if playerId > round.connectedPlayersAmount then
+        if playerId > round.connectedPlayersAmount || player.disconnectedMidGame then
             randomPlayer()
         else
             round.allPlayerScripts[playerId]
