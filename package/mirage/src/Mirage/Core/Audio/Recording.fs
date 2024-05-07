@@ -45,7 +45,7 @@ let internal isRecording (dissonance: DissonanceComms) (speechDetected: bool) =
     let pushToTalkEnabled = IngamePlayerSettings.Instance.settings.pushToTalk
     let pushToTalkPressed = pushToTalkEnabled && not dissonance.IsMuted
     let voiceActivated = not pushToTalkEnabled && speechDetected
-    isPlayerDead && (pushToTalkPressed || voiceActivated)
+    (getConfig().recordWhileDead || isPlayerDead) && (pushToTalkPressed || voiceActivated)
 
 /// Delete the recordings of the local player. Any exception found is ignored.
 /// Note: This runs on a separate thread, but is not a true non-blocking function, and will cause the other thread to block.

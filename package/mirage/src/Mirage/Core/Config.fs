@@ -69,6 +69,13 @@ type internal LocalConfig(config: ConfigFile) =
             "Set to true to never delete recordings (ignores the option set by DeleteRecordingsPerRound).\n"
                 + "Note: This only applies to you. Each player who wants to use this setting will have to set it themselves."
         )
+    member val RecordWhileDead =
+        config.Bind<bool>(
+            imitateSection,
+            "RecordWhileDead",
+            false,
+            "Whether or not a player should be recorded while they're dead."
+        )
     member val MuteLocalPlayerVoice =
         config.Bind<bool>(
             imitateSection,
@@ -325,6 +332,7 @@ type internal SyncedConfig =
         imitateMode: ImitateMode
         muteLocalPlayerVoice: bool
         deleteRecordingsPerRound: bool
+        recordWhileDead: bool
         enableMaskedEnemy: bool
         enableBaboonHawk: bool
         enableBracken: bool
@@ -371,6 +379,7 @@ let private toSyncedConfig (config: LocalConfig) =
                 | mode -> invalidOp $"Synced invalid ImitateMode value: {mode}"
         muteLocalPlayerVoice = config.MuteLocalPlayerVoice.Value
         deleteRecordingsPerRound = config.DeleteRecordingsPerRound.Value
+        recordWhileDead = config.RecordWhileDead.Value
         enableMaskedEnemy = config.EnableMaskedEnemy.Value
         enableBaboonHawk = config.EnableBaboonHawk.Value
         enableBracken = config.EnableBracken.Value
