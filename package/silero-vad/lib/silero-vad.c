@@ -125,7 +125,7 @@ __declspec(dllexport) float detect_speech(struct SileroVAD *vad, const float *pc
         ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT,
         &c_tensor);
 
-    // Run inference. TODO: Make this async
+    // Run inference.
     const OrtValue *input_tensors[] = {input_tensor, sr_tensor, h_tensor, c_tensor};
     OrtValue *output_tensors[] = {NULL, NULL, NULL};
     vad->api->Run(
@@ -155,6 +155,10 @@ __declspec(dllexport) float detect_speech(struct SileroVAD *vad, const float *pc
     vad->api->ReleaseValue(sr_tensor);
     vad->api->ReleaseValue(h_tensor);
     vad->api->ReleaseValue(c_tensor);
+
+    free(probabilities);
+    free(h_output);
+    free(c_output);
 
     return probabilities[0];
 }
