@@ -4,6 +4,7 @@ import sys ; sys.setrecursionlimit(sys.getrecursionlimit() * 5)
 from PyInstaller.utils.hooks import collect_data_files
 from PyInstaller.utils.hooks import copy_metadata
 from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.utils.hooks import collect_dynamic_libs
 
 datas = []
 datas += collect_data_files("torch")
@@ -39,10 +40,14 @@ hiddenimports.append("sklearn.tree")
 hiddenimports.append("sklearn.trees._utils")
 hiddenimports.append("sklearn.metrics._pairwise_distances_reduction._dataset_pair")
 
+# TODO: Not sure if this is needed.
+binaries = []
+binaries += collect_dynamic_libs("nvidia.cuda_nvrtc")
+
 a = Analysis(
     ["test-exe.py"],
     pathex=[],
-    binaries=[],
+    binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],
