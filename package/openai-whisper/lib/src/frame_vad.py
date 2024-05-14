@@ -7,10 +7,7 @@ from abc import ABC, abstractmethod
 import os
 import torch
 import numpy as np
-<<<<<<< Updated upstream
 
-=======
->>>>>>> Stashed changes
 
 class VADBaseClass(ABC):
     def __init__(self, sampling_rate=16000):
@@ -38,27 +35,15 @@ class FrameVAD(VADBaseClass):
     ):
 
         super().__init__(sampling_rate=sampling_rate)
-
-        if device == None:
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-
         self.device = device
 
         if self.device == "cpu":
             # This is a JIT Scripted model of Nvidia's NeMo Framewise Marblenet Model: https://catalog.ngc.nvidia.com/orgs/nvidia/teams/nemo/models/vad_multilingual_frame_marblenet
-<<<<<<< Updated upstream
             self.vad_pp = torch.jit.load(os.path.join(base_path, "assets/vad_pp_cpu.ts")).to(self.device)
             self.vad_model = torch.jit.load(os.path.join(base_path, "assets/frame_vad_model_cpu.ts")).to(self.device)
         else:
             self.vad_pp = torch.jit.load(os.path.join(base_path, "assets/vad_pp_gpu.ts")).to(self.device)
             self.vad_model = torch.jit.load(os.path.join(base_path, "assets/frame_vad_model_gpu.ts")).to(self.device)
-=======
-            self.vad_pp = torch.jit.load(os.path.join(base_path, "vad_pp_cpu.ts")).to(self.device)
-            self.vad_model = torch.jit.load(os.path.join(base_path, "frame_vad_model_cpu.ts")).to(self.device)
-        else:
-            self.vad_pp = torch.jit.load(os.path.join(base_path, "vad_pp_gpu.ts")).to(self.device)
-            self.vad_model = torch.jit.load(os.path.join(base_path, "frame_vad_model_gpu.ts")).to(self.device)
->>>>>>> Stashed changes
 
         self.vad_pp.eval()
         self.vad_model.eval()
@@ -104,7 +89,6 @@ class FrameVAD(VADBaseClass):
     @torch.cuda.amp.autocast()
     @torch.no_grad()
     def forward(self, input_signal, input_signal_length):
-
         all_logits = []
         for s_idx in range(0, len(input_signal), self.batch_size):
             input_signal_pt = torch.stack([torch.tensor(_, device=self.device) for _ in input_signal[s_idx : s_idx + self.batch_size]])
@@ -131,10 +115,8 @@ class FrameVAD(VADBaseClass):
     def __call__(self, audio_signal):
         audio_duration = len(audio_signal) / self.sampling_rate
 
-        print("before call")
         input_signal, input_signal_length = self.prepare_input_batch(audio_signal)
         speech_probs = self.forward(input_signal, input_signal_length)
-        print("after call")
 
         vad_times = []
         for idx, prob in enumerate(speech_probs):

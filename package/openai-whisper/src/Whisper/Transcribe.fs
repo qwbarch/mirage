@@ -1,7 +1,7 @@
 module Whisper.Transcribe
 
 open Whisper.API
-open Mirage.Utilities.LVar
+open Mirage.Core.Async.LVar
 open FSharpPlus
 open System.Diagnostics
 
@@ -13,7 +13,7 @@ type Transcriber =
             readSamples: LVar<int>
         }
 
-let initTranscriber whisper =
+let Transcriber whisper =
     let samplesVar = newLVar [||]
     let readSamplesVar = newLVar 0
     Async.Start <|

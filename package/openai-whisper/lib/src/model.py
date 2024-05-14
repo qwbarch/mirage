@@ -3,7 +3,6 @@
 # WhisperS2T is licensed under MIT, which you can view here: https://github.com/shashikg/WhisperS2T/blob/main/LICENSE
 # Credits: https://github.com/shashikg/WhisperS2T
 
-<<<<<<< Updated upstream
 from abc import ABC, abstractmethod
 from itertools import chain
 from src.frame_vad import FrameVAD
@@ -15,120 +14,80 @@ from whisper_s2t.configs import *
 
 import os
 import numpy as np
-=======
-import os
-import numpy as np
-from whisper_s2t.configs import *
-from abc import ABC, abstractmethod
-from src.loader import WhisperDataLoader
-from src.audio import LogMelSpectogram
-from src.segmenter import SpeechSegmenter
-
->>>>>>> Stashed changes
 import ctranslate2
 import torch
 import tokenizers
 
-from src.tokenizer import Tokenizer
-
 FAST_ASR_OPTIONS = {
     "beam_size": 1,
-    "best_of": 1, # Placeholder
+    "best_of": 1,
     "patience": 1,
     "length_penalty": 1,
     "repetition_penalty": 1.01,
     "no_repeat_ngram_size": 0,
-    "compression_ratio_threshold": 2.4, # Placeholder
-    "log_prob_threshold": -1.0, # Placeholder
-    "no_speech_threshold": 0.5, # Placeholder
-    "prefix": None, # Placeholder
+    "compression_ratio_threshold": 2.4,
+    "log_prob_threshold": -1.0,
+    "no_speech_threshold": 0.5,
+    "prefix": None,
     "suppress_blank": True,
     "suppress_tokens": [-1],
     "without_timestamps": True,
     "max_initial_timestamp": 1.0,
-<<<<<<< Updated upstream
-=======
-    "word_timestamps": False, # Placeholder
->>>>>>> Stashed changes
     "sampling_temperature": 1.0,
     "return_scores": True,
     "return_no_speech_prob": True,
-    "word_aligner_model": 'tiny',
+    "word_aligner_model": "tiny",
 }
 
 
 BEST_ASR_CONFIG = {
     "beam_size": 5,
-    "best_of": 1, # Placeholder
+    "best_of": 1,
     "patience": 2,
     "length_penalty": 1,
     "repetition_penalty": 1.01,
     "no_repeat_ngram_size": 0,
-    "compression_ratio_threshold": 2.4, # Placeholder
-    "log_prob_threshold": -1.0, # Placeholder
-    "no_speech_threshold": 0.5, # Placeholder
-    "prefix": None, # Placeholder
+    "compression_ratio_threshold": 2.4,
+    "log_prob_threshold": -1.0,
+    "no_speech_threshold": 0.5,
+    "prefix": None,
     "suppress_blank": True,
     "suppress_tokens": [-1],
     "without_timestamps": True,
     "max_initial_timestamp": 1.0,
-<<<<<<< Updated upstream
-=======
-    "word_timestamps": False, # Placeholder
->>>>>>> Stashed changes
     "sampling_temperature": 1.0,
     "return_scores": True,
     "return_no_speech_prob": True,
-    "word_aligner_model": 'tiny',
+    "word_aligner_model": "tiny",
 }
 
-<<<<<<< Updated upstream
 
-=======
->>>>>>> Stashed changes
 class NoneTokenizer:
     def __init__(self):
         self.sot_prev = 0
         self.silent_token = 0
         self.no_timestamps = 0
         self.timestamp_begin = 0
-<<<<<<< Updated upstream
 
     def sot_sequence(self, task=None, lang=None):
         return [task, lang]
 
     def encode(self, _):
-=======
-    
-    def sot_sequence(self, task=None, lang=None):
-        return [task, lang]
-
-    def encode(self):
->>>>>>> Stashed changes
         return [0]
 
 
 def fix_batch_param(param, default_value, N):
     if param is None:
-<<<<<<< Updated upstream
         param = N * [default_value]
     elif type(param) == type(default_value):
         param = N * [param]
     elif len(param) != N:
         param = N * [param[0]]
-=======
-        param = N*[default_value]
-    elif type(param) == type(default_value):
-        param = N*[param]
-    elif len(param) != N:
-        param = N*[param[0]]
->>>>>>> Stashed changes
 
     return param
 
 
 class WhisperModel(ABC):
-<<<<<<< Updated upstream
     def __init__(
         self,
         tokenizer=None,
@@ -146,28 +105,10 @@ class WhisperModel(ABC):
         model_path=None,
     ):
 
-=======
-    def __init__(self,
-                 tokenizer=None,
-                 vad_model=None,
-                 n_mels=80,
-                 device="cpu",
-                 device_index=0,
-                 compute_type="float32",
-                 merge_chunks=True,
-                 dta_padding=3.0,
-                 use_dynamic_time_axis = False,
-                 max_speech_len=29.0,
-                 max_text_token_len=MAX_TEXT_TOKEN_LENGTH,
-                 without_timestamps=True,
-                 speech_segmenter_options={}):
-        
->>>>>>> Stashed changes
         # Configure Params
         self.device = device
         self.device_index = device_index
         self.compute_type = compute_type
-<<<<<<< Updated upstream
 
         self.n_mels = n_mels
         self.merge_chunks = merge_chunks
@@ -317,155 +258,22 @@ class WhisperModelCT2(WhisperModel):
             compute_type=compute_type,
             intra_threads=cpu_threads,
             inter_threads=num_workers,
-=======
-
-        self.n_mels = n_mels
-        self.merge_chunks = merge_chunks
-        self.max_speech_len = max_speech_len
-
-        self.dta_padding = dta_padding
-        self.use_dynamic_time_axis = use_dynamic_time_axis
-
-        self.without_timestamps = without_timestamps
-        self.max_text_token_len = max_text_token_len
-
-        self.vad_model = vad_model
-        self.speech_segmenter_options = speech_segmenter_options
-        self.speech_segmenter_options['max_seg_len'] = self.max_speech_len
-
-        # Tokenizer
-        if tokenizer is None:
-            tokenizer = NoneTokenizer()
-
-        self.tokenizer = tokenizer
-
-        self._init_dependables()
-
-
-    def _init_dependables(self):
-        # Rescaled Params
-        self.dta_padding = int(self.dta_padding*SAMPLE_RATE)
-        self.max_initial_prompt_len = self.max_text_token_len//2 -1
-
-        # Load Pre Processor
-        self.preprocessor = LogMelSpectogram(n_mels=self.n_mels, base_path=self.vad_path).to(self.device)
-
-        # Load Speech Segmenter
-        self.speech_segmenter = SpeechSegmenter(self.vad_model, device=self.device, base_path=self.vad_path, **self.speech_segmenter_options)
-
-        # Load Data Loader
-        self.data_loader = WhisperDataLoader(
-            self.device, self.tokenizer, self.speech_segmenter, 
-            dta_padding=self.dta_padding,
-            without_timestamps=self.without_timestamps, 
-            max_speech_len=self.max_speech_len, 
-            max_initial_prompt_len=self.max_initial_prompt_len, 
-            use_dynamic_time_axis=self.use_dynamic_time_axis,
-            merge_chunks=self.merge_chunks
->>>>>>> Stashed changes
         )
 
-    def update_params(self, params={}):
-        for key, value in params.items():
-            setattr(self, key, value)
-        
-        self._init_dependables()
-
-    
-    @abstractmethod
-    def generate_segment_batched(self, features, prompts):
-        pass
-        
-    @torch.no_grad()
-    def transcribe(self, samples_batch, lang_codes=None, tasks=None, initial_prompts=None, batch_size=8):
-        lang_codes = fix_batch_param(lang_codes, 'en', len(samples_batch))
-        tasks = fix_batch_param(tasks, 'transcribe', len(samples_batch))
-        initial_prompts = fix_batch_param(initial_prompts, None, len(samples_batch))
-            
-        responses = [[] for _ in samples_batch]
-        
-        for signals, prompts, seq_len, seg_metadata in self.data_loader(samples_batch, lang_codes, tasks, initial_prompts, batch_size=batch_size, use_vad=False):
-            mels, seq_len = self.preprocessor(signals, seq_len)
-            res = self.generate_segment_batched(mels.to(self.device), prompts, seq_len, seg_metadata)
-
-            for res_idx, _seg_metadata in enumerate(seg_metadata):
-                responses[_seg_metadata['file_id']].append({**res[res_idx],
-                                                            'start_time': round(_seg_metadata['start_time'], 3),
-                                                            'end_time': round(_seg_metadata['end_time'], 3)})
-        
-        return responses
-
-    @torch.no_grad()
-    def transcribe_with_vad(self, samples_batch, lang_codes=None, tasks=None, initial_prompts=None, batch_size=8):
-        lang_codes = fix_batch_param(lang_codes, 'en', len(samples_batch))
-        tasks = fix_batch_param(tasks, 'transcribe', len(samples_batch))
-        initial_prompts = fix_batch_param(initial_prompts, None, len(samples_batch))
-            
-        responses = [[] for _ in samples_batch]
-        
-        for signals, prompts, seq_len, seg_metadata in self.data_loader(samples_batch, lang_codes, tasks, initial_prompts, batch_size=batch_size):
-            mels, seq_len = self.preprocessor(signals, seq_len)
-            res = self.generate_segment_batched(mels.to(self.device), prompts, seq_len, seg_metadata)
-
-            for res_idx, _seg_metadata in enumerate(seg_metadata):
-                responses[_seg_metadata['file_id']].append({**res[res_idx],
-                                                            'start_time': round(_seg_metadata['start_time'], 3),
-                                                            'end_time': round(_seg_metadata['end_time'], 3)})
-                
-        return responses
-
-class WhisperModelCT2(WhisperModel):
-    def __init__(self,
-                 model_path: str,
-                 cpu_threads=4,
-                 num_workers=1,
-                 device="cpu",
-                 device_index=0,
-                 compute_type="float32",
-                 max_text_token_len=MAX_TEXT_TOKEN_LENGTH,
-                 asr_options={},
-                 **model_kwargs):
-
-        self.model_path = model_path
-        self.vad_path = os.path.join(model_path, "vad")
-        
-        # Load model
-        self.model = ctranslate2.models.Whisper(self.model_path,
-                                                device=device,
-                                                device_index=device_index,
-                                                compute_type=compute_type,
-                                                intra_threads=cpu_threads,
-                                                inter_threads=num_workers)
-        
         # Load tokenizer
-<<<<<<< Updated upstream
         tokenizer_file = os.path.join(model_path, "tokenizer.json")
         tokenizer = Tokenizer(
             tokenizers.Tokenizer.from_file(tokenizer_file),
             self.model.is_multilingual,
             model_path,
         )
-=======
-        tokenizer_file = os.path.join(self.model_path, "tokenizer.json")
-        tokenizer = Tokenizer(tokenizers.Tokenizer.from_file(tokenizer_file), self.model.is_multilingual, self.vad_path)
->>>>>>> Stashed changes
 
         # ASR Options
         self.asr_options = FAST_ASR_OPTIONS
         self.asr_options.update(asr_options)
 
-        #if self.asr_options['word_timestamps']:
-        #    self.aligner_model_path = download_model(self.asr_options['word_aligner_model'])
-        #    self.aligner_model = ctranslate2.models.Whisper(self.aligner_model_path,
-        #                                                    device=device,
-        #                                                    device_index=device_index,
-        #                                                    compute_type=compute_type,
-        #                                                    intra_threads=cpu_threads,
-        #                                                    inter_threads=num_workers)
-        
         self.generate_kwargs = {
             "max_length": max_text_token_len,
-<<<<<<< Updated upstream
             "return_scores": self.asr_options["return_scores"],
             "return_no_speech_prob": self.asr_options["return_no_speech_prob"],
             "length_penalty": self.asr_options["length_penalty"],
@@ -477,19 +285,6 @@ class WhisperModelCT2(WhisperModel):
             "suppress_tokens": self.asr_options["suppress_tokens"],
             "max_initial_timestamp_index": int(round(self.asr_options["max_initial_timestamp"] / TIME_PRECISION)),
             "sampling_temperature": self.asr_options["sampling_temperature"],
-=======
-            "return_scores": self.asr_options['return_scores'],
-            "return_no_speech_prob": self.asr_options['return_no_speech_prob'],
-            "length_penalty": self.asr_options['length_penalty'],
-            "repetition_penalty": self.asr_options['repetition_penalty'],
-            "no_repeat_ngram_size": self.asr_options['no_repeat_ngram_size'],
-            "beam_size": self.asr_options['beam_size'],
-            "patience": self.asr_options['patience'],
-            "suppress_blank": self.asr_options['suppress_blank'],
-            "suppress_tokens": self.asr_options['suppress_tokens'],
-            "max_initial_timestamp_index": int(round(self.asr_options['max_initial_timestamp']/TIME_PRECISION)),
-            "sampling_temperature": self.asr_options['sampling_temperature'],
->>>>>>> Stashed changes
         }
 
         super().__init__(
@@ -498,50 +293,39 @@ class WhisperModelCT2(WhisperModel):
             device_index=device_index,
             compute_type=compute_type,
             max_text_token_len=max_text_token_len,
-<<<<<<< Updated upstream
             model_path=model_path,
             **model_kwargs,
-=======
-            **model_kwargs
->>>>>>> Stashed changes
         )
 
     def update_generation_kwargs(self, params={}):
         self.generate_kwargs.update(params)
 
-<<<<<<< Updated upstream
         if "max_text_token_len" in params:
             self.update_params(params={"max_text_token_len": params["max_text_token_len"]})
 
-=======
-        if 'max_text_token_len' in params:
-            self.update_params(params={'max_text_token_len': params['max_text_token_len']})
-    
->>>>>>> Stashed changes
     def encode(self, features):
         """
         [Not Used]
         """
-        
+
         features = ctranslate2.StorageView.from_array(features.contiguous())
         return self.model.encode(features)
 
     def assign_word_timings(self, alignments, text_token_probs, words, word_tokens):
         text_indices = np.array([pair[0] for pair in alignments])
         time_indices = np.array([pair[1] for pair in alignments])
-    
+
         if len(word_tokens) <= 1:
             return []
-            
+
         word_boundaries = np.pad(np.cumsum([len(t) for t in word_tokens[:-1]]), (1, 0))
         if len(word_boundaries) <= 1:
             return []
-    
+
         jumps = np.pad(np.diff(text_indices), (1, 0), constant_values=1).astype(bool)
-        jump_times = time_indices[jumps]*TIME_PRECISION
+        jump_times = time_indices[jumps] * TIME_PRECISION
         start_times = jump_times[word_boundaries[:-1]]
         end_times = jump_times[word_boundaries[1:]]
-<<<<<<< Updated upstream
         word_probs = [np.mean(text_token_probs[i:j]) for i, j in zip(word_boundaries[:-1], word_boundaries[1:])]
 
         return [
@@ -553,24 +337,6 @@ class WhisperModelCT2(WhisperModel):
         self, features, texts, text_tokens, sot_seqs, seq_lens, seg_metadata
     ):
         lang_codes = [_["lang_code"] for _ in seg_metadata]
-=======
-        word_probs = [
-            np.mean(text_token_probs[i:j])
-            for i, j in zip(word_boundaries[:-1], word_boundaries[1:])
-        ]
-    
-        return [
-            dict(
-                word=word, start=round(start, 2), end=round(end, 2), prob=round(prob, 2)
-            )
-            for word, start, end, prob in zip(
-                words, start_times, end_times, word_probs
-            )
-        ]
-
-    def align_words(self, features, texts, text_tokens, sot_seqs, seq_lens, seg_metadata):
-        lang_codes = [_['lang_code'] for _ in seg_metadata]
->>>>>>> Stashed changes
         word_tokens = self.tokenizer.split_to_word_tokens_batch(texts, text_tokens, lang_codes)
 
         start_seq_wise_req = {}
@@ -582,90 +348,70 @@ class WhisperModelCT2(WhisperModel):
 
         token_alignments = [[] for _ in seg_metadata]
         for start_seq, req_idx in start_seq_wise_req.items():
-            res = self.aligner_model.align(ctranslate2.StorageView.from_array(features[req_idx]), 
-                                           start_sequence=list(start_seq), 
-                                           text_tokens=[text_tokens[_] for _ in req_idx],
-                                           num_frames=list(seq_lens[req_idx].detach().cpu().numpy()), 
-                                           median_filter_width=7)
+            res = self.aligner_model.align(
+                ctranslate2.StorageView.from_array(features[req_idx]),
+                start_sequence=list(start_seq),
+                text_tokens=[text_tokens[_] for _ in req_idx],
+                num_frames=list(seq_lens[req_idx].detach().cpu().numpy()),
+                median_filter_width=7,
+            )
 
             for _res, _req_idx in zip(res, req_idx):
                 token_alignments[_req_idx] = _res
 
         word_timings = []
         for _idx, _seg_metadata in enumerate(seg_metadata):
-            _word_timings = self.assign_word_timings(token_alignments[_idx].alignments, 
-                                                     token_alignments[_idx].text_token_probs, 
-                                                     word_tokens[_idx][0], 
-                                                     word_tokens[_idx][1])
-        
-            stitched_seg = _seg_metadata['stitched_seg']
+            _word_timings = self.assign_word_timings(
+                token_alignments[_idx].alignments,
+                token_alignments[_idx].text_token_probs,
+                word_tokens[_idx][0],
+                word_tokens[_idx][1],
+            )
+
+            stitched_seg = _seg_metadata["stitched_seg"]
 
             current_seg_idx = 0
-            current_offset = _seg_metadata['start_time']
-        
+            current_offset = _seg_metadata["start_time"]
+
             for w in _word_timings:
-                while (w['start'] + current_offset) >= stitched_seg[current_seg_idx][1]:
+                while (w["start"] + current_offset) >= stitched_seg[current_seg_idx][1]:
                     current_seg_idx += 1
-                    current_offset += (stitched_seg[current_seg_idx][0]-stitched_seg[current_seg_idx-1][1])
-        
-                w['start'] += current_offset
-                w['end'] += current_offset
-        
+                    current_offset += (
+                        stitched_seg[current_seg_idx][0]
+                        - stitched_seg[current_seg_idx - 1][1]
+                    )
+
+                w["start"] += current_offset
+                w["end"] += current_offset
+
             word_timings.append(_word_timings)
 
         return word_timings
-    
+
     def generate_segment_batched(self, features, prompts, seq_lens, seg_metadata):
-<<<<<<< Updated upstream
         if self.device == "cpu":
-=======
-        if self.device == 'cpu':
->>>>>>> Stashed changes
             features = np.ascontiguousarray(features.detach().numpy())
         else:
             features = features.contiguous()
 
-<<<<<<< Updated upstream
         result = self.model.generate(
             ctranslate2.StorageView.from_array(features),
             prompts,
             **self.generate_kwargs,
         )
 
-=======
-        result = self.model.generate(ctranslate2.StorageView.from_array(features),
-                                     prompts,
-                                     **self.generate_kwargs)
-        
->>>>>>> Stashed changes
         texts = self.tokenizer.decode_batch([x.sequences_ids[0] for x in result])
-        
+
         response = []
         for idx, r in enumerate(result):
-            response.append({'text': texts[idx].strip()})
+            response.append({"text": texts[idx].strip()})
 
-            if self.generate_kwargs['return_scores']:
+            if self.generate_kwargs["return_scores"]:
                 seq_len = len(r.sequences_ids[0])
-<<<<<<< Updated upstream
                 cum_logprob = r.scores[0] * (seq_len ** self.generate_kwargs["length_penalty"])
                 response[-1]["avgLogProb"] = cum_logprob / (seq_len + 1)
 
             if self.generate_kwargs["return_no_speech_prob"]:
                 response[-1]["noSpeechProb"] = r.no_speech_prob
-=======
-                cum_logprob = r.scores[0]*(seq_len**self.generate_kwargs['length_penalty'])
-                response[-1]['avg_logprob'] = cum_logprob/(seq_len + 1)
-
-            if self.generate_kwargs['return_no_speech_prob']:
-                response[-1]['no_speech_prob'] = r.no_speech_prob
-
-        if self.asr_options['word_timestamps']:
-            text_tokens = [x.sequences_ids[0]+[self.tokenizer.eot] for x in result]
-            sot_seqs = [tuple(_[-4:]) for _ in prompts]
-            word_timings = self.align_words(features, texts, text_tokens, sot_seqs, seq_lens, seg_metadata)
-
-            for _response, _word_timings in zip(response, word_timings):
-                _response['word_timestamps'] = _word_timings
->>>>>>> Stashed changes
 
         return response

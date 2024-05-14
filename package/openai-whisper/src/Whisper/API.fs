@@ -4,17 +4,15 @@ open System
 open System.IO
 open System.Diagnostics
 open System.Text
-open System.Threading
 open FSharp.Json
 open FSharpPlus
-open Mirage.Utilities.Async
-open Mirage.Utilities.Lock
+open Mirage.Core.Async.Lazy
+open Mirage.Core.Async.Lock
 
 /// Context required to interact with whisper.
 type Whisper =
     private
         {   process': Process
-            cancelToken: CancellationToken
             lock: Lock
         }
 
@@ -34,7 +32,7 @@ type WhisperResponse<'A> =
     }
 
 /// Start the whisper process. This should only be invoked once.
-let startWhisper cancelToken =
+let Whisper () =
     let whisper = new Process()
     whisper.StartInfo <-
         new ProcessStartInfo(
@@ -48,7 +46,6 @@ let startWhisper cancelToken =
     whisper.StartInfo.StandardOutputEncoding <- Encoding.UTF8
     ignore <| whisper.Start()
     {   process' = whisper
-        cancelToken = cancelToken
         lock = createLock()
     }
 
@@ -69,7 +66,7 @@ let private request<'A, 'B> whisper (request: WhisperRequest<'A>) : Async<'B> =
             let mutable running = true
             while running do
                 let buffer = new Memory<char>(Array.zeroCreate<char> 1)
-                let! bytesRead = whisper.process'.StandardOutput.ReadAsync(buffer, whisper.cancelToken)
+                let! bytesRead = whisper.process'.StandardOutput.ReadAsync buffer
                 if bytesRead = 0 then
                     raise <| WhisperException "Unexpectedly read 0 bytes from whisper process' stdout."
                 let letter = buffer.Span[0]
@@ -104,7 +101,7 @@ type InitModelFullParams =
         workers: int
     }
 
-/// Initialize the whisper model. This needs to be run at least once for <b>transcribe</b> to work.
+/// Initialize the whisper model. This needs to be run once (and only once) for <b>transcribe</b> to work.
 let initModel whisper (modelParams: InitModelParams) =
     let baseDirectory = AppDomain.CurrentDomain.BaseDirectory
     let fullParams =

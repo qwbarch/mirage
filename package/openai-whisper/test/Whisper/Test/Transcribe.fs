@@ -1,13 +1,12 @@
 module Whisper.Test.Inference
 
-open System.Threading
+open System.Diagnostics
 open Assertion
 open NAudio.Wave
 open NUnit.Framework
 open Whisper.API
-open System.Diagnostics
 
-let f whisper =
+let runTest whisper =
     async {
         let audioReader = new WaveFileReader("jfk.wav")
         let samples = Array.zeroCreate<byte> <| int audioReader.Length
@@ -15,7 +14,8 @@ let f whisper =
         let sw = Stopwatch.StartNew()
         let! transcription =
             transcribe whisper
-                {   samplesBatch = List.replicate 10 samples
+                {   
+                    samplesBatch = List.replicate 10 samples
                     language = "en"
                 }
         sw.Stop()
@@ -28,15 +28,16 @@ let f whisper =
 [<Test>]
 let ``test transcription on jfk.wav`` () =
     async {
-        let whisper = startWhisper (new CancellationTokenSource()).Token
-        return!
+        let whisper = Whisper()
+        let! useCuda = isCudaAvailable whisper
+        printfn $"useCuda: {useCuda}"
+        do!
             initModel whisper
-                {   //useCuda = false
-                    useCuda = true
-                    cpuThreads = 24
-                    workers = 24
+                {   useCuda = useCuda
+                    cpuThreads = 16
+                    workers = 16
                 }
-        for i in 0 .. 10 do
-            return! f whisper
+        for _ in 0 .. 10 do
+            do! runTest whisper
         stopWhisper whisper
     }

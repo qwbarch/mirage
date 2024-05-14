@@ -8,9 +8,9 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="FSharp.Json" Version="0.4.1" />
-    <ProjectReference Include="../../mirage-utilities/src/Utilities.fsproj" />
+    <ProjectReference Include="../../mirage-core/src/Mirage.fsproj" />
       <Reference Include="FSharpx.Async">
-      <HintPath>../../../lib/FSharpx.Async.dll</HintPath>
+      <HintPath>../../../lib/FSharpx.Async/FSharpx.Async.dll</HintPath>
     </Reference>
     <ContentWithTargetPath Include="../lib/dist/main/main.exe">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

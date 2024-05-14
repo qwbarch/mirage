@@ -11,40 +11,18 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-<<<<<<< Updated upstream
 
 def to_audio_signal(samples: bytes):
     return np.frombuffer(samples, np.int16).flatten().astype(np.float32) / 32768.0
-
-=======
-def to_audio_signal(samples, sample_rate, return_duration=False):
-    audio_signal = (
-        np.frombuffer(samples, np.int16).flatten().astype(np.float32) / 32768.0
-    )
-    if return_duration:
-        audio_duration = len(audio_signal) / sample_rate
-        return audio_signal, audio_duration
-    else:
-        return audio_signal
->>>>>>> Stashed changes
 
 def pad_or_trim(array, length: int = N_SAMPLES, *, axis: int = -1):
     """
     Pad or trim the audio array to N_SAMPLES, as expected by the encoder.
     """
-<<<<<<< Updated upstream
 
     if torch.is_tensor(array):
         if array.shape[axis] > length:
             array = array.index_select(dim=axis, index=torch.arange(length, device=array.device))
-=======
-    
-    if torch.is_tensor(array):
-        if array.shape[axis] > length:
-            array = array.index_select(
-                dim=axis, index=torch.arange(length, device=array.device)
-            )
->>>>>>> Stashed changes
 
         if array.shape[axis] < length:
             pad_widths = [(0, 0)] * array.ndim
@@ -58,26 +36,17 @@ def pad_or_trim(array, length: int = N_SAMPLES, *, axis: int = -1):
             pad_widths = [(0, 0)] * array.ndim
             pad_widths[axis] = (0, length - array.shape[axis])
             array = np.pad(array, pad_widths)
-<<<<<<< Updated upstream
 
     return array
 
 
-=======
-    
-    return array
-
->>>>>>> Stashed changes
 class TorchSTFT(nn.Module):
     def __init__(self, n_fft, hop_length):
         super().__init__()
 
         self.n_fft = n_fft
         self.hop_length = hop_length
-<<<<<<< Updated upstream
 
-=======
->>>>>>> Stashed changes
         window = torch.hann_window(n_fft)
         self.register_buffer("window", window)
 
