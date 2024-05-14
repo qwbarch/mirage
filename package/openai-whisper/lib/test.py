@@ -2,11 +2,23 @@ from src.model import WhisperModelCT2
 
 import unittest
 import wave
+import time
 
 model_path = "../../../model/whisper-base"
 
 if __name__ == "__main__":
     unittest.main()
+
+def run_test(self, model, samples):
+    start_time = time.time()
+    i = 10
+    samples_batch = [samples] * i
+    lang_codes = ["en"] * i
+    response = model.transcribe_with_vad(samples_batch=samples_batch, lang_codes=lang_codes, batch_size=32)
+    elapsed_time = time.time() - start_time
+    print(f"elapsed time: {elapsed_time} seconds")
+    expected = "And so my fellow Americans, ask not what your country can do for you, ask what you can do for your country."
+    self.assertEqual(expected, response[0]["text"])
 
 class Test(unittest.TestCase):
     def test_transcribe(self):
@@ -14,9 +26,8 @@ class Test(unittest.TestCase):
             samples = wave_file.readframes(int(wave_file.getnframes()))
             model = WhisperModelCT2(
                 model_path=model_path,
-                device="cpu",
-                compute_type="float32",
+                device="cuda",
+                compute_type="float16",
             )
-            response = model.transcribe_with_vad(samples_batch=[samples], lang_codes=["en"], batch_size=32)
-            expected = "And so my fellow Americans, ask not what your country can do for you, ask what you can do for your country."
-            self.assertEqual(expected, response[0]["text"])
+            for _ in range(10):
+                run_test(self, model, samples)

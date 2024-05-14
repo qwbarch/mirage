@@ -16,18 +16,17 @@ def run_request(request):
             use_cuda = body["useCuda"]
             model = WhisperModelCT2(
                 model_path=body["modelPath"],
-                device="cuda" if use_cuda else "cpu",
-                compute_type="float16" if use_cuda else "float32",
+                #device="cuda" if use_cuda else "cpu",
+                #compute_type="float16" if use_cuda else "float32",
                 cpu_threads=body["cpuThreads"],
                 num_workers=body["workers"],
             )
             return "Ok"
         case "transcribe":
             samples_batch = body["samplesBatch"]
-            batch_size = len(samples_batch)
             return model.transcribe_with_vad(
                 samples_batch=list(map(bytes, samples_batch)),
-                lang_codes=[body["language"]] * batch_size,
+                lang_codes=[body["language"]] * len(samples_batch),
                 batch_size=32, # Taken from the WhisperS2T example. I'm assuming this is optimal for CTranslate2.
             )
 
