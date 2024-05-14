@@ -74,6 +74,7 @@ let private request<'A, 'B> whisper (request: WhisperRequest<'A>) : Async<'B> =
                     running <- false
                 else
                     ignore <| response.Append letter
+            printfn $"response: {response.ToString()}"
             let body = Json.deserialize <| response.ToString()
             return
                 match body.response, body.error with

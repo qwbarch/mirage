@@ -16,8 +16,8 @@ def run_request(request):
             use_cuda = body["useCuda"]
             model = WhisperModelCT2(
                 model_path=body["modelPath"],
-                #device="cuda" if use_cuda else "cpu",
-                #compute_type="float16" if use_cuda else "float32",
+                device="cuda" if use_cuda else "cpu",
+                compute_type="float16" if use_cuda else "float32",
                 cpu_threads=body["cpuThreads"],
                 num_workers=body["workers"],
             )

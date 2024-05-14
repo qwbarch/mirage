@@ -19,6 +19,7 @@ datas += copy_metadata("tokenizers")
 datas += copy_metadata("huggingface-hub")
 datas += copy_metadata("pyyaml")
 datas += copy_metadata("safetensors")
+datas += copy_metadata("wave")
 
 hiddenimports = collect_submodules("sklearn") 
 hiddenimports.append("torch")
@@ -38,9 +39,10 @@ hiddenimports.append("sklearn.neighbors.quad_tree")
 hiddenimports.append("sklearn.tree")
 hiddenimports.append("sklearn.trees._utils")
 hiddenimports.append("sklearn.metrics._pairwise_distances_reduction._dataset_pair")
+hiddenimports.append("wave")
 
 a = Analysis(
-    ["main.py"],
+    ["test-exe.py"],
     pathex=[],
     binaries=[],
     datas=datas,
