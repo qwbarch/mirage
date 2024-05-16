@@ -36,7 +36,7 @@ if __name__ == "__main__":
         return model.transcribe_with_vad(
             samples_batch=list(map(bytes, samples_batch)),
             lang_codes=[request["language"]] * len(samples_batch),
-            batch_size=32, # Taken from the WhisperS2T example. I'm assuming this is optimal for CTranslate2.
+            batch_size=32,  # Taken from the WhisperS2T example. I'm assuming this is optimal for CTranslate2.
         )
 
     running = True
@@ -44,9 +44,9 @@ if __name__ == "__main__":
         try:
             request = socket.recv()
             parsed_request = fastavro.schemaless_reader(io.BytesIO(request), schema)
-            respond({ "response": transcribe(parsed_request) })
+            respond({"response": transcribe(parsed_request)})
         except zmq.error.ZMQError as exception:
             running = False
         except Exception:
-            respond({ "exception": traceback.format_exc() })
+            respond({"exception": traceback.format_exc()})
             running = False
