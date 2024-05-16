@@ -4,10 +4,15 @@ import sys
 import torch
 import traceback
 import zmq
+import fastavro
+import io
 
 if __name__ == "__main__":
     stdin = sys.stdin.buffer
     stdout = sys.stdout.buffer
+
+    # Store the request schema.
+    schema = json.loads(stdin.readline())
 
     # Initialize ZeroMQ.
     context = zmq.Context()
@@ -36,9 +41,9 @@ if __name__ == "__main__":
 
     while True:
         try:
-            request = socket.recv().decode("utf-8")
-            response = transcribe(json.loads(request))
-            respond(response)
+            request = socket.recv()
+            parsed_request = fastavro.schemaless_reader(io.BytesIO(request), schema)
+            respond({ "response": transcribe(parsed_request) })
         except Exception:
             respond({ "exception": traceback.format_exc() })
             break

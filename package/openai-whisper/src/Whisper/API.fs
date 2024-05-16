@@ -10,6 +10,7 @@ open NetMQ.Sockets
 open Mirage.Core.Async.Lazy
 open Mirage.Core.Async.Lock
 open Mirage.Core.Async.Fork
+open SolTechnology.Avro
 
 /// Context required to interact with whisper.
 type Whisper =
@@ -17,10 +18,29 @@ type Whisper =
         {   process': Process
             lock: Lock
             client: RequestSocket
+            schema: string
         }
 
 type WhisperException(message: string) =
     inherit Exception(message)
+
+type TranscribeRequest =
+    {   samplesBatch: array<array<byte>>
+        language: string
+    }
+
+type Transcription =
+    {   text: string
+        startTime: float32
+        endTime: float32
+        avgLogProb: float32
+        noSpeechProb: float32
+    }
+
+type TranscribeResponse =
+    {   response: Option<Transcription[]>
+        error: Option<string>
+    }
 
 /// Start the whisper process. This should only be invoked once.
 let startWhisper =
@@ -42,6 +62,8 @@ let startWhisper =
                     process'.Kill()
             )
             ignore <| process'.Start()
+            let schema = AvroConvert.GenerateSchema typeof<TranscribeRequest>
+            do! process'.StandardInput.WriteLineAsync schema
             let! response = process'.StandardOutput.ReadLineAsync()
             let mutable cudaAvailable = false
             ignore <| Boolean.TryParse(response, &cudaAvailable)
@@ -49,6 +71,7 @@ let startWhisper =
                 {   process' = process'
                     lock = createLock()
                     client = new RequestSocket(">tcp://localhost:50292")
+                    schema = schema
                 }
             return (whisper, cudaAvailable)
         }
@@ -63,36 +86,17 @@ let stopWhisper whisper =
         dispose whisper.lock
         dispose whisper.client
 
-type TranscribeRequest =
-    {   samplesBatch: array<array<byte>>
-        language: string
-    }
-
-type Transcription =
-    {   text: string
-        startTime: float32
-        endTime: float32
-        avgLogProb: float32
-        noSpeechProb: float32
-    }
-
-type TranscriptionResponse =
-    {   response: Option<Transcription>
-        error: Option<string>
-    }
-
 /// Transcribe the given audio samples into text.
-let transcribe whisper request =
+let transcribe whisper request : Async<Transcription[]> =
     forkReturn << withLock' whisper.lock <|
         async {
-            whisper.client.SendFrame(Json.serializeU request)
+            whisper.client.SendFrame(AvroConvert.SerializeHeadless(request, whisper.schema))
             let (responseBody, _) =  whisper.client.ReceiveFrameString()
-            printfn $"responseBody: {responseBody}"
-            return {text=zero;startTime=zero;endTime=zero;avgLogProb=zero;noSpeechProb=zero}
-            //let body = Json.deserialize responseBody
-            //return
-            //    match body.response, body.error with
-            //        | Some response, None -> response
-            //        | None, Some error -> raise <| WhisperException error
-            //        | _, _ -> raise <| WhisperException $"Received an unexpected response from whisper-s2t. Response: {responseBody.ToString()}"
+            let body = Json.deserialize<TranscribeResponse> responseBody
+            let body = Json.deserialize responseBody
+            return
+                match body.response, body.error with
+                    | Some response, None -> response
+                    | None, Some error -> raise <| WhisperException error
+                    | _, _ -> raise <| WhisperException $"Received an unexpected response from whisper-s2t. Response: {responseBody.ToString()}"
         }
