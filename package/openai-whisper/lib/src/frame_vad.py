@@ -25,25 +25,37 @@ class VADBaseClass(ABC):
 class FrameVAD(VADBaseClass):
     def __init__(
         self,
+        base_path,
         device=None,
         chunk_size=15.0,
         margin_size=1.0,
         frame_size=0.02,
         batch_size=4,
         sampling_rate=16000,
-        base_path=None,
     ):
 
         super().__init__(sampling_rate=sampling_rate)
+
+        if device == None:
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+
         self.device = device
 
         if self.device == "cpu":
             # This is a JIT Scripted model of Nvidia's NeMo Framewise Marblenet Model: https://catalog.ngc.nvidia.com/orgs/nvidia/teams/nemo/models/vad_multilingual_frame_marblenet
-            self.vad_pp = torch.jit.load(os.path.join(base_path, "assets/vad_pp_cpu.ts")).to(self.device)
-            self.vad_model = torch.jit.load(os.path.join(base_path, "assets/frame_vad_model_cpu.ts")).to(self.device)
+            self.vad_pp = torch.jit.load(
+                os.path.join(base_path, "assets/vad_pp_cpu.ts")
+            ).to(self.device)
+            self.vad_model = torch.jit.load(
+                os.path.join(base_path, "assets/frame_vad_model_cpu.ts")
+            ).to(self.device)
         else:
-            self.vad_pp = torch.jit.load(os.path.join(base_path, "assets/vad_pp_gpu.ts")).to(self.device)
-            self.vad_model = torch.jit.load(os.path.join(base_path, "assets/frame_vad_model_gpu.ts")).to(self.device)
+            self.vad_pp = torch.jit.load(
+                os.path.join(base_path, "assets/vad_pp_gpu.ts")
+            ).to(self.device)
+            self.vad_model = torch.jit.load(
+                os.path.join(base_path, "assets/frame_vad_model_gpu.ts")
+            ).to(self.device)
 
         self.vad_pp.eval()
         self.vad_model.eval()
@@ -57,7 +69,9 @@ class FrameVAD(VADBaseClass):
 
     def _init_params(self):
         self.signal_chunk_len = int(self.chunk_size * self.sampling_rate)
-        self.signal_stride = int(self.signal_chunk_len - 2 * int(self.margin_size * self.sampling_rate))
+        self.signal_stride = int(
+            self.signal_chunk_len - 2 * int(self.margin_size * self.sampling_rate)
+        )
 
         self.margin_logit_len = int(self.margin_size / self.frame_size)
         self.signal_to_logit_len = int(self.frame_size * self.sampling_rate)
@@ -81,7 +95,9 @@ class FrameVAD(VADBaseClass):
             input_signal_length.append(_signal_len)
 
             if _signal_len < self.signal_chunk_len:
-                input_signal[-1] = np.pad(input_signal[-1], (0, self.signal_chunk_len - _signal_len))
+                input_signal[-1] = np.pad(
+                    input_signal[-1], (0, self.signal_chunk_len - _signal_len)
+                )
                 break
 
         return input_signal, input_signal_length
@@ -89,10 +105,18 @@ class FrameVAD(VADBaseClass):
     @torch.cuda.amp.autocast()
     @torch.no_grad()
     def forward(self, input_signal, input_signal_length):
+
         all_logits = []
         for s_idx in range(0, len(input_signal), self.batch_size):
-            input_signal_pt = torch.stack([torch.tensor(_, device=self.device) for _ in input_signal[s_idx : s_idx + self.batch_size]])
-            input_signal_length_pt = torch.tensor(input_signal_length[s_idx : s_idx + self.batch_size], device=self.device)
+            input_signal_pt = torch.stack(
+                [
+                    torch.tensor(_, device=self.device)
+                    for _ in input_signal[s_idx : s_idx + self.batch_size]
+                ]
+            )
+            input_signal_length_pt = torch.tensor(
+                input_signal_length[s_idx : s_idx + self.batch_size], device=self.device
+            )
 
             x, x_len = self.vad_pp(input_signal_pt, input_signal_length_pt)
             logits = self.vad_model(x, x_len)
@@ -105,7 +129,9 @@ class FrameVAD(VADBaseClass):
             all_logits[-1] = all_logits[-1][self.margin_logit_len :]
 
             for i in range(1, len(all_logits) - 1):
-                all_logits[i] = all_logits[i][self.margin_logit_len : -self.margin_logit_len]
+                all_logits[i] = all_logits[i][
+                    self.margin_logit_len : -self.margin_logit_len
+                ]
 
         all_logits = torch.concatenate(all_logits)
         all_logits = torch.softmax(all_logits, dim=-1)

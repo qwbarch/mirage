@@ -7,9 +7,9 @@ from abc import ABC, abstractmethod
 from itertools import chain
 from src.frame_vad import FrameVAD
 from src.loader import WhisperDataLoader
-from src.audio import LogMelSpectogram
+from src.audio import LogMelSpectogram, to_audio_signal
 from src.segmenter import SpeechSegmenter
-from src.tokenizer import Tokenizer
+from src.tokenizer import NoneTokenizer, Tokenizer
 from whisper_s2t.configs import *
 
 import os
@@ -20,19 +20,20 @@ import tokenizers
 
 FAST_ASR_OPTIONS = {
     "beam_size": 1,
-    "best_of": 1,
+    "best_of": 1,  # Placeholder
     "patience": 1,
     "length_penalty": 1,
     "repetition_penalty": 1.01,
     "no_repeat_ngram_size": 0,
-    "compression_ratio_threshold": 2.4,
-    "log_prob_threshold": -1.0,
-    "no_speech_threshold": 0.5,
-    "prefix": None,
+    "compression_ratio_threshold": 2.4,  # Placeholder
+    "log_prob_threshold": -1.0,  # Placeholder
+    "no_speech_threshold": 0.5,  # Placeholder
+    "prefix": None,  # Placeholder
     "suppress_blank": True,
     "suppress_tokens": [-1],
     "without_timestamps": True,
     "max_initial_timestamp": 1.0,
+    "word_timestamps": False,  # Placeholder
     "sampling_temperature": 1.0,
     "return_scores": True,
     "return_no_speech_prob": True,
@@ -42,38 +43,25 @@ FAST_ASR_OPTIONS = {
 
 BEST_ASR_CONFIG = {
     "beam_size": 5,
-    "best_of": 1,
+    "best_of": 1,  # Placeholder
     "patience": 2,
     "length_penalty": 1,
     "repetition_penalty": 1.01,
     "no_repeat_ngram_size": 0,
-    "compression_ratio_threshold": 2.4,
-    "log_prob_threshold": -1.0,
-    "no_speech_threshold": 0.5,
-    "prefix": None,
+    "compression_ratio_threshold": 2.4,  # Placeholder
+    "log_prob_threshold": -1.0,  # Placeholder
+    "no_speech_threshold": 0.5,  # Placeholder
+    "prefix": None,  # Placeholder
     "suppress_blank": True,
     "suppress_tokens": [-1],
     "without_timestamps": True,
     "max_initial_timestamp": 1.0,
+    "word_timestamps": False,  # Placeholder
     "sampling_temperature": 1.0,
     "return_scores": True,
     "return_no_speech_prob": True,
     "word_aligner_model": "tiny",
 }
-
-
-class NoneTokenizer:
-    def __init__(self):
-        self.sot_prev = 0
-        self.silent_token = 0
-        self.no_timestamps = 0
-        self.timestamp_begin = 0
-
-    def sot_sequence(self, task=None, lang=None):
-        return [task, lang]
-
-    def encode(self, _):
-        return [0]
 
 
 def fix_batch_param(param, default_value, N):
@@ -91,6 +79,7 @@ class WhisperModel(ABC):
     def __init__(
         self,
         tokenizer=None,
+        vad_model=None,
         n_mels=80,
         device="cuda",
         device_index=0,
@@ -102,7 +91,6 @@ class WhisperModel(ABC):
         max_text_token_len=MAX_TEXT_TOKEN_LENGTH,
         without_timestamps=True,
         speech_segmenter_options={},
-        model_path=None,
     ):
 
         # Configure Params
@@ -120,10 +108,9 @@ class WhisperModel(ABC):
         self.without_timestamps = without_timestamps
         self.max_text_token_len = max_text_token_len
 
+        self.vad_model = vad_model
         self.speech_segmenter_options = speech_segmenter_options
         self.speech_segmenter_options["max_seg_len"] = self.max_speech_len
-
-        self.model_path = model_path
 
         # Tokenizer
         if tokenizer is None:
@@ -139,11 +126,17 @@ class WhisperModel(ABC):
         self.max_initial_prompt_len = self.max_text_token_len // 2 - 1
 
         # Load Pre Processor
-        self.preprocessor = LogMelSpectogram(n_mels=self.n_mels, base_path=self.model_path).to(self.device)
+        self.preprocessor = LogMelSpectogram(
+            base_path=self.model_path, n_mels=self.n_mels
+        ).to(self.device)
 
         # Load Speech Segmenter
-        vad_model = FrameVAD(device=self.device, base_path=self.model_path)
-        self.speech_segmenter = SpeechSegmenter(vad_model, **self.speech_segmenter_options)
+        self.speech_segmenter = SpeechSegmenter(
+            base_path=self.model_path,
+            vad_model=self.vad_model,
+            device=self.device,
+            **self.speech_segmenter_options
+        )
 
         # Load Data Loader
         self.data_loader = WhisperDataLoader(
@@ -169,43 +162,6 @@ class WhisperModel(ABC):
         pass
 
     @torch.no_grad()
-    def transcribe(
-        self,
-        samples_batch,
-        lang_codes=None,
-        tasks=None,
-        initial_prompts=None,
-        batch_size=8,
-    ):
-        lang_codes = fix_batch_param(lang_codes, "en", len(samples_batch))
-        tasks = fix_batch_param(tasks, "transcribe", len(samples_batch))
-        initial_prompts = fix_batch_param(initial_prompts, None, len(samples_batch))
-
-        responses = [[] for _ in samples_batch]
-
-        for signals, prompts, seq_len, seg_metadata in self.data_loader(
-            samples_batch,
-            lang_codes,
-            tasks,
-            initial_prompts,
-            batch_size=batch_size,
-            use_vad=False,
-        ):
-            mels, seq_len = self.preprocessor(signals, seq_len)
-            res = self.generate_segment_batched(mels.to(self.device), prompts, seq_len, seg_metadata)
-
-            for res_idx, _seg_metadata in enumerate(seg_metadata):
-                responses[_seg_metadata["file_id"]].append(
-                    {
-                        **res[res_idx],
-                        "start_time": round(_seg_metadata["start_time"], 3),
-                        "end_time": round(_seg_metadata["end_time"], 3),
-                    }
-                )
-
-        return list(chain(*responses))
-
-    @torch.no_grad()
     def transcribe_with_vad(
         self,
         samples_batch,
@@ -214,17 +170,21 @@ class WhisperModel(ABC):
         initial_prompts=None,
         batch_size=8,
     ):
-
         lang_codes = fix_batch_param(lang_codes, "en", len(samples_batch))
         tasks = fix_batch_param(tasks, "transcribe", len(samples_batch))
         initial_prompts = fix_batch_param(initial_prompts, None, len(samples_batch))
-
         responses = [[] for _ in samples_batch]
-
-        for signals, prompts, seq_len, seg_metadata in self.data_loader(samples_batch, lang_codes, tasks, initial_prompts, batch_size=batch_size):
-            mels, seq_len = self.preprocessor(signals, seq_len)
-            res = self.generate_segment_batched(mels.to(self.device), prompts, seq_len, seg_metadata)
-
+        for audio_signal, prompts, seq_len, seg_metadata in self.data_loader(
+            list(map(to_audio_signal, samples_batch)),
+            lang_codes,
+            tasks,
+            initial_prompts,
+            batch_size=batch_size,
+        ):
+            mels, seq_len = self.preprocessor(audio_signal, seq_len)
+            res = self.generate_segment_batched(
+                mels.to(self.device), prompts, seq_len, seg_metadata
+            )
             for res_idx, _seg_metadata in enumerate(seg_metadata):
                 responses[_seg_metadata["file_id"]].append(
                     {
@@ -239,7 +199,7 @@ class WhisperModel(ABC):
 class WhisperModelCT2(WhisperModel):
     def __init__(
         self,
-        model_path: str,
+        model_path,
         cpu_threads=4,
         num_workers=1,
         device="cuda",
@@ -251,8 +211,9 @@ class WhisperModelCT2(WhisperModel):
     ):
 
         # Load model
+        self.model_path = model_path
         self.model = ctranslate2.models.Whisper(
-            model_path,
+            self.model_path,
             device=device,
             device_index=device_index,
             compute_type=compute_type,
@@ -261,7 +222,7 @@ class WhisperModelCT2(WhisperModel):
         )
 
         # Load tokenizer
-        tokenizer_file = os.path.join(model_path, "tokenizer.json")
+        tokenizer_file = os.path.join(self.model_path, "tokenizer.json")
         tokenizer = Tokenizer(
             tokenizers.Tokenizer.from_file(tokenizer_file),
             self.model.is_multilingual,
@@ -283,7 +244,9 @@ class WhisperModelCT2(WhisperModel):
             "patience": self.asr_options["patience"],
             "suppress_blank": self.asr_options["suppress_blank"],
             "suppress_tokens": self.asr_options["suppress_tokens"],
-            "max_initial_timestamp_index": int(round(self.asr_options["max_initial_timestamp"] / TIME_PRECISION)),
+            "max_initial_timestamp_index": int(
+                round(self.asr_options["max_initial_timestamp"] / TIME_PRECISION)
+            ),
             "sampling_temperature": self.asr_options["sampling_temperature"],
         }
 
@@ -293,15 +256,16 @@ class WhisperModelCT2(WhisperModel):
             device_index=device_index,
             compute_type=compute_type,
             max_text_token_len=max_text_token_len,
-            model_path=model_path,
-            **model_kwargs,
+            **model_kwargs
         )
 
     def update_generation_kwargs(self, params={}):
         self.generate_kwargs.update(params)
 
         if "max_text_token_len" in params:
-            self.update_params(params={"max_text_token_len": params["max_text_token_len"]})
+            self.update_params(
+                params={"max_text_token_len": params["max_text_token_len"]}
+            )
 
     def encode(self, features):
         """
@@ -326,10 +290,15 @@ class WhisperModelCT2(WhisperModel):
         jump_times = time_indices[jumps] * TIME_PRECISION
         start_times = jump_times[word_boundaries[:-1]]
         end_times = jump_times[word_boundaries[1:]]
-        word_probs = [np.mean(text_token_probs[i:j]) for i, j in zip(word_boundaries[:-1], word_boundaries[1:])]
+        word_probs = [
+            np.mean(text_token_probs[i:j])
+            for i, j in zip(word_boundaries[:-1], word_boundaries[1:])
+        ]
 
         return [
-            dict(word=word, start=round(start, 2), end=round(end, 2), prob=round(prob, 2))
+            dict(
+                word=word, start=round(start, 2), end=round(end, 2), prob=round(prob, 2)
+            )
             for word, start, end, prob in zip(words, start_times, end_times, word_probs)
         ]
 
@@ -337,11 +306,14 @@ class WhisperModelCT2(WhisperModel):
         self, features, texts, text_tokens, sot_seqs, seq_lens, seg_metadata
     ):
         lang_codes = [_["lang_code"] for _ in seg_metadata]
-        word_tokens = self.tokenizer.split_to_word_tokens_batch(texts, text_tokens, lang_codes)
+        word_tokens = self.tokenizer.split_to_word_tokens_batch(
+            texts, text_tokens, lang_codes
+        )
 
         start_seq_wise_req = {}
         for _idx, _sot_seq in enumerate(sot_seqs):
             try:
+                # print(_sot_seq)
                 start_seq_wise_req[_sot_seq].append(_idx)
             except:
                 start_seq_wise_req[_sot_seq] = [_idx]
@@ -389,6 +361,7 @@ class WhisperModelCT2(WhisperModel):
         return word_timings
 
     def generate_segment_batched(self, features, prompts, seq_lens, seg_metadata):
+
         if self.device == "cpu":
             features = np.ascontiguousarray(features.detach().numpy())
         else:
@@ -397,7 +370,7 @@ class WhisperModelCT2(WhisperModel):
         result = self.model.generate(
             ctranslate2.StorageView.from_array(features),
             prompts,
-            **self.generate_kwargs,
+            **self.generate_kwargs
         )
 
         texts = self.tokenizer.decode_batch([x.sequences_ids[0] for x in result])
@@ -408,10 +381,22 @@ class WhisperModelCT2(WhisperModel):
 
             if self.generate_kwargs["return_scores"]:
                 seq_len = len(r.sequences_ids[0])
-                cum_logprob = r.scores[0] * (seq_len ** self.generate_kwargs["length_penalty"])
+                cum_logprob = r.scores[0] * (
+                    seq_len ** self.generate_kwargs["length_penalty"]
+                )
                 response[-1]["avgLogProb"] = cum_logprob / (seq_len + 1)
 
             if self.generate_kwargs["return_no_speech_prob"]:
                 response[-1]["noSpeechProb"] = r.no_speech_prob
+
+        if self.asr_options["word_timestamps"]:
+            text_tokens = [x.sequences_ids[0] + [self.tokenizer.eot] for x in result]
+            sot_seqs = [tuple(_[-4:]) for _ in prompts]
+            word_timings = self.align_words(
+                features, texts, text_tokens, sot_seqs, seq_lens, seg_metadata
+            )
+
+            for _response, _word_timings in zip(response, word_timings):
+                _response["word_timestamps"] = _word_timings
 
         return response

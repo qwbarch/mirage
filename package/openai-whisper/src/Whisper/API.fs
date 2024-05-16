@@ -1,127 +1,34 @@
 module Whisper.API
 
 open System
-open System.IO
 open System.Diagnostics
 open System.Text
-open FSharp.Json
+open SolTechnology.Avro
 open FSharpPlus
+open FSharp.Json
+open NetMQ
+open NetMQ.Sockets
 open Mirage.Core.Async.Lazy
 open Mirage.Core.Async.Lock
+open Mirage.Core.Async.Fork
 
 /// Context required to interact with whisper.
 type Whisper =
     private
         {   process': Process
             lock: Lock
+            socket: PushSocket
+            schema: string
         }
 
 type WhisperException(message: string) =
     inherit Exception(message)
 
-// This cannot have a private constructor due to FSharpJson constraints.
-type WhisperRequest<'A> =
-    {   requestType: string   
-        body: Option<'A>
-    }
-
-// This cannot have a private constructor due to FSharpJson constraints.
-type WhisperResponse<'A> =
-    {   response: Option<'A>
-        error: Option<string>
-    }
-
-/// Start the whisper process. This should only be invoked once.
-let Whisper () =
-    let whisper = new Process()
-    whisper.StartInfo <-
-        new ProcessStartInfo(
-            FileName = "model/whisper-s2t/main.exe",
-            UseShellExecute = false,
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            CreateNoWindow = true
-        )
-    whisper.StartInfo.StandardInputEncoding <- Encoding.UTF8
-    whisper.StartInfo.StandardOutputEncoding <- Encoding.UTF8
-    ignore <| whisper.Start()
-    {   process' = whisper
-        lock = createLock()
-    }
-
-/// Kill the whisper process.<br />
-/// Note: The <b>CancellationToken</b> used during <b>startWhisper</b> is not implicitly cancelled or disposed.<br />
-/// You must handle this yourself explicitly.
-let stopWhisper whisper =
-    try whisper.process'.Kill()
-    finally dispose whisper.lock
-
-let private request<'A, 'B> whisper (request: WhisperRequest<'A>) : Async<'B> =
-    withLock' whisper.lock << Lazy.toAsync<'B> <| fun () ->
-        task {
-            do! whisper.process'.StandardInput.WriteAsync(Json.serializeU request)
-            do! whisper.process'.StandardInput.WriteAsync '\x00'
-            do! whisper.process'.StandardInput.FlushAsync()
-            let response = new StringBuilder()
-            let mutable running = true
-            while running do
-                let buffer = new Memory<char>(Array.zeroCreate<char> 1)
-                let! bytesRead = whisper.process'.StandardOutput.ReadAsync buffer
-                if bytesRead = 0 then
-                    raise <| WhisperException "Unexpectedly read 0 bytes from whisper process' stdout."
-                let letter = buffer.Span[0]
-                if letter = '\x00' then
-                    running <- false
-                else
-                    ignore <| response.Append letter
-            let body = Json.deserialize <| response.ToString()
-            return
-                match body.response, body.error with
-                    | Some response, None -> response
-                    | None, Some error -> raise <| WhisperException error
-                    | _, _ -> raise <| WhisperException $"Received an unexpected response from whisper-s2t. Response: {response.ToString()}"
-        }
-
-let isCudaAvailable whisper =
-    request<string, bool> whisper
-        {   requestType = "isCudaAvailable" 
-            body = None
-        }
-
-type InitModelParams =
-    {   useCuda: bool
-        cpuThreads: int 
-        workers: int
-    }
-
-type InitModelFullParams =
-    {   modelPath: string
-        useCuda: bool
-        cpuThreads: int 
-        workers: int
-    }
-
-/// Initialize the whisper model. This needs to be run once (and only once) for <b>transcribe</b> to work.
-let initModel whisper (modelParams: InitModelParams) =
-    let baseDirectory = AppDomain.CurrentDomain.BaseDirectory
-    let fullParams =
-        {   modelPath = Path.Join(baseDirectory, "model/whisper-base")
-            useCuda = modelParams.useCuda
-            cpuThreads = modelParams.cpuThreads
-            workers = modelParams.workers
-        }
-    map ignore <| request<InitModelFullParams, string> whisper
-        {   requestType = "initModel"
-            body = Some fullParams
-        }
-
-/// A batch of samples to transcribe.
-type TranscribeParams =
-    {   samplesBatch: list<array<byte>>
+type TranscribeRequest =
+    {   samplesBatch: array<array<byte>>
         language: string
     }
 
-/// A transcription of the given audio samples.
 type Transcription =
     {   text: string
         startTime: float32
@@ -130,9 +37,70 @@ type Transcription =
         noSpeechProb: float32
     }
 
+type TranscribeResponse =
+    {   response: Option<Transcription[]>
+        error: Option<string>
+    }
+
+/// Start the whisper process. This should only be invoked once.
+let startWhisper =
+    Lazy.toAsync<Tuple<Whisper, bool>> <| fun () ->
+        task {
+            let process' = new Process()
+            process'.StartInfo <-
+                new ProcessStartInfo(
+                    FileName = "model/whisper-s2t/main.exe",
+                    UseShellExecute = false,
+                    RedirectStandardInput = true,
+                    RedirectStandardOutput = true,
+                    CreateNoWindow = true
+                )
+            process'.StartInfo.StandardInputEncoding <- Encoding.UTF8
+            process'.StartInfo.StandardOutputEncoding <- Encoding.UTF8
+
+            // Close the child process if the parent dies.
+            // From the python exe's side, it will also auto-close if the ZeroMQ socket is closed.
+            AppDomain.CurrentDomain.ProcessExit.AddHandler(fun _ _ ->
+                if not process'.HasExited then
+                    process'.Kill()
+            )
+
+            // Start the child process, and retrieve whether cuda is available or not.
+            ignore <| process'.Start()
+            let schema = AvroConvert.GenerateSchema typeof<TranscribeRequest>
+            do! process'.StandardInput.WriteLineAsync schema
+            let! response = process'.StandardOutput.ReadLineAsync()
+            let mutable cudaAvailable = false
+            ignore <| Boolean.TryParse(response, &cudaAvailable)
+            let whisper =
+                {   process' = process'
+                    lock = createLock()
+                    socket = new PushSocket("@tcp://localhost:50292")
+                    schema = schema
+                }
+            return (whisper, cudaAvailable)
+        }
+
+/// Kill the whisper process.<br />
+/// Note: The <b>CancellationToken</b> used during <b>startWhisper</b> is not implicitly cancelled or disposed.<br />
+/// You must handle this yourself explicitly.
+let stopWhisper whisper =
+    try
+        whisper.process'.Kill()
+    finally
+        dispose whisper.lock
+        dispose whisper.socket
+
 /// Transcribe the given audio samples into text.
-let transcribe whisper transcribeParams =
-    request<TranscribeParams, array<Transcription>> whisper
-        {   requestType = "transcribe"
-            body = Some transcribeParams
+let transcribe whisper request =
+    forkReturn << withLock' whisper.lock << Lazy.toAsync<Transcription[]> <| fun () ->
+        task {
+            whisper.socket.SendFrame(AvroConvert.SerializeHeadless(request, whisper.schema))
+            let! responseBody = whisper.process'.StandardOutput.ReadLineAsync()
+            let body = Json.deserialize responseBody
+            return
+                match body.response, body.error with
+                    | Some response, None -> response
+                    | None, Some error -> raise <| WhisperException error
+                    | _, _ -> raise <| WhisperException $"Received an unexpected response from whisper-s2t. Response: {responseBody.ToString()}"
         }

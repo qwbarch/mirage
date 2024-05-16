@@ -8,11 +8,25 @@ import os
 
 _TASKS = ("transcribe", "translate")
 
+
+class NoneTokenizer:
+    def __init__(self):
+        self.sot_prev = 0
+        self.silent_token = 0
+        self.no_timestamps = 0
+        self.timestamp_begin = 0
+
+    def sot_sequence(self, task=None, lang=None):
+        return [task, lang]
+
+    def encode(self, text):
+        return [0]
+
+
 class Tokenizer:
     def __init__(self, tokenizer, multilingual, base_path):
         with open(os.path.join(base_path, "assets/lang_codes.txt"), "r") as file:
-            lang_codes = [_ for _ in file.read().split("\n") if _]
-
+            languages = [_ for _ in file.read().split("\n") if _]
             self.tokenizer = tokenizer
             self.multilingual = multilingual
 
@@ -22,7 +36,7 @@ class Tokenizer:
                 }
                 self.lang_code_to_token_id = {
                     lang: self.tokenizer.token_to_id(f"<|{lang}|>")
-                    for lang in lang_codes
+                    for lang in languages
                 }
             else:
                 self.task_to_token_id = None
@@ -98,8 +112,12 @@ class Tokenizer:
             decoded = self.decode(current_tokens)
 
             try:
-                replacement_char_index = (decoded.index(replacement_char) + unicode_offset)
-                if (replacement_char_index < len(text)) and (text[replacement_char_index] == replacement_char):
+                replacement_char_index = (
+                    decoded.index(replacement_char) + unicode_offset
+                )
+                if (replacement_char_index < len(text)) and (
+                    text[replacement_char_index] == replacement_char
+                ):
                     word_finished = True
             except ValueError:
                 word_finished = True

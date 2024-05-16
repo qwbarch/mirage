@@ -6,20 +6,18 @@ open NAudio.Wave
 open NUnit.Framework
 open Whisper.API
 
-let runTest whisper =
+let runTest whisper samples =
     async {
-        let audioReader = new WaveFileReader("jfk.wav")
-        let samples = Array.zeroCreate<byte> <| int audioReader.Length
-        ignore <| audioReader.Read(samples, 0, samples.Length)
+        let samplesBatch = Array.replicate 10 samples
         let sw = Stopwatch.StartNew()
         let! transcription =
             transcribe whisper
                 {   
-                    samplesBatch = List.replicate 10 samples
+                    samplesBatch = samplesBatch
                     language = "en"
                 }
         sw.Stop()
-        printfn $"Elapsed time: {sw.ElapsedMilliseconds} seconds"
+        printfn $"Elapsed time: {sw.Elapsed.TotalSeconds} seconds"
         let expected = "And so my fellow Americans, ask not what your country can do for you, ask what you can do for your country."
         let actual = transcription[0].text
         assertEquals expected actual
@@ -27,17 +25,12 @@ let runTest whisper =
 
 [<Test>]
 let ``test transcription on jfk.wav`` () =
-    async {
-        let whisper = Whisper()
-        let! useCuda = isCudaAvailable whisper
-        printfn $"useCuda: {useCuda}"
-        do!
-            initModel whisper
-                {   useCuda = useCuda
-                    cpuThreads = 16
-                    workers = 16
-                }
+    Async.RunSynchronously <| async {
+        let! (whisper, _) = startWhisper
+        let audioReader = new WaveFileReader("jfk.wav")
+        let samples = Array.zeroCreate<byte> <| int audioReader.Length
+        ignore <| audioReader.Read(samples, 0, samples.Length)
         for _ in 0 .. 10 do
-            do! runTest whisper
+            do! runTest whisper samples
         stopWhisper whisper
     }

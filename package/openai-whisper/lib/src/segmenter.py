@@ -6,6 +6,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
 
+
 class VADBaseClass(ABC):
     def __init__(self, sampling_rate=16000):
         self.sampling_rate = sampling_rate
@@ -22,7 +23,9 @@ class VADBaseClass(ABC):
 class SpeechSegmenter:
     def __init__(
         self,
+        base_path,
         vad_model=None,
+        device=None,
         frame_size=0.02,
         min_seg_len=0.08,
         max_seg_len=29.0,
@@ -33,6 +36,11 @@ class SpeechSegmenter:
         cut_factor=2,
         sampling_rate=16000,
     ):
+
+        if vad_model is None:
+            from .frame_vad import FrameVAD
+
+            vad_model = FrameVAD(base_path=base_path, device=device)
 
         self.vad_model = vad_model
 
@@ -62,13 +70,16 @@ class SpeechSegmenter:
 
     def okay_to_merge(self, speech_probs, last_seg, curr_seg):
         conditions = [
-            (speech_probs[curr_seg["start"]][1] - speech_probs[last_seg["end"]][2]) < self.max_silent_region,
-            (speech_probs[curr_seg["end"]][2] - speech_probs[last_seg["start"]][1]) <= self.max_seg_len,
+            (speech_probs[curr_seg["start"]][1] - speech_probs[last_seg["end"]][2])
+            < self.max_silent_region,
+            (speech_probs[curr_seg["end"]][2] - speech_probs[last_seg["start"]][1])
+            <= self.max_seg_len,
         ]
 
         return all(conditions)
 
     def get_speech_segments(self, speech_probs):
+
         speech_flag, start_idx = False, 0
         speech_segments = []
         for idx, (speech_prob, _, _) in enumerate(speech_probs):
@@ -77,7 +88,9 @@ class SpeechSegmenter:
                     speech_flag = False
                     curr_seg = {"start": start_idx, "end": idx - 1}
 
-                    if len(speech_segments) and self.okay_to_merge(speech_probs, speech_segments[-1], curr_seg):
+                    if len(speech_segments) and self.okay_to_merge(
+                        speech_probs, speech_segments[-1], curr_seg
+                    ):
                         speech_segments[-1]["end"] = curr_seg["end"]
                     else:
                         speech_segments.append(curr_seg)
@@ -88,8 +101,9 @@ class SpeechSegmenter:
 
         if speech_flag:
             curr_seg = {"start": start_idx, "end": len(speech_probs) - 1}
-
-            if len(speech_segments) and self.okay_to_merge(speech_probs, speech_segments[-1], curr_seg):
+            if len(speech_segments) and self.okay_to_merge(
+                speech_probs, speech_segments[-1], curr_seg
+            ):
                 speech_segments[-1]["end"] = curr_seg["end"]
             else:
                 speech_segments.append(curr_seg)
@@ -109,18 +123,23 @@ class SpeechSegmenter:
                 _start_idx = int(start_idx + self.cut_idx)
                 _end_idx = int(min(end_idx, start_idx + self.max_idx_in_seg))
 
-                new_end_idx = _start_idx + np.argmin(speech_probs[_start_idx:_end_idx, 0])
-                start_ends.append([speech_probs[start_idx][1], speech_probs[new_end_idx][2]])
+                new_end_idx = _start_idx + np.argmin(
+                    speech_probs[_start_idx:_end_idx, 0]
+                )
+                start_ends.append(
+                    [speech_probs[start_idx][1], speech_probs[new_end_idx][2]]
+                )
                 start_idx = new_end_idx + 1
 
-            start_ends.append([speech_probs[start_idx][1], speech_probs[end_idx][2] + self.padding])
+            start_ends.append(
+                [speech_probs[start_idx][1], speech_probs[end_idx][2] + self.padding]
+            )
             start_ends[first_idx][0] = start_ends[first_idx][0] - self.padding
 
         return start_ends
 
     def __call__(self, audio_signal):
         audio_duration = len(audio_signal) / self.sampling_rate
-
         speech_probs = self.vad_model(audio_signal)
         start_ends = self.get_speech_segments(speech_probs)
 

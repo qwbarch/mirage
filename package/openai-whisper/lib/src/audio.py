@@ -3,17 +3,18 @@
 # WhisperS2T is licensed under MIT, which you can view here: https://github.com/shashikg/WhisperS2T/blob/main/LICENSE
 # Credits: https://github.com/shashikg/WhisperS2T
 
-import os
 from whisper_s2t.configs import *
 
+import os
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 
-def to_audio_signal(samples: bytes):
+def to_audio_signal(samples):
     return np.frombuffer(samples, np.int16).flatten().astype(np.float32) / 32768.0
+
 
 def pad_or_trim(array, length: int = N_SAMPLES, *, axis: int = -1):
     """
@@ -22,7 +23,9 @@ def pad_or_trim(array, length: int = N_SAMPLES, *, axis: int = -1):
 
     if torch.is_tensor(array):
         if array.shape[axis] > length:
-            array = array.index_select(dim=axis, index=torch.arange(length, device=array.device))
+            array = array.index_select(
+                dim=axis, index=torch.arange(length, device=array.device)
+            )
 
         if array.shape[axis] < length:
             pad_widths = [(0, 0)] * array.ndim
@@ -41,6 +44,7 @@ def pad_or_trim(array, length: int = N_SAMPLES, *, axis: int = -1):
 
 
 class TorchSTFT(nn.Module):
+
     def __init__(self, n_fft, hop_length):
         super().__init__()
 
@@ -51,18 +55,22 @@ class TorchSTFT(nn.Module):
         self.register_buffer("window", window)
 
     def forward(self, x):
-        return torch.stft(x, self.n_fft, self.hop_length, window=self.window, return_complex=True)
+        return torch.stft(
+            x, self.n_fft, self.hop_length, window=self.window, return_complex=True
+        )
 
 
 class LogMelSpectogram(nn.Module):
+
     def __init__(
         self,
+        base_path,
         n_mels=N_MELS,
         n_fft=N_FFT,
         hop_length=HOP_LENGTH,
         padding=0,
-        base_path=None,
     ):
+
         super().__init__()
 
         self.n_fft = n_fft
@@ -82,6 +90,7 @@ class LogMelSpectogram(nn.Module):
 
     @torch.no_grad()
     def forward(self, x, seq_len):
+
         seq_len = self.get_seq_len(seq_len.float())
 
         if self.padding > 0:

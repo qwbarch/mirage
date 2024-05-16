@@ -26,11 +26,11 @@ let Transcriber whisper =
                 else
                     return! modifyLVar readSamplesVar (konst samples.Length)
                     let sw = Stopwatch.StartNew()
-                    let! transcription =  transcribe whisper { samplesBatch = [samples]; language = "en" }
+                    let! transcription =  transcribe whisper { samplesBatch = [|samples|]; language = "en" }
                     sw.Stop()
                     printfn $"Elapsed time: {float sw.ElapsedMilliseconds / 1000.0} seconds"
                     printfn $"Length: {samples.Length}"
-                    printfn $"Transcription: {transcription[0]}"
+                    //printfn $"Transcription: {transcription[0]}"
         }
     {   whisper = whisper
         samples = samplesVar
