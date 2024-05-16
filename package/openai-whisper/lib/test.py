@@ -23,7 +23,7 @@ class Test(unittest.TestCase):
 
     def run_test(self, model, samples):
         start_time = time.time()
-        i = 10
+        i = 30
         samples_batch = [samples] * i
         lang_codes = ["en"] * i
         response = model.transcribe_with_vad(samples_batch=samples_batch, lang_codes=lang_codes, batch_size=32)
