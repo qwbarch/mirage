@@ -16,11 +16,11 @@ if __name__ == "__main__":
 
     # Initialize ZeroMQ.
     context = zmq.Context()
-    socket = context.socket(zmq.REP)
-    socket.bind("tcp://localhost:50292")
+    socket = context.socket(zmq.PULL)
+    socket.connect("tcp://localhost:50292")
 
     def respond(response):
-        socket.send(json.dumps(response).encode("utf-8"))
+        print(json.dumps(response), flush=True)
 
     # Initialize Whisper, and notify the process invoker whether CUDA is enabled or not.
     use_cuda = torch.cuda.is_available()
@@ -39,11 +39,14 @@ if __name__ == "__main__":
             batch_size=32, # Taken from the WhisperS2T example. I'm assuming this is optimal for CTranslate2.
         )
 
-    while True:
+    running = True
+    while running:
         try:
             request = socket.recv()
             parsed_request = fastavro.schemaless_reader(io.BytesIO(request), schema)
             respond({ "response": transcribe(parsed_request) })
+        except zmq.error.ZMQError as exception:
+            running = False
         except Exception:
             respond({ "exception": traceback.format_exc() })
-            break
+            running = False

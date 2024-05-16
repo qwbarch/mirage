@@ -3,6 +3,7 @@ module Whisper.API
 open System
 open System.Diagnostics
 open System.Text
+open SolTechnology.Avro
 open FSharpPlus
 open FSharp.Json
 open NetMQ
@@ -10,14 +11,13 @@ open NetMQ.Sockets
 open Mirage.Core.Async.Lazy
 open Mirage.Core.Async.Lock
 open Mirage.Core.Async.Fork
-open SolTechnology.Avro
 
 /// Context required to interact with whisper.
 type Whisper =
     private
         {   process': Process
             lock: Lock
-            client: RequestSocket
+            socket: PushSocket
             schema: string
         }
 
@@ -57,10 +57,15 @@ let startWhisper =
                 )
             process'.StartInfo.StandardInputEncoding <- Encoding.UTF8
             process'.StartInfo.StandardOutputEncoding <- Encoding.UTF8
+
+            // Close the child process if the parent dies.
+            // From the python exe's side, it will also auto-close if the ZeroMQ socket is closed.
             AppDomain.CurrentDomain.ProcessExit.AddHandler(fun _ _ ->
                 if not process'.HasExited then
                     process'.Kill()
             )
+
+            // Start the child process, and retrieve whether cuda is available or not.
             ignore <| process'.Start()
             let schema = AvroConvert.GenerateSchema typeof<TranscribeRequest>
             do! process'.StandardInput.WriteLineAsync schema
@@ -70,7 +75,7 @@ let startWhisper =
             let whisper =
                 {   process' = process'
                     lock = createLock()
-                    client = new RequestSocket(">tcp://localhost:50292")
+                    socket = new PushSocket("@tcp://localhost:50292")
                     schema = schema
                 }
             return (whisper, cudaAvailable)
@@ -84,15 +89,14 @@ let stopWhisper whisper =
         whisper.process'.Kill()
     finally
         dispose whisper.lock
-        dispose whisper.client
+        dispose whisper.socket
 
 /// Transcribe the given audio samples into text.
-let transcribe whisper request : Async<Transcription[]> =
-    forkReturn << withLock' whisper.lock <|
-        async {
-            whisper.client.SendFrame(AvroConvert.SerializeHeadless(request, whisper.schema))
-            let (responseBody, _) =  whisper.client.ReceiveFrameString()
-            let body = Json.deserialize<TranscribeResponse> responseBody
+let transcribe whisper request =
+    forkReturn << withLock' whisper.lock << Lazy.toAsync<Transcription[]> <| fun () ->
+        task {
+            whisper.socket.SendFrame(AvroConvert.SerializeHeadless(request, whisper.schema))
+            let! responseBody = whisper.process'.StandardOutput.ReadLineAsync()
             let body = Json.deserialize responseBody
             return
                 match body.response, body.error with
