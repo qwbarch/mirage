@@ -1,19 +1,19 @@
 module Predictor.Learner
+
 open System
 open DisposableAsync
-open Mirage.Utilities.LVar
 open Predictor.MimicPool
 open ObservationGenerator
 open Predictor.Domain
-open Mirage.Utilities.MVar
 open FSharpx.Control
 open Model
 open Config
 open Utilities
 open System.Linq
 open System.Collections.Generic
-open FileHandler
 open Embedding
+open Mirage.Core.Async.LVar
+open Mirage.Core.Async.MVar
 
 let learnerLVar : LVar<LearnerAccess option> = newLVar(None)
 

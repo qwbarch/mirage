@@ -1,11 +1,11 @@
 module Predictor.Domain
+
 open System
-open FSharpx.Control
 open System.Collections.Generic
-open Mirage.Utilities.LVar
-open Mirage.Utilities.MVar
+open FSharpx.Control
 open Predictor.DisposableAsync
-open FSharpPlus
+open Mirage.Core.Async.LVar
+open Mirage.Core.Async.MVar
 
 type TextEmbedding = float32 array
 

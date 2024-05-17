@@ -1,5 +1,5 @@
 module Predictor.EmitAction
-open System.Collections.Concurrent
+
 open Domain
 open System
 open FSharpx.Control

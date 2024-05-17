@@ -1,19 +1,17 @@
 module Predictor.MimicPool
+
 open Predictor.PolicyController
 open Predictor.DisposableAsync
 open Predictor.ActionSelector
-open Mirage.Utilities.LVar
-open Mirage.Utilities.MVar
-open Mirage.Utilities.Lock
-open Mirage.Utilities.Print
+open Predictor.Model
 open System.Collections.Generic
 open System
 open Domain
 open ObservationGenerator
-open System.Collections.Concurrent
-open Predictor.Model
 open EmitAction
 open Utilities
+open Mirage.Core.Async.LVar
+open Mirage.Core.Async.MVar
 
 let mutable USER_CLASS : Guid = Guid.Empty
 let mimicsLVar: LVar<Dictionary<Guid, MimicData>> = newLVar <| Dictionary()

@@ -3,11 +3,9 @@ module Embedding
 open System
 open System.Runtime.InteropServices
 open System.Collections.Generic
-open Mirage.Utilities.BatchProcessor
-open System.Threading
+open Mirage.Core.Async.BatchProcessor
 
 let [<Literal>] dll = "bertlib.dll"
-
 
 [<DllImport(dll)>]
 extern int ping(int x)

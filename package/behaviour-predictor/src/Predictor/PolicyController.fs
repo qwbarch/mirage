@@ -1,7 +1,8 @@
 module Predictor.PolicyController
-open FSharpx.Control
+
 open Domain
-open Mirage.Utilities.LVar
+open FSharpx.Control
+open Mirage.Core.Async.LVar
 
 // Updates the policy for each individal mimic
 let createPolicyUpdater 

@@ -2,19 +2,18 @@ module Predictor.Test.Bar
 
 open NUnit.Framework
 open Assertion
-open Predictor.Lib
 open System.Collections.Generic
-open Predictor.MimicPool
-open Predictor.Model
-open Mirage.Utilities.LVar
+open Mirage.Core.Async.LVar
+open Mirage.Core.Async.Print
 open FSharpPlus
-open System
+open Predictor.Lib
 open Predictor.Utilities
-open Mirage.Utilities.Print
 open Predictor.Domain
 open Predictor.Config
+open Predictor.MimicPool
+open Predictor.Model
+open System
 open System.Linq 
-open Predictor.Learner
 
 let printInfo (s : string) : unit = printfn "INFO: %s" s
 let printWarning (s : string) : unit = printfn "WARNING: %s" s

@@ -1,10 +1,11 @@
 module Predictor.Model
+
 open Domain
-open System.Collections.Generic
-open Mirage.Utilities.LVar
-open Utilities
 open System
+open System.Collections.Generic
+open Utilities
 open FileHandler
+open Mirage.Core.Async.LVar
 
 let mutable userId = Guid.Empty
 

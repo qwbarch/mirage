@@ -2,27 +2,15 @@ module App
 
 open Predictor.Lib
 open Predictor.Domain
+open Predictor.Utilities
+open Predictor.MimicPool
 open Embedding
 open System.Collections.Generic
 open System
-open System.Threading
-open System.Collections.Concurrent
-open Mirage.Utilities.MVar
-open Mirage.Utilities.Lock
-open Mirage.Utilities.Print
-open Mirage.Utilities.AtomicFile
 open System.Diagnostics
-open FSharpPlus
-open Predictor.MimicPool
-open Microsoft.FSharp.Control
-open System.Threading.Tasks
-open Mirage.Utilities.Async
 open System.Linq
-open Mirage.Utilities.LVar
-open Predictor.Model
-open Predictor.Utilities
-open Predictor.FileHandler
-open FSharp.Json
+open Microsoft.FSharp.Control
+open Mirage.Core.Async.Print
 open MathNet.Numerics.Distributions
 open MathNet.Numerics.Random
 

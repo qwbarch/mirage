@@ -1,13 +1,14 @@
 module Predictor.FileHandler
+
 open Predictor.Domain
 open System.IO
 open System
 open Utilities
 open FSharp.Json
+open FSharpPlus
 open System.Collections.Generic
 open Config
-open Mirage.Utilities.AtomicFile
-open FSharpPlus
+open Mirage.Core.Async.AtomicFile
 
 let toCompressedObsFileFormat (obs: CompressedObservation) : CompressedObservationFileFormat =
     {   time = obs.time

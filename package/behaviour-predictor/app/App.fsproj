@@ -10,15 +10,6 @@
     <ProjectReference Include="../src/Predictor.fsproj" />
     <ProjectReference Include="../embedding/Embedding.fsproj" />
     <ProjectReference Include="../../openai-whisper/src/Whisper.fsproj" />
-    <Reference Include="FSharpPlus">
-      <HintPath>../../../lib/FSharpPlus.dll</HintPath>
-    </Reference>
-    <Reference Include="FSharp.Control.AsyncSeq">
-      <HintPath>../../../lib/FSharp.Control.AsyncSeq.dll</HintPath>
-    </Reference>
-    <Reference Include="FSharpx.Async">
-        <HintPath>../../../lib/FSharpx.Async.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Main.fs" />

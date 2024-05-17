@@ -6,20 +6,19 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <Optimize>true</Optimize>
+    <DebugType>embedded</DebugType>
+    <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=.</PathMap>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="FSharpPlus" Version="1.5.0" />
+    <PackageReference Include="FSharpPlus" Version="1.6.1" />
     <Reference Include="FSharp.Control.AsyncSeq">
       <HintPath>../../../lib/FSharp.Control.AsyncSeq.dll</HintPath>
     </Reference>
     <Reference Include="FSharpx.Async">
-      <HintPath>../../../lib/FSharpx.Async.dll</HintPath>
-    </Reference>
-    <Reference Include="FSharpx.Collections">
-      <HintPath>../../../lib/FSharpx.Collections.dll</HintPath>
+      <HintPath>../../../lib/FSharpx.Async/FSharpx.Async.dll</HintPath>
     </Reference>
     <ProjectReference Include="../embedding/Embedding.fsproj" />
-    <ProjectReference Include="../../utilities/src/Utilities.fsproj" />
+    <ProjectReference Include="../../mirage-core/src/Mirage.fsproj" />
     <PackageReference Include="FSharpx.Collections" Version="3.1.0" />
     <PackageReference Include="FSharp.Json" Version="0.4.1" />
     <PackageReference Include="MathNet.Numerics.FSharp" Version="5.0.0" />

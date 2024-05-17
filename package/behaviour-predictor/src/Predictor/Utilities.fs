@@ -1,8 +1,8 @@
 module Predictor.Utilities
+
 open System
-open Domain
-open Config
 open System.Collections.Generic
+open Domain
 open FSharpPlus
 
 let mutable logInfo = fun (s: string) -> printfn "INFO: %s" s

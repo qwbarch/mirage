@@ -5,6 +5,8 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <Optimize>true</Optimize>
+    <DebugType>embedded</DebugType>
+    <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=.</PathMap>
   </PropertyGroup>
   <ItemGroup>
     <ContentWithTargetPath Include="../bertlib.dll">
@@ -18,15 +20,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Embedding.fs" />
-    <ProjectReference Include="../../utilities/src/Utilities.fsproj" />
-    <Reference Include="FSharpPlus">
-      <HintPath>../../../lib/FSharpPlus.dll</HintPath>
-    </Reference>
-    <Reference Include="FSharp.Control.AsyncSeq">
-      <HintPath>../../../lib/FSharp.Control.AsyncSeq.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="../../mirage-core/src/Mirage.fsproj" />
+    <PackageReference Include="FSharpPlus" Version="1.6.1" />
     <Reference Include="FSharpx.Async">
-        <HintPath>../../../lib/FSharpx.Async.dll</HintPath>
+        <HintPath>../../../lib/FSharpx.Async/FSharpx.Async.dll</HintPath>
     </Reference>
   </ItemGroup>
 </Project>

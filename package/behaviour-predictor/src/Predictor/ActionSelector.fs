@@ -1,15 +1,13 @@
 module Predictor.ActionSelector
-open Mirage.Utilities.LVar
+
 open Domain
 open System
-open System.Collections.Concurrent
 open Utilities
 open Config
-open Mirage.Utilities.Print
 open System.Collections.Generic
 open Embedding
 open FSharpPlus
-open System.Linq
+open Mirage.Core.Async.LVar
 
 let NOSPEECH_NOSPEECH = 2.0
 let SPEECH_NOSPEECH = 0.0

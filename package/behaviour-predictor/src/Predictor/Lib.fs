@@ -1,11 +1,10 @@
 module Predictor.Lib
+
 open System
-open Mirage.Utilities.LVar
 open System.Collections.Generic
 open Predictor.Domain
 open Predictor.MimicPool
 open Predictor.Learner
-open Mirage.Utilities.Async
 open ObservationGenerator
 open Embedding
 open Learner
@@ -14,6 +13,7 @@ open FileHandler
 open System.IO
 open Model
 open Utilities
+open Mirage.Core.Async.LVar
 
 let initBehaviourPredictor
     (logInfo: string -> unit)

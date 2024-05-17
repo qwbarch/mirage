@@ -1,17 +1,16 @@
 module Predictor.ObservationGenerator
-open FSharpx.Control
+
 open FSharp.Core
 open Predictor.Domain
 open System.Collections.Generic
-open Mirage.Utilities.LVar
-open Mirage.Utilities.MVar
-open FSharpPlus
 open System
 open Embedding
 open Config
 open Utilities
 open DisposableAsync
 open System.Linq
+open Mirage.Core.Async.LVar
+open Mirage.Core.Async.MVar
 
 let defaultGameInputStatistics () =
     {   spokeQueue = SortedDictionary()
