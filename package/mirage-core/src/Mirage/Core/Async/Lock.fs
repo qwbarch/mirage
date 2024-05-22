@@ -17,7 +17,11 @@ let createLock () : Lock = { semaphore =  new SemaphoreSlim(1) }
 // It is written in this way to catch bugs with thread A acquiring a lock and thread B tries to release the lock that thread A acquired.
 let lockAcquire (lock: Lock) : Async<unit> = Lazy.toAsync <| fun () -> lock.semaphore.WaitAsync()
 
-let lockRelease (lock: Lock) : Unit = ignore <| lock.semaphore.Release()
+let lockRelease (lock: Lock) : Unit =
+    ignore <| lock.semaphore.Release()
+
+/// Try to acquire the lock, immediately returning <b>true</b> if the lock is acquired, or <b>false</b> if it failed, without blocking the thread.<br />
+let tryAcquire lock = lock.semaphore.Wait TimeSpan.Zero
 
 type LockContext =
     {   lock: Lock

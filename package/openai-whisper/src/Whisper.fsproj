@@ -2,15 +2,16 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <RootNamespace>Whisper</RootNamespace>
-    <AssemblyName>openai-whisper</AssemblyName>
+    <AssemblyName>OpenAI.Whisper</AssemblyName>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <Optimize>true</Optimize>
+    <DebugType>embedded</DebugType>
+    <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=.</PathMap>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../mirage-core/src/Mirage.fsproj" />
-    <PackageReference Include="AvroConvert" Version="3.4.8" />
-    <PackageReference Include="NetMQ" Version="4.0.1.13" />
-    <PackageReference Include="FSharp.Json" Version="0.4.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <Reference Include="FSharpx.Async">
       <HintPath>../../../lib/FSharpx.Async/FSharpx.Async.dll</HintPath>
     </Reference>

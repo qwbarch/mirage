@@ -3,50 +3,57 @@ import json
 import sys
 import torch
 import traceback
-import zmq
-import fastavro
-import io
+import base64
 
-if __name__ == "__main__":
-    stdin = sys.stdin.buffer
-    stdout = sys.stdout.buffer
+with open("pylog.txt", 'w') as file:
+    try:
+        def log(m):
+            file.write(f"{m}\n")
+            file.flush()
+        if __name__ == "__main__":
+            stdin = sys.stdin.buffer
+            stdout = sys.stdout.buffer
 
-    # Store the request schema.
-    schema = json.loads(stdin.readline())
+            log("waiting for schema")
 
-    # Initialize ZeroMQ.
-    context = zmq.Context()
-    socket = context.socket(zmq.PULL)
-    socket.connect("tcp://localhost:50292")
+            # Store the request schema.
+            model_path = stdin.readline().decode("utf-8-sig").strip()
+            log(f"model_path: {model_path}")
 
-    def respond(response):
-        print(json.dumps(response), flush=True)
+            def respond(response):
+                print(json.dumps(response), flush=True)
 
-    # Initialize Whisper, and notify the process invoker whether CUDA is enabled or not.
-    use_cuda = torch.cuda.is_available()
-    model = WhisperModelCT2(
-        model_path="model/whisper-base",
-        device="cuda" if use_cuda else "cpu",
-        compute_type="float16" if use_cuda else "float32",
-    )
-    print(str(use_cuda), flush=True)
+            # Initialize Whisper, and notify the process invoker whether CUDA is enabled or not.
+            use_cuda = torch.cuda.is_available()
+            log(f"cuda available: {use_cuda}")
+            model = WhisperModelCT2(
+                model_path=model_path,
+                device="cuda" if use_cuda else "cpu",
+                compute_type="float16" if use_cuda else "float32",
+            )
+            print(str(use_cuda), flush=True)
 
-    def transcribe(request):
-        samples_batch = request["samplesBatch"]
-        return model.transcribe_with_vad(
-            samples_batch=list(map(bytes, samples_batch)),
-            lang_codes=[request["language"]] * len(samples_batch),
-            batch_size=32,  # Taken from the WhisperS2T example. I'm assuming this is optimal for CTranslate2.
-        )
+            def transcribe(request):
+                log(request)
+                samples_batch = request["samplesBatch"]
+                return model.transcribe_with_vad(
+                    samples_batch=[bytes(base64.b64decode(sample)) for sample in samples_batch],
+                    lang_codes=[request["language"]] * len(samples_batch),
+                    batch_size=32, # Taken from the WhisperS2T example. I'm assuming this is optimal for CTranslate2.
+                )
 
-    running = True
-    while running:
-        try:
-            request = socket.recv()
-            parsed_request = fastavro.schemaless_reader(io.BytesIO(request), schema)
-            respond({"response": transcribe(parsed_request)})
-        except zmq.error.ZMQError as exception:
-            running = False
-        except Exception:
-            respond({"exception": traceback.format_exc()})
-            running = False
+            running = True
+            while running:
+                try:
+                    log("waiting recv")
+                    request = json.loads(stdin.readline().decode("utf-8-sig"))
+                    log("recv received")
+                    log("finished parsing request")
+                    respond({"response": transcribe(request)})
+                    log("finished sending response")
+                except Exception as e:
+                    log(f"exception found.: {traceback.format_exc()}")
+                    respond({"exception": traceback.format_exc()})
+                    running = False
+    except Exception as e:
+        log(f"exception found.: {traceback.format_exc()}")

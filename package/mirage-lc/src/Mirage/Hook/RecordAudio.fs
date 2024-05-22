@@ -10,10 +10,11 @@ open NAudio.Lame
 open FSharpPlus
 open FSharpx.Control
 open UnityEngine
+open Mirage.Domain.Logger
 open Mirage.Core.Audio.Speech
 open Mirage.Core.Audio.Resampler
 open Mirage.Core.Audio.File.Mp3Writer
-open Mirage.Domain.Logger
+open Mirage.Hook.VoiceRecognition
 
 let [<Literal>] private SampleRate = 16000
 let [<Literal>] private SamplesPerWindow = 1024
@@ -24,9 +25,9 @@ let private resampler = Resampler()
 let private silero = SileroVAD SamplesPerWindow
 let private speechDetector =
     let mutable writer = None
-    SpeechDetector (result << detectSpeech silero) <| fun detection ->
+    SpeechDetector (result << detectSpeech silero) <| fun speech ->
         async {
-            match detection with
+            match speech with
                 | SpeechStart ->
                     logInfo "speech start"
                     let filePath = $"{Application.dataPath}/../Mirage/{DateTime.UtcNow.ToFileTime()}.mp3"
@@ -37,6 +38,7 @@ let private speechDetector =
                     do! closeMp3Writer writer.Value
                     writer <- None
                 | SpeechFound samples -> do! writeMp3File writer.Value samples
+            do! transcribeSpeech speech
         }
 
 type AudioFrame =
