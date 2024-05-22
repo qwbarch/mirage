@@ -16,8 +16,8 @@ let SIM_OFFSET = -0.2
 let SIM_SCALE = 10.0
 
 let TIME_AREA = 5.0
-let TIME_SIGNAL = 3.0
-let SCORE_SPEAK_FACTOR = 0.3
+let TIME_SIGNAL = 4.0
+let SCORE_SPEAK_FACTOR = 1.0
 
 let simTransform (x: float) = SIM_SCALE * (x + SIM_OFFSET)
 
@@ -80,12 +80,6 @@ let sample (unnormScores: List<float * FutureAction>) (rngSource: RandomSource) 
 
     scoresOrd.Sort()
     scoresOrd.Reverse()
-
-    let mx = fst scoresOrd[0]
-    let cand = List()
-    for score, i in scoresOrd do
-        if (abs (mx - score) < 0.01) then
-            cand.Add((score, i))
 
     let scores : float array =
         let scoresList: List<float> = map fst scoresOrd

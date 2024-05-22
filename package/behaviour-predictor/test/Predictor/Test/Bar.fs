@@ -491,6 +491,46 @@ type public Test() =
         }
         assertTrue result ""
 
+    // A variant where the user quickly replies. There should only be one reply with decent probability.
+    [<Test>]
+    member this.replyToHello_quickHello () =
+        let result = Async.RunSynchronously <| async {
+            this.reset()
+            // These are filled in
+            config <- { config with VOICE_BUFFER = 5000; SCORE_TALK_BIAS = 0.1 }
+            whisperDelay <- 500
+            let bob = Guid.NewGuid()
+            let mallory = Guid.NewGuid()
+            let mimicIdToPlayerClass = Map.ofList [(mallory, uid)]
+            let idToNames = Map.ofList [(uid, "user"); (bob, "bob"); (mallory, "mallory")]
+            let reply = mkTextId "reply"
+            let replyTexts = [reply]
+            let actions = [
+                Wait 1000;
+                Speak ("hello", bob, [uid])
+                Wait 600;
+                SpeakUser (reply, [bob])
+                Wait 6000;
+                SetIsAfk;
+                Wait 1000;
+                StartMimic (mallory, [])
+                Wait 1000;
+                Speak ("hello", bob, [mallory])
+                Wait 6000;
+                EndMimic mallory
+                Wait 100;
+            ]
+
+            // Do not touch these
+            let fileIdToText = Map.ofList <| map (fun x -> (x.id, x.text)) replyTexts
+            let classesMap = createClassesMap mimicIdToPlayerClass idToNames
+            let mimicsSet = Set.ofList <| List.ofSeq mimicIdToPlayerClass.Keys
+            let! _ = processActions actions 0 classesMap mimicsSet idToNames fileIdToText
+            let! mimicTimings = getMimicPrintList
+            printfn "Mimic timings: %A" mimicTimings
+            return mimicTimings.Count = 1
+        }
+        assertTrue result ""
     [<Test>]
     member this.replyToHello_notHello () =
         let result = Async.RunSynchronously <| async {
@@ -599,8 +639,9 @@ type public Test() =
             let bob = Guid.NewGuid()
             let mallory = Guid.NewGuid()
             let darth = Guid.NewGuid()
-            let mimicIdToPlayerClass = Map.ofList [(mallory, uid); (darth, uid)]
-            let idToNames = Map.ofList [(uid, "user"); (bob, "bob"); (mallory, "mallory"); (darth, "darth")]
+            let max = Guid.NewGuid()
+            let mimicIdToPlayerClass = Map.ofList [(mallory, uid); (darth, uid); (max, uid)]
+            let idToNames = Map.ofList [(uid, "user"); (bob, "bob"); (mallory, "mallory"); (darth, "darth"); (max, "max")]
             let reply = mkTextId "reply"
             let replyTexts = [reply]
             let actions = [
@@ -612,14 +653,28 @@ type public Test() =
                 SpeakUser (reply, [bob])
                 Wait 6000;
                 Speak ("machine", bob, [uid])
+                Wait 6000;
+                Speak ("hello", bob, [uid])
+                Wait 1200;
+                SpeakUser (reply, [bob])
+                Wait 6000;
+                Speak ("machine", bob, [uid])
+                Wait 6000;
+                Speak ("hello", bob, [uid])
+                Wait 1200;
+                SpeakUser (reply, [bob])
+                Wait 6000;
+                Speak ("machine", bob, [uid])
                 Wait 7000;
                 StartMimic (mallory, [])
                 StartMimic (darth, [])
+                StartMimic (max, [])
                 Wait 1000;
-                Speak ("hello", bob, [mallory; darth])
+                Speak ("hello", bob, [mallory; darth; max])
                 Wait 5000;
                 EndMimic mallory
                 EndMimic darth
+                EndMimic max
                 Wait 100;
             ]
 
@@ -630,7 +685,7 @@ type public Test() =
             let! _ = processActions actions 0 classesMap mimicsSet idToNames fileIdToText
             let! mimicTimings = getMimicPrintList
             printfn "mimicTimings: %A" mimicTimings
-            return mimicTimings.Count = 2
+            return mimicTimings.Count = 3
         }
         assertTrue result ""
 
