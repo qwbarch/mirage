@@ -151,19 +151,19 @@ let spamPrintStdout (endTime: DateTime) =
 
 [<EntryPoint>]
 let main _ =
-    let sw = Stopwatch()
-    sw.Start()
-    let g = Gamma(2.0, 1.5)
-    let mutable t = 0.0
-    let r = Mcg31m1()
-    for i in 1..10000000 do
-        // let x = g.Sample()
-        let x = r.NextDouble()
-        t <- t + x
-    // let x = Random.doubles 1000000
-    // let t = Array.sum x
-    printfn "%d" sw.ElapsedMilliseconds
-    printfn "%f" t
+    // let sw = Stopwatch()
+    // sw.Start()
+    // let g = Gamma(2.0, 1.5)
+    // let mutable t = 0.0
+    // let r = Mcg31m1()
+    // for i in 1..10000000 do
+    //     // let x = g.Sample()
+    //     let x = r.NextDouble()
+    //     t <- t + x
+    // // let x = Random.doubles 1000000
+    // // let t = Array.sum x
+    // printfn "%d" sw.ElapsedMilliseconds
+    // printfn "%f" t
 
 
     // let z: SortedDictionary<int, SortedDictionary<int, int>> = SortedDictionary()
@@ -179,11 +179,11 @@ let main _ =
     //     let! check = encodeText "hello"
     //     printfn "%A" check.Value
     // }
-    // Async.RunSynchronously <| async {
-    //     let! res = encodeText "hello"
-    //     printfn "%A" res
-    //     // do! exponentialRepeat 200 20 rngSuccess
-    // }
+    Async.RunSynchronously <| async {
+        let! res = encodeText "hello"
+        printfn "%A" res
+        // do! exponentialRepeat 200 20 rngSuccess
+    }
     // testBackwardsIterate()
     // Async.RunSynchronously <| atomicFileWrite "E:/temp/data/foo" "hello" true logInfo logError
     // Async.RunSynchronously <| removeTempFiles "E:/temp/data" logInfo logError
