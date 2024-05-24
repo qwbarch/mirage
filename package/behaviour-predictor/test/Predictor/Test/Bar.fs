@@ -154,6 +154,7 @@ type public Test() =
                             }
                         if speakerId = uid then
                             userRegisterText spokeAtom
+
                         elif mimics.Contains(speakerId) then
                             mimicRegisterText speakerId spokeAtom
 
@@ -176,7 +177,8 @@ type public Test() =
                                 text = text // this text is from the outer scope
                                 start = startTime
                             }
-                            steps = []
+                            whisperTimings = List.ofSeq whisperTimings
+                            vadTimings = List.ofSeq vadTimings
                             audioInfo = {   
                                 fileId = guidOption.Value
                                 duration = utteranceTime

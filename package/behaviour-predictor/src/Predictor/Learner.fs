@@ -67,7 +67,8 @@ let addSpokeResponse
                         action = 
                             {   fileId=spokeRecordingAtom.audioInfo.fileId 
                                 embedding = spokeAtomEmbedding
-                                steps = spokeRecordingAtom.steps
+                                whisperTimings = spokeRecordingAtom.whisperTimings
+                                vadTimings = spokeRecordingAtom.vadTimings
                                 duration=spokeRecordingAtom.audioInfo.duration 
                             }
                         delay = timeDifferenceMillis

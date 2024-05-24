@@ -33,7 +33,8 @@ type AudioInfo =
 
 type SpokeRecordingAtom =
     {   spokeAtom: SpokeAtom
-        steps: (int * string) list
+        whisperTimings: (int * string) list
+        vadTimings: int list
         audioInfo: AudioInfo
     }
 
@@ -123,7 +124,8 @@ type CompressedObservationFileFormat =
 type AudioResponse =
     {   fileId: Guid
         embedding: Option<string * TextEmbedding>
-        steps: (int * string) list
+        whisperTimings: (int * string) list
+        vadTimings: int list
         duration: int
     }
     override this.ToString() =
