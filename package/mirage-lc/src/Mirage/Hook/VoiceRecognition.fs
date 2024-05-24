@@ -14,12 +14,11 @@ open Mirage.Domain.Logger
 open Mirage.Core.Audio.Speech
 open Mirage.Core.Audio.PCM
 open Mirage.Core.Async.Lock
+open Mirage.Unity.Temp
 
-//[<StaticNetcode>]
+[<StaticNetcode>]
 module VoiceRecognition =
-    // Temporarily hard-coding the local user's id.
-    let guid = new Guid("37f6b68d-3ce2-4cde-9dc9-b6a68ccf002c")
-
+    open System.Threading
     /// Min # of samples to wait for before transcribing.
     let [<Literal>] private MinSamples = 1024
 
@@ -27,7 +26,19 @@ module VoiceRecognition =
         logInfo "Loading WhisperS2T."
         Async.RunSynchronously startWhisper
 
-    let private isHost () = StartOfRound.Instance.IsHost
+    let threadId = Thread.CurrentThread.ManagedThreadId
+    let syncContext = SynchronizationContext.Current
+    let mutable private syncer = null
+
+    let initTemp () =
+        On.GameNetcodeStuff.PlayerControllerB.add_Awake(fun orig self ->
+            orig.Invoke self
+            ignore <| self.gameObject.AddComponent<TranscriptionSyncer>()
+        )
+        On.GameNetcodeStuff.PlayerControllerB.add_ConnectClientToPlayerObject(fun orig self ->
+            orig.Invoke self
+            syncer <- self.GetComponent<TranscriptionSyncer>()
+        )
 
     let private transcribeChannel =
         let agent = new BlockingQueueAgent<SpeechDetection>(Int32.MaxValue)
@@ -50,11 +61,11 @@ module VoiceRecognition =
 
                         // Send the transcribed text to the behaviour predictor.
                         logInfo $"userRegisterText (SpokeAtom): {transcriptions[0].text}"
-                        //userRegisterText <| SpokeAtom
-                        //    {   text = transcriptions[0].text
-                        //        start = DateTime.UtcNow
-                        //    }
-                        //logInfo $"transcription: {transcriptions[0]}"
+                        userRegisterText <| SpokeAtom
+                            {   text = transcriptions[0].text
+                                start = DateTime.UtcNow
+                            }
+                        syncer.SendTranscription transcriptions[0].text
                         //logInfo "waiting 1 second as a test"
                         //do! Async.Sleep 1000
                         //logInfo "done transcribing"
@@ -94,49 +105,3 @@ module VoiceRecognition =
 
     /// Queue samples taken from the local player, to be transcribed whenever possible.
     let transcribeSpeech = transcribeChannel.AsyncAdd
-
-    let private sendTranscription (userId: string) text =
-        let guid = Guid <| new Guid(userId)
-        logInfo $"HeardAtom. Speaker: {guid}. Text: {text}"
-        //userRegisterText <| HeardAtom
-        //    {   text = text
-        //        start = DateTime.UtcNow
-        //        speakerClass = guid
-        //        speakerId = guid
-        //    }
-
-    //[<ClientRpc>]
-    //let private sendTranscriptionClientRpc () =
-    //    logInfo "client rpc invoked"
-
-    //[<ServerRpc>]
-    //let private sendTranscriptionServerRpc () =
-    //    logInfo "server rpc invoked"
-
-    //[<ClientRpc>]
-    //let private sendTranscriptionClientRpc userId text =
-    //    if not <| isHost() && guid.ToString() <> userId then
-    //        sendTranscription userId text
-    
-    //[<ServerRpc>]
-    //let private sendTranscriptionServerRpc (userId: string) text =
-    //    if isHost() then
-    //        sendTranscription userId text
-    //        sendTranscriptionClientRpc userId text
-
-    //let private rpcChannel =
-    //    let agent = new BlockingQueueAgent<Transcription>(Int32.MaxValue)
-    //    let rec consumer =
-    //        async {
-    //            let! transcription = agent.AsyncGet()
-    //            let rpc =
-    //                if isHost() then
-    //                    sendTranscriptionClientRpc
-    //                else
-    //                    sendTranscriptionServerRpc
-    //            //rpc (guid.ToString()) transcription.text
-    //            rpc()
-    //            do! consumer
-    //        }
-    //    Async.StartImmediate consumer
-    //    agent

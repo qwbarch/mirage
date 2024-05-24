@@ -16,6 +16,7 @@ open Mirage.Hook.Dissonance
 open Mirage.Hook.MaskedPlayerEnemy
 open Mirage.Domain.Logger
 open Mirage.Hook.VoiceRecognition
+open Mirage.Unity.Temp
 
 [<BepInPlugin(pluginId, pluginName, pluginVersion)>]
 [<BepInDependency(StaticNetcodeLib.MyPluginInfo.PLUGIN_GUID, BepInDependency.DependencyFlags.HardDependency)>]
@@ -27,16 +28,9 @@ type Plugin() =
             async {
                 initNetcodePatcher()
                 ignore <| LameDLL.LoadNativeDLL [|Path.GetDirectoryName this.Info.Location|]
-
-                logInfo "mirage awake"
                 logInfo $"useCuda: {useCuda}"
-
-                logInfo "before init behaviour predictor"
-                logInfo $"guid: {guid}"
                 let baseDirectory = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName)
-                logInfo $"baseDirectory: {baseDirectory}"
                 do! initBehaviourPredictor logInfo logWarning logError guid $"{baseDirectory}/Mirage/Predictor" Int32.MaxValue // Size limit
-                logInfo "after init behaviour predictor"
 
                 // Hooks.
                 registerPrefab()
@@ -44,4 +38,5 @@ type Plugin() =
                 recordAudio()
                 fetchDissonance()
                 initMaskedEnemy()
+                initTemp()
             }
