@@ -3,11 +3,11 @@ open Predictor.Domain
 open System.IO
 open System
 open Utilities
-open FSharp.Json
 open FSharpPlus
 open System.Collections.Generic
 open Predictor.Config
 open Mirage.Core.Async.AtomicFile
+open Newtonsoft.Json
 
 let toCompressedObsFileFormat (obs: CompressedObservation) : CompressedObservationFileFormat =
     {   time = obs.time
@@ -65,7 +65,7 @@ let readStoredPolicy
                 fileReader.Close()
                 let asFileFormatOption = 
                     try
-                        Some <| Json.deserialize<PolicyFileFormat>(contents)
+                        Some <| JsonConvert.DeserializeObject<PolicyFileFormat>(contents)
                     with
                     | ex -> 
                         logWarning <| "Unable to parse '" + file.ToString() + "'. Deleting..."
@@ -142,7 +142,7 @@ let createFileHandler
                                 creationDate = fileInfo.creationDate
                                 data = newData
                             }
-                            let newFileString = Json.serialize(newFileData)
+                            let newFileString = JsonConvert.SerializeObject newFileData
                             let path = Path.Combine(dir, fileInfo.name)
 
                             let! _ = atomicFileWrite path newFileString true logInfo logError
@@ -164,7 +164,7 @@ let createFileHandler
                                 creationDate = now
                                 name = newFileName
                             }
-                            let newFileString = Json.serialize newFileData
+                            let newFileString = JsonConvert.SerializeObject newFileData
                             let path = Path.Combine(dir, newFileName)
 
                             let! _ = atomicFileWrite path newFileString true logInfo logError
@@ -182,7 +182,7 @@ let createFileHandler
                                 creationDate = fileInfo.creationDate
                                 data = Array.append prevData [|(newObs, futureAction)|]
                             }
-                            let newFileString = Json.serialize newFileData
+                            let newFileString = JsonConvert.SerializeObject newFileData
                             let path = Path.Combine(dir, fileInfo.name)
                             let! _ = atomicFileWrite path  newFileString true logInfo logError
 

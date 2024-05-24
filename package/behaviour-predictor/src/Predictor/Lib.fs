@@ -1,19 +1,17 @@
 module Predictor.Lib
 
 open System
-open System.Collections.Generic
+open System.IO
 open Predictor.Domain
 open Predictor.MimicPool
 open Predictor.Learner
-open ObservationGenerator
+open Predictor.PolicyFileHandler
+open Predictor.ObservationGenerator
+open Predictor.Model
 open Embedding
-open Learner
-open FSharpPlus.Internals
-open PolicyFileHandler
-open System.IO
-open Model
 open Mirage.Core.Async.LVar
 open Mirage.Core.Async.MVar
+open System.Reflection
 
 let initBehaviourPredictor
     (logInfo: string -> unit)
@@ -23,7 +21,14 @@ let initBehaviourPredictor
     (fileDir: string)
     (sizeLimit: int64) : Async<unit> =
         async {
-            logInfo "Initiating behaviour predictor"
+            logInfo "Initializing behaviour predictor."
+            let baseDirectory =
+                Assembly.GetExecutingAssembly().CodeBase
+                    |> UriBuilder
+                    |> _.Path
+                    |> Uri.UnescapeDataString
+                    |> Path.GetDirectoryName
+            init_bert $"{baseDirectory}/main.exe"
             Utilities.logInfo <- logInfo
             Utilities.logWarning <- logWarning
             Utilities.logError <- logError

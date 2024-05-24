@@ -15,6 +15,8 @@ open Mirage.Core.Audio.Speech
 open Mirage.Core.Audio.Resampler
 open Mirage.Core.Audio.File.Mp3Writer
 open Mirage.Hook.VoiceRecognition
+open Predictor.Lib
+open Predictor.Domain
 
 let [<Literal>] private SampleRate = 16000
 let [<Literal>] private SamplesPerWindow = 1024
@@ -30,7 +32,11 @@ let private speechDetector =
             match speech with
                 | SpeechStart ->
                     logInfo "speech start"
-                    let filePath = $"{Application.dataPath}/../Mirage/{DateTime.UtcNow.ToFileTime()}.mp3"
+                    //userRegisterText <| VoiceActivityAtom
+                    //    {   time = DateTime.UtcNow
+                    //        speakerId = Guid guid
+                    //    }
+                    let filePath = $"{Application.dataPath}/../Mirage/{Guid.NewGuid()}.mp3"
                     let! mp3Writer = createMp3Writer filePath WriterFormat WriterPreset
                     writer <- Some mp3Writer
                 | SpeechEnd ->

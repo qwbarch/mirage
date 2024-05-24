@@ -16,6 +16,7 @@
     <ProjectReference Include="../../mirage-core/src/Mirage.fsproj" />
     <ProjectReference Include="../../silero-vad/src/Silero.fsproj" />
     <ProjectReference Include="../../openai-whisper/src/Whisper.fsproj" />
+    <ProjectReference Include="../../behaviour-predictor/src/Predictor.fsproj" />
     <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1" PrivateAssets="all" />
     <PackageReference Include="BepInEx.Core" Version="5.4.21" />
     <PackageReference Include="LethalCompany.GameLibs.Steam" Version="50.0.1-ngd.0" Publicize="true" />

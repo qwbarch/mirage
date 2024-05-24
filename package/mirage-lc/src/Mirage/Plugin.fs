@@ -1,7 +1,11 @@
 namespace Mirage
 
 open BepInEx
+open System
 open System.IO
+open System.Diagnostics
+open Predictor.Lib
+open UnityEngine
 open NAudio.Lame
 open Mirage.PluginInfo
 open Mirage.Domain.Netcode
@@ -19,14 +23,25 @@ type Plugin() =
     inherit BaseUnityPlugin()
 
     member this.Awake() =
-        initNetcodePatcher()
-        ignore <| LameDLL.LoadNativeDLL [|Path.GetDirectoryName this.Info.Location|]
+        Async.RunSynchronously <|
+            async {
+                initNetcodePatcher()
+                ignore <| LameDLL.LoadNativeDLL [|Path.GetDirectoryName this.Info.Location|]
 
-        logInfo $"useCuda: {useCuda}"
+                logInfo "mirage awake"
+                logInfo $"useCuda: {useCuda}"
 
-        // Hooks.
-        registerPrefab()
-        disableAudioSpatializer()
-        recordAudio()
-        fetchDissonance()
-        initMaskedEnemy()
+                logInfo "before init behaviour predictor"
+                logInfo $"guid: {guid}"
+                let baseDirectory = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName)
+                logInfo $"baseDirectory: {baseDirectory}"
+                do! initBehaviourPredictor logInfo logWarning logError guid $"{baseDirectory}/Mirage/Predictor" Int32.MaxValue // Size limit
+                logInfo "after init behaviour predictor"
+
+                // Hooks.
+                registerPrefab()
+                disableAudioSpatializer()
+                recordAudio()
+                fetchDissonance()
+                initMaskedEnemy()
+            }

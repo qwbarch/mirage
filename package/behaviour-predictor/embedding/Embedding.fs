@@ -8,6 +8,9 @@ open Mirage.Core.Async.BatchProcessor
 let [<Literal>] dll = "bertlib.dll"
 
 [<DllImport(dll)>]
+extern void init_bert(string file_path)
+
+[<DllImport(dll)>]
 extern int ping(int x)
 
 [<DllImport(dll)>]

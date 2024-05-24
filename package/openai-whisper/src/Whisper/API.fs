@@ -90,7 +90,7 @@ let startWhisper =
                 {   process' = process'
                     lock = createLock()
                 }
-            log "return"
+            log $"return. cudaAvailable: {cudaAvailable}"
             return (whisper, cudaAvailable)
         }
 

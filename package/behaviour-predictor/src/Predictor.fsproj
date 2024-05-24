@@ -20,7 +20,7 @@
     <ProjectReference Include="../embedding/Embedding.fsproj" />
     <ProjectReference Include="../../mirage-core/src/Mirage.fsproj" />
     <PackageReference Include="FSharpx.Collections" Version="3.1.0" />
-    <PackageReference Include="FSharp.Json" Version="0.4.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="MathNet.Numerics.FSharp" Version="5.0.0" />
   </ItemGroup>
   <ItemGroup>
