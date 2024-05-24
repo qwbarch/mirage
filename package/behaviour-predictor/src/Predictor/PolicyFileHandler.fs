@@ -142,7 +142,7 @@ let createFileHandler
                                 creationDate = fileInfo.creationDate
                                 data = newData
                             }
-                            let newFileString = JsonConvert.SerializeObject newFileData
+                            let newFileString = JsonConvert.SerializeObject(newFileData, Formatting.Indented)
                             let path = Path.Combine(dir, fileInfo.name)
 
                             let! _ = atomicFileWrite path newFileString true logInfo logError
@@ -164,7 +164,7 @@ let createFileHandler
                                 creationDate = now
                                 name = newFileName
                             }
-                            let newFileString = JsonConvert.SerializeObject newFileData
+                            let newFileString = JsonConvert.SerializeObject(newFileData, Formatting.Indented)
                             let path = Path.Combine(dir, newFileName)
 
                             let! _ = atomicFileWrite path newFileString true logInfo logError
@@ -182,7 +182,7 @@ let createFileHandler
                                 creationDate = fileInfo.creationDate
                                 data = Array.append prevData [|(newObs, futureAction)|]
                             }
-                            let newFileString = JsonConvert.SerializeObject newFileData
+                            let newFileString = JsonConvert.SerializeObject(newFileData, Formatting.Indented)
                             let path = Path.Combine(dir, fileInfo.name)
                             let! _ = atomicFileWrite path  newFileString true logInfo logError
 

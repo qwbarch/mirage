@@ -19,6 +19,7 @@ type Mp3Writer =
         {   channel: BlockingQueueAgent<Mp3Action>
             writer: LameMP3FileWriter
             fileId: Guid
+            creationTime: DateTime
         }
 
 let createMp3Writer (directory: string) inputFormat (preset: LAMEPreset) =
@@ -47,7 +48,12 @@ let createMp3Writer (directory: string) inputFormat (preset: LAMEPreset) =
                 do! consumer
             }
         Async.Start consumer
-        return { channel = channel; writer = writer; fileId = fileId }
+        return {
+            channel = channel
+            writer = writer
+            fileId = fileId
+            creationTime = DateTime.UtcNow
+        }
     }
 
 /// Write the given frame of pcm data into the mp3 file.
@@ -58,3 +64,6 @@ let closeMp3Writer mp3Writer = mp3Writer.channel.AsyncAdd Dispose
 
 /// Retrieve the identifier of the file.
 let getFileId mp3Writer = mp3Writer.fileId
+
+/// Get the creation time of the file.
+let getCreationTime mp3Writer = mp3Writer.creationTime

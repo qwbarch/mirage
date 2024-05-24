@@ -13,7 +13,7 @@ open Predictor.MimicPool
 open AudioStream
 
 // Temporarily hard-coding the local user's id.
-let guid = new Guid("37f6b68d-3ce2-4cde-9dc9-b6a68ccf002c")
+let guid = Guid.NewGuid() // new Guid("37f6b68d-3ce2-4cde-9dc9-b6a68ccf002c")
 
 [<AllowNullLiteral>]
 type TranscriptionSyncer() as self =

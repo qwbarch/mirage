@@ -10,14 +10,16 @@ open FSharpx.Control
 open Predictor.Lib
 open Predictor.Domain
 open Whisper.API
+open UnityEngine
 open Mirage.Domain.Logger
 open Mirage.Core.Audio.Speech
 open Mirage.Core.Audio.PCM
 open Mirage.Core.Async.Lock
+open Mirage.Core.Audio.File.Mp3Reader
 open Mirage.Unity.Temp
 
 module VoiceRecognition =
-    open Mirage.Core.Audio.File.Mp3Reader
+    open Mirage.Core.Audio.File.Mp3Writer
     /// Min # of samples to wait for before transcribing.
     let [<Literal>] private MinSamples = 1024
 
@@ -40,16 +42,15 @@ module VoiceRecognition =
         )
 
     let private transcribeChannel =
-        let agent = new BlockingQueueAgent<Tuple<SpeechDetection, Guid>>(Int32.MaxValue)
+        let agent = new BlockingQueueAgent<Tuple<SpeechDetection, Mp3Writer>>(Int32.MaxValue)
         let sampleBuffer = new List<byte>()
         let lock = createLock()
 
         // TODO: Maybe make waiting for lock waitable from the caller?
-        let processSamples finalSample fileId =
+        let processSamples mp3Writer finalSample (samples: byte[]) =
             let run =
                 async {
                     //logInfo "inside processSamples"
-                    let samples = sampleBuffer.ToArray()
                     if samples.Length > 0 then
                         //logInfo $"processing samples: {samples.Length}"
                         let! transcriptions =
@@ -60,15 +61,18 @@ module VoiceRecognition =
 
                         // Send the transcribed text to the behaviour predictor.
                         logInfo $"userRegisterText (SpokeAtom): {transcriptions[0].text}"
+
                         let spokeAtom =
                             {   text = transcriptions[0].text
-                                start = DateTime.UtcNow
+                                start = getCreationTime mp3Writer
                             }
-                        userRegisterText <| SpokeAtom spokeAtom
-                        syncer.SendTranscription transcriptions[0].text
-
-                        if finalSample then
-                            use! file = readMp3File "{Application.dataPath}/../Mirage/{fileId}.mp3"
+                        if not finalSample then
+                            userRegisterText <| SpokeAtom spokeAtom
+                            syncer.SendTranscription transcriptions[0].text
+                        else
+                            logInfo "final sample, sending spokerecordingatom"
+                            let fileId = getFileId mp3Writer
+                            use! file = readMp3File $"{Application.dataPath}/../Mirage/{fileId}.mp3"
                             logInfo $"SpokeRecordingAtom. Total milliseconds: {file.reader.TotalTime.TotalMilliseconds}"
                             userRegisterText <| SpokeRecordingAtom
                                 {   spokeAtom = spokeAtom
@@ -83,10 +87,12 @@ module VoiceRecognition =
                         //do! Async.Sleep 1000
                         //logInfo "done transcribing"
                 }
-            Async.Start <| async {
-                //logInfo "in processSamples Async.Start"
+            Async.StartImmediate <| async {
                 if finalSample then
+                    logInfo "voice recognition end"
+                    logInfo "final sample. acquiring lock"
                     do! withLock' lock run
+                    logInfo "final sample. finished"
                 else if tryAcquire lock then
                     try do! run
                     finally lockRelease lock
@@ -99,18 +105,21 @@ module VoiceRecognition =
                 let! speech = agent.AsyncGet()
                 //logInfo "after consumer async get"
                 match speech with
-                    | (SpeechStart, _) ->
-                        sampleBuffer.Clear()
+                    | (SpeechStart, mp3Writer) ->
                         logInfo "voice recognition start"
-                    | (SpeechEnd, fileId) ->
-                        logInfo "voice recognition end"
-                        processSamples true fileId
                         sampleBuffer.Clear()
-                    | (SpeechFound samples, fileId) ->
+                        userRegisterText <| VoiceActivityAtom
+                            {   time = getCreationTime mp3Writer
+                                speakerId = Guid guid
+                            }
+                    | (SpeechEnd, mp3Writer) ->
+                        processSamples mp3Writer true << Array.copy <| sampleBuffer.ToArray()
+                        sampleBuffer.Clear()
+                    | (SpeechFound samples, mp3Writer) ->
                         //logInfo "voice recognition speech found"
                         sampleBuffer.AddRange <| toPCMBytes samples
                         //logInfo "before acquiring lock"
-                        processSamples false fileId
+                        processSamples mp3Writer false << Array.copy <| sampleBuffer.ToArray()
                 do! consumer
             }
         Async.Start consumer
