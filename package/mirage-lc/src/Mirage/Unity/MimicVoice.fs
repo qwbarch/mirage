@@ -13,9 +13,13 @@ open Mirage.Domain.Audio.Recording
 open Mirage.Domain.Logger
 open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicPlayer
+open Predictor.MimicPool
+open Unity.Collections
 
 type MimicVoice() as self =
     inherit NetworkBehaviour()
+
+    let mimicId = new NetworkVariable<FixedString64Bytes>()
 
     let recordingManager = RecordingManager()
     let mutable mimicPlayer: MimicPlayer = null
@@ -56,7 +60,24 @@ type MimicVoice() as self =
         voicePlayback.transform.parent <- audioStream.transform
         voicePlayback.SetActive true
 
-    member _.Start() = startVoiceMimic()
+    member this.Start() =
+        if this.IsHost then
+            mimicId.Value <- FixedString64Bytes(Guid.NewGuid().ToString())
+    
+    override _.OnDestroy () =
+        base.OnDestroy()
+        mimicKill (Guid mimicId.Value.Value)
     
     /// Update voice playback object to always be at the same location as the parent.
     member this.LateUpdate() = voicePlayback.transform.position <- this.transform.position
+
+    override this.OnNetworkSpawn () =
+        base.OnNetworkSpawn()
+        let onMimicIdChanged _ (guid: FixedString64Bytes) =
+            let audioStream = this.GetComponent<AudioStream>()
+            let onPlayAudio (fileId: Guid) =
+                logInfo $"mimic requesting audio: {fileId}"
+                Async.StartImmediate <| audioStream.StreamAudioFromFile $"{Application.dataPath}/../Mirage/{fileId}.mp3"
+            logInfo $"mimicId: {guid}"
+            mimicInit (Guid guid.Value) onPlayAudio
+        mimicId.OnValueChanged <- onMimicIdChanged

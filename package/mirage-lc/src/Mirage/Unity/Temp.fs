@@ -4,10 +4,13 @@ module Mirage.Unity.Temp
 
 open System
 open Unity.Netcode
+open UnityEngine
 open Predictor.Lib
 open Predictor.Domain
 open Predictor.Utilities
 open FSharpx.Control
+open Predictor.MimicPool
+open AudioStream
 
 // Temporarily hard-coding the local user's id.
 let guid = new Guid("37f6b68d-3ce2-4cde-9dc9-b6a68ccf002c")
@@ -22,10 +25,8 @@ type TranscriptionSyncer() as self =
             async {
                 let! transcription = agent.AsyncGet()
                 let rpc =
-                    if self.IsHost then
-                        self.SendTranscriptionClientRpc
-                    else
-                        self.SendTranscriptionServerRpc
+                    if self.IsHost then self.SendTranscriptionClientRpc
+                    else self.SendTranscriptionServerRpc
                 rpc(guid.ToString(), transcription)
                 do! consumer
             }
@@ -46,7 +47,6 @@ type TranscriptionSyncer() as self =
     
     member _.SendTranscription(text) =
         logInfo "transcription syncer: sending transcription"
-        logInfo $"current thread id: {System.Threading.Thread.CurrentThread.ManagedThreadId}"
         channel.Add text
     
     [<ClientRpc>]

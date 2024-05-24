@@ -32,6 +32,15 @@ type Plugin() =
                 let baseDirectory = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName)
                 do! initBehaviourPredictor logInfo logWarning logError guid $"{baseDirectory}/Mirage/Predictor" Int32.MaxValue // Size limit
 
+
+                let rec keepActive =
+                    async {
+                        userIsActivePing()
+                        do! Async.Sleep 5000
+                        do! keepActive
+                    }
+                Async.Start keepActive
+
                 // Hooks.
                 registerPrefab()
                 disableAudioSpatializer()

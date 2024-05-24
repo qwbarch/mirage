@@ -18,14 +18,17 @@ type Mp3Writer =
     private
         {   channel: BlockingQueueAgent<Mp3Action>
             writer: LameMP3FileWriter
+            fileId: Guid
         }
 
-let createMp3Writer (filePath: string) inputFormat (preset: LAMEPreset) =
+let createMp3Writer (directory: string) inputFormat (preset: LAMEPreset) =
     async {
         // Create the directory on a background thread.
         do! forkReturn <| async {
-            ignore << Directory.CreateDirectory <| Path.GetDirectoryName filePath
+            ignore << Directory.CreateDirectory <| Path.GetDirectoryName directory
         }
+        let fileId = Guid.NewGuid()
+        let filePath = Path.Join(directory, $"{fileId}.mp3")
         let writer = new LameMP3FileWriter(filePath, inputFormat, preset)
         let channel = new BlockingQueueAgent<Mp3Action>(Int32.MaxValue)
         let rec consumer =
@@ -44,7 +47,7 @@ let createMp3Writer (filePath: string) inputFormat (preset: LAMEPreset) =
                 do! consumer
             }
         Async.Start consumer
-        return { channel = channel; writer = writer }
+        return { channel = channel; writer = writer; fileId = fileId }
     }
 
 /// Write the given frame of pcm data into the mp3 file.
@@ -52,3 +55,6 @@ let writeMp3File mp3Writer = mp3Writer.channel.AsyncAdd << WriteSamples
 
 /// Closes the mp3 file.
 let closeMp3Writer mp3Writer = mp3Writer.channel.AsyncAdd Dispose
+
+/// Retrieve the identifier of the file.
+let getFileId mp3Writer = mp3Writer.fileId
