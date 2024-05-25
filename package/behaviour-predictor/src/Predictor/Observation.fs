@@ -35,7 +35,7 @@ let insertObsTime (obs: PartialObservation) (newTime: DateTime) : Observation =
     }
 
 let reduceSize (queue: SortedSet<DateTime * 'T>) =
-    let cutoff = DateTime.Now.AddMilliseconds(-config.VOICE_BUFFER)
+    let cutoff = DateTime.UtcNow.AddMilliseconds(-config.VOICE_BUFFER)
     let mutable reduced = false
     while queue.Count > 1 && fst queue.Min < cutoff do
         reduced <- true
@@ -97,7 +97,6 @@ let statisticsToPartialObservation (entityId: EntityId) (statistics: GameInputSt
         let! embedding = Async.Parallel [encodeText spokeConcat; encodeText heardConcat]
         let spokeEmbedding = embedding[0]
         let heardEmbedding = embedding[1]
-        let now = DateTime.Now
         let partialObservation : PartialObservation =
             {   spokeEmbedding = spokeEmbedding
                 heardEmbedding = heardEmbedding
@@ -137,13 +136,13 @@ let reduceSpoke
     (queue: SortedDictionary<DateTime, SpokeAtom>)
     (lastActivity: DateTime) =
     let mutable reduced = false
-    let cutoff = DateTime.Now.AddMilliseconds(-config.VOICE_BUFFER)
+    let cutoff = DateTime.UtcNow.AddMilliseconds(-config.VOICE_BUFFER)
     while queue.Count > 1 && queue.First().Key < cutoff do
         let _ = queue.Remove(queue.First().Key)
         reduced <- true
         ()
 
-    if queue.Count > 0 && DateTime.Now > lastActivity.AddMilliseconds(config.VOICE_BUFFER) then
+    if queue.Count > 0 && DateTime.UtcNow > lastActivity.AddMilliseconds(config.VOICE_BUFFER) then
         queue.Clear()
         reduced <- true
     reduced
@@ -152,13 +151,13 @@ let reduceHeard
     (queue: SortedDictionary<DateTime, HeardAtom>)
     (lastActivity: DateTime) =
     let mutable reduced = false
-    let cutoff = DateTime.Now.AddMilliseconds(-config.VOICE_BUFFER)
+    let cutoff = DateTime.UtcNow.AddMilliseconds(-config.VOICE_BUFFER)
     while queue.Count > 1 && queue.First().Key < cutoff do
         let _ = queue.Remove(queue.First().Key)
         reduced <- true
         ()
 
-    if queue.Count > 0 && DateTime.Now > lastActivity.AddMilliseconds(config.VOICE_BUFFER) then
+    if queue.Count > 0 && DateTime.UtcNow > lastActivity.AddMilliseconds(config.VOICE_BUFFER) then
         queue.Clear()
         reduced <- true
     reduced

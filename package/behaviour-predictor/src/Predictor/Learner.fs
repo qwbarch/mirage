@@ -76,7 +76,10 @@ let addSpokeResponse
                     model.policy[relObs.time] <- (relObs, QueueAction queueAction)
                     Async.RunSynchronously <| sendUpdateToMimics relObs.time relObs (QueueAction queueAction)
                     fileHandler.Post <| Update (relObs.time, QueueAction queueAction)
+                    logInfo $"Added a response"
                     ()
+                else
+                    logInfo $"Large time gap {timeDifferenceMillis} {relObs}"
             with
             | :? InvalidOperationException -> 
                 logInfo $"No observation found {model.policy.Count}" // No observation found
@@ -95,6 +98,7 @@ let createLearnerMessageHandler
         async {
             let! gameInput = inbox.Receive()
             // If the person spoke and it corresponds to a saved recording, we update the model.
+            logInfo $"{gameInput}"
             match gameInput with
             | SpokeAtom _ ->
                 ()
@@ -124,7 +128,7 @@ let learnerObservationSampler
     repeatAsync config.MIL_PER_OBS <| async {
         let! isActive = readLVar isActiveLVar
         if isActive then
-            let timeStart = DateTime.Now
+            let timeStart = DateTime.UtcNow
             let! observationProducer = readLVar observationChannel
             do! addEmptyObservation fileHandler <| observationProducer timeStart
     }

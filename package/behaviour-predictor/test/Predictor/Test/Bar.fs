@@ -53,9 +53,9 @@ type public Test() =
     let mutable wordDelay = defaultWordDelay
     let mutable vadRepeat = defaultVadRepeat // vad has basically 0 delay
 
-    let mutable startDate = DateTime.Now
+    let mutable startDate = DateTime.UtcNow
 
-    let getNowMillis () = timeSpanToMillis <| DateTime.Now - startDate
+    let getNowMillis () = timeSpanToMillis <| DateTime.UtcNow - startDate
 
 
     let mimicPrintListLVar : LVar<List<int * string * string>> = newLVar(System.Collections.Generic.List())
@@ -136,7 +136,7 @@ type public Test() =
             let utteranceTime = newTime - t
 
             logInfo <| $"[{t}-{snd speakTimings[speakTimings.Count - 1]}]" + (if isMimic then " (mimic) " else " ") + $"{idToNames[speakerId]}: {text}"
-            let startTime = DateTime.Now
+            let startTime = DateTime.UtcNow
 
             let emitWhisper =
                 async {
@@ -155,8 +155,8 @@ type public Test() =
                         if speakerId = uid then
                             userRegisterText spokeAtom
 
-                        elif mimics.Contains(speakerId) then
-                            mimicRegisterText speakerId spokeAtom
+                        // elif mimics.Contains(speakerId) then
+                        //     mimicRegisterText speakerId spokeAtom
 
                         let heardAtom =
                             HeardAtom {
@@ -203,8 +203,8 @@ type public Test() =
                         for id in everyone do
                             if id = uid then
                                 userRegisterText voiceActivityAtom
-                            elif mimics.Contains(id) then
-                                mimicRegisterText id voiceActivityAtom
+                            // elif mimics.Contains(id) then
+                            //     mimicRegisterText id voiceActivityAtom
                 }
 
             Async.Start emitWhisper
@@ -305,7 +305,7 @@ type public Test() =
             Async.RunSynchronously <| initBehaviourPredictor printInfo printWarning printError uid "E:/temp/data" 2000000
 
     member this.reset () =
-        startDate <- DateTime.Now
+        startDate <- DateTime.UtcNow
         config <- defaultConfig
         whisperDelay <- defaultWhisperDelay
         wordDelay <- defaultWordDelay

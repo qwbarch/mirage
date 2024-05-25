@@ -17,12 +17,12 @@ let timeSpanToMillis (t : TimeSpan) = int << min 2000000000.0 <| floor t.TotalMi
 let repeatAsync (repeatMillis: int) (f: Async<'T>) =
     let rec loop () = 
         async {
-            let timeStart = DateTime.Now
+            let timeStart = DateTime.UtcNow
             let targetWakeup = timeStart.AddMilliseconds(repeatMillis)
 
             let! _ = f
 
-            let now = DateTime.Now
+            let now = DateTime.UtcNow
             let waitMillis : int = max 0 <| timeSpanToMillis (targetWakeup - now)
             do! Async.Sleep waitMillis
             do! loop()

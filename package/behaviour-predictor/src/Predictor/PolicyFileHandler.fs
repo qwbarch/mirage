@@ -154,7 +154,7 @@ let createFileHandler
                     | Add (observation, futureAction) ->
                         if fileState.files.Count = 0 || fileState.fileToData[fileState.files.Max.name].Length >= config.FILE_SPLIT_SIZE then
                             // Create a new file
-                            let now = DateTime.Now
+                            let now = DateTime.UtcNow
                             let newFileName = now.ToString("yyyyMMddHHmmss") + "-" + Guid.NewGuid().ToString() + ".json"
                             let newFileData = {
                                 creationDate = now

@@ -148,7 +148,7 @@ let createFutureActionGeneratorAsync
     (sendToActionEmitter: FutureAction -> unit)
     (rngSource: RandomSource) =
     repeatAsync config.MIL_PER_OBS <| async {
-        let timeStart = DateTime.Now
+        let timeStart = DateTime.UtcNow
         let! observationProducer = readLVar observationChannel
         let observation = observationProducer timeStart
         let! futureActionOption = observationToFutureAction internalPolicy observation rngSource
