@@ -10,16 +10,15 @@ open FSharpx.Control
 open Predictor.Lib
 open Predictor.Domain
 open Whisper.API
-open UnityEngine
 open Mirage.Domain.Logger
 open Mirage.Core.Audio.Speech
 open Mirage.Core.Audio.PCM
 open Mirage.Core.Async.Lock
 open Mirage.Core.Audio.File.Mp3Reader
 open Mirage.Unity.Temp
+open Mirage.Core.Audio.File.Mp3Writer
 
 module VoiceRecognition =
-    open Mirage.Core.Audio.File.Mp3Writer
     /// Min # of samples to wait for before transcribing.
     let [<Literal>] private MinSamples = 1024
 
@@ -71,15 +70,16 @@ module VoiceRecognition =
                             syncer.SendTranscription transcriptions[0].text
                         else
                             logInfo "final sample, sending spokerecordingatom"
-                            let fileId = getFileId mp3Writer
-                            use! file = readMp3File $"{Application.dataPath}/../Mirage/{fileId}.mp3"
+                            let filePath = getFilePath mp3Writer
+                            logInfo $"path: {filePath}"
+                            use! file = readMp3File filePath
                             logInfo $"SpokeRecordingAtom. Total milliseconds: {file.reader.TotalTime.TotalMilliseconds}"
                             userRegisterText <| SpokeRecordingAtom
                                 {   spokeAtom = spokeAtom
                                     whisperTimings = []
                                     vadTimings = []
                                     audioInfo =
-                                        {   fileId = fileId
+                                        {   fileId = getFileId mp3Writer
                                             duration = int file.reader.TotalTime.TotalMilliseconds
                                         }
                                 }

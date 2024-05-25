@@ -3,6 +3,8 @@ module Mirage.Hook.RecordAudio
 #nowarn "40"
 
 open System
+open System.IO
+open System.Diagnostics
 open System.Collections.Generic
 open Silero.API
 open NAudio.Wave
@@ -15,6 +17,9 @@ open Mirage.Core.Audio.Speech
 open Mirage.Core.Audio.Resampler
 open Mirage.Core.Audio.File.Mp3Writer
 open Mirage.Hook.VoiceRecognition
+
+// TODO: This should only need to be declared in one area. Right now it's in multiple files.
+let private baseDirectory = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName)
 
 let [<Literal>] private SampleRate = 16000
 let [<Literal>] private SamplesPerWindow = 1024
@@ -30,7 +35,7 @@ let private speechDetector =
             match speech with
                 | SpeechStart ->
                     logInfo "speech start"
-                    let directory = $"{Application.dataPath}/../Mirage"
+                    let directory = Path.Join(baseDirectory, "Mirage")
                     let! mp3Writer = createMp3Writer directory WriterFormat WriterPreset
                     writer <- Some mp3Writer
                     do! transcribeSpeech speech mp3Writer

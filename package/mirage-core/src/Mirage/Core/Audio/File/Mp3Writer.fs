@@ -19,6 +19,7 @@ type Mp3Writer =
         {   channel: BlockingQueueAgent<Mp3Action>
             writer: LameMP3FileWriter
             fileId: Guid
+            filePath: string
             creationTime: DateTime
         }
 
@@ -41,17 +42,18 @@ let createMp3Writer (directory: string) inputFormat (preset: LAMEPreset) =
                             |> writer.WriteAsync
                             |> _.AsTask()
                             |> Async.AwaitTask
+                        do! consumer
                     | Dispose ->
                         do! Async.AwaitTask(writer.FlushAsync())
                         dispose writer
                         dispose channel
-                do! consumer
             }
         Async.Start consumer
         return {
             channel = channel
             writer = writer
             fileId = fileId
+            filePath = filePath
             creationTime = DateTime.UtcNow
         }
     }
@@ -64,6 +66,9 @@ let closeMp3Writer mp3Writer = mp3Writer.channel.AsyncAdd Dispose
 
 /// Retrieve the identifier of the file.
 let getFileId mp3Writer = mp3Writer.fileId
+
+/// Get the file path of the mp3 file.
+let getFilePath mp3Writer = mp3Writer.filePath
 
 /// Get the creation time of the file.
 let getCreationTime mp3Writer = mp3Writer.creationTime
