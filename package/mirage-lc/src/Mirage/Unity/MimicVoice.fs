@@ -15,6 +15,7 @@ open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicPlayer
 open Predictor.MimicPool
 open Unity.Collections
+open FSharpx.Control
 
 type MimicVoice() as self =
     inherit NetworkBehaviour()
@@ -64,20 +65,28 @@ type MimicVoice() as self =
         if this.IsHost then
             mimicId.Value <- FixedString64Bytes(Guid.NewGuid().ToString())
     
-    override _.OnDestroy () =
-        base.OnDestroy()
-        mimicKill (Guid mimicId.Value.Value)
-    
     /// Update voice playback object to always be at the same location as the parent.
     member this.LateUpdate() = voicePlayback.transform.position <- this.transform.position
 
     override this.OnNetworkSpawn () =
         base.OnNetworkSpawn()
+        // AudioStream functions require it to be run from the unity thread.
+        // mimicInit runs the callback from a different thread, requiring its queued action to have to be passed back to the unity thread.
+        let channel = new BlockingQueueAgent<string>(Int32.MaxValue)
+        let rec consumer =
+            async {
+                let! file = channel.AsyncGet()
+                logInfo $"Mimic {mimicId.Value.Value} requested file: {file}"
+                do! audioStream.StreamAudioFromFile file
+                do! consumer
+            }
+        Async.StartImmediate(consumer, this.destroyCancellationToken)
         let onMimicIdChanged _ (guid: FixedString64Bytes) =
-            let audioStream = this.GetComponent<AudioStream>()
-            let onPlayAudio (fileId: Guid) =
-                logInfo $"mimic requesting audio: {fileId}"
-                Async.StartImmediate <| audioStream.StreamAudioFromFile $"{Application.dataPath}/../Mirage/{fileId}.mp3"
             logInfo $"mimicId: {guid}"
-            mimicInit (Guid guid.Value) onPlayAudio
+            mimicInit (Guid guid.Value) <| fun fileId ->
+                channel.Add $"{Application.dataPath}/../Mirage/{fileId}.mp3"
         mimicId.OnValueChanged <- onMimicIdChanged
+    
+    override _.OnNetworkDespawn() =
+        base.OnDestroy()
+        mimicKill <| Guid mimicId.Value.Value
