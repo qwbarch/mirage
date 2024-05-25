@@ -69,7 +69,7 @@ let computeScores
         let totalCost = heardSim + spokeSim + talkBias + speakOrHearTimeCost
         // match action with
         // | NoAction -> ()
-        // | QueueAction _ -> printfn "action %f %f %f %f %f %O %O" totalCost spokeSim heardSim speakTimeCost hearTimeCost policyObs action
+        // | QueueAction _ -> logInfo <| sprintf "action %f %f %f %f %f %O %O" totalCost spokeSim heardSim speakTimeCost hearTimeCost policyObs action
 
         totalCost, action
 
@@ -130,7 +130,7 @@ let sampleAction (oppositeOrdPolicy: Policy) (observation: Observation) (rngSour
         let spokeSims = computeSims policySpokeEmbs observation.spokeEmbedding
         let scores = computeScores heardSims spokeSims policy observation rngSource
         let sampled = sample scores rngSource
-        // printfn "SAMPLED %A" sampled
+        // logInfo <| sprintf "Sampled %A" sampled
         snd sampled
 let observationToFutureAction (internalPolicy: LVar<Policy>) (observation : Observation) (rngSource: RandomSource) : Async<Option<FutureAction>> =
     async {
