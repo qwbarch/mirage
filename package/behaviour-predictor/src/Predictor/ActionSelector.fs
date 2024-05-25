@@ -57,7 +57,8 @@ let computeScores
             i <- i + 1
         temp
 
-    flip map flattened <| fun (heardSim, spokeSim, _, policyObs, action) ->
+    let mutable maxNoAction = -10.0
+    let result = flip map flattened <| fun (heardSim, spokeSim, _, policyObs, action) ->
         let talkBias =
             match action with
             | NoAction -> 0.0
@@ -67,11 +68,15 @@ let computeScores
         let hearTimeCost = speakOrHearDiffToCost policyObs.lastHeard observation.lastHeard rngSource
         let speakOrHearTimeCost = max speakTimeCost hearTimeCost
         let totalCost = heardSim + spokeSim + talkBias + speakOrHearTimeCost
-        // match action with
-        // | NoAction -> ()
-        // | QueueAction _ -> logInfo <| sprintf "action %f %f %f %f %f %O %O" totalCost spokeSim heardSim speakTimeCost hearTimeCost policyObs action
+        match action with
+        | NoAction -> 
+            maxNoAction <- max maxNoAction totalCost
+            ()
+        | QueueAction _ -> logInfo <| sprintf "action %f %f %f %f %f %O %O" totalCost spokeSim heardSim speakTimeCost hearTimeCost policyObs action
 
         totalCost, action
+    logInfo <| sprintf $"maxNoAction {maxNoAction}"
+    result
 
 let sample (unnormScores: List<float * FutureAction>) (rngSource: RandomSource) =
     // TODO use a heap instead of sorting

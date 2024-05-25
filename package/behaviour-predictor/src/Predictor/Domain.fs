@@ -31,10 +31,15 @@ type AudioInfo =
         duration: int
     }
 
+type VoiceActivityAtom =
+    {   time: DateTime
+        speakerId: EntityId
+    }
+
 type SpokeRecordingAtom =
     {   spokeAtom: SpokeAtom
-        whisperTimings: (int * string) list
-        vadTimings: int list
+        whisperTimings: SpokeAtom list
+        vadTimings: VoiceActivityAtom list
         audioInfo: AudioInfo
     }
 
@@ -45,11 +50,6 @@ type HeardAtom =
         start: DateTime
         // TODO
         // languageId: int32
-    }
-
-type VoiceActivityAtom =
-    {   time: DateTime
-        speakerId: EntityId
     }
 
 type GameInput =
@@ -124,8 +124,8 @@ type CompressedObservationFileFormat =
 type AudioResponse =
     {   fileId: Guid
         embedding: Option<string * TextEmbedding>
-        whisperTimings: (int * string) list
-        vadTimings: int list
+        whisperTimings: SpokeAtom list
+        vadTimings: VoiceActivityAtom list
         duration: int
     }
     override this.ToString() =
