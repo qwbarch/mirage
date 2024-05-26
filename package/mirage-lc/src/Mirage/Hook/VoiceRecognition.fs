@@ -70,7 +70,7 @@ module VoiceRecognition =
                                 let! mimics = readLVar mimicsVar
                                 iter (flip mimicRegisterText <| SpokeAtom spokeAtom) mimics
                             }
-                            syncer.SendTranscription transcriptions[0].text
+                            syncer.SendTranscription(getCreationTime mp3Writer, transcriptions[0].text)
                         else
                             logInfo "final sample, sending spokerecordingatom"
                             let filePath = getFilePath mp3Writer
