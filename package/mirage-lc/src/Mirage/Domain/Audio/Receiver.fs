@@ -42,6 +42,7 @@ let AudioReceiver (audioSource: AudioSource) (pcmHeader: PcmHeader) : AudioRecei
             pcmHeader.frequency,
             false
         )
+    ignore <| audioSource.clip.SetData(Array.zeroCreate(pcmHeader.samples * pcmHeader.channels), 0)
     let waveFormat =
         new Mp3WaveFormat(
             pcmHeader.frequency,

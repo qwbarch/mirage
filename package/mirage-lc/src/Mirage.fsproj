@@ -58,10 +58,10 @@
     <Compile Include="Mirage/Domain/Audio/Recording.fs" />
     <Compile Include="Mirage/Hook/Dissonance.fs" />
     <Compile Include="Mirage/Unity/AudioStream.fs" />
-    <Compile Include="Mirage/Unity/Temp.fs" />
-    <Compile Include="Mirage/Hook/VoiceRecognition.fs" />
     <Compile Include="Mirage/Unity/MimicPlayer.fs" />
     <Compile Include="Mirage/Unity/MimicVoice.fs" />
+    <Compile Include="Mirage/Unity/Temp.fs" />
+    <Compile Include="Mirage/Hook/VoiceRecognition.fs" />
     <Compile Include="Mirage/Hook/AudioSpatializer.fs" />
     <Compile Include="Mirage/Hook/RecordAudio.fs" />
     <Compile Include="Mirage/Hook/RegisterPrefab.fs" />

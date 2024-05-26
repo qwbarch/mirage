@@ -3,19 +3,23 @@ module Mirage.Unity.MimicVoice
 #nowarn "40"
 
 open System
+open System.Collections.Generic
+open Predictor.MimicPool
+open FSharpx.Control
 open FSharpPlus
 open FSharpPlus.Data
 open UnityEngine
 open Unity.Netcode
+open Unity.Collections
 open Dissonance.Audio.Playback
 open Mirage.Hook.Dissonance
 open Mirage.Domain.Audio.Recording
 open Mirage.Domain.Logger
 open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicPlayer
-open Predictor.MimicPool
-open Unity.Collections
-open FSharpx.Control
+open Mirage.Core.Async.LVar
+
+let mimicsVar = newLVar <| new HashSet<Guid>()
 
 type MimicVoice() as self =
     inherit NetworkBehaviour()
@@ -43,6 +47,8 @@ type MimicVoice() as self =
                 do! runMimicLoop
             }
         Async.StartImmediate(runMimicLoop, self.destroyCancellationToken)
+
+    member _.GetMimicId() = mimicId
 
     member this.Awake() =
         mimicPlayer <- this.GetComponent<MimicPlayer>()
@@ -83,7 +89,11 @@ type MimicVoice() as self =
         Async.StartImmediate(consumer, this.destroyCancellationToken)
         let onMimicIdChanged _ (guid: FixedString64Bytes) =
             logInfo $"mimicId: {guid}"
+            Async.StartImmediate << modifyLVar mimicsVar <| fun mimics ->
+                ignore << mimics.Add <| new Guid(guid.Value)
+                mimics
             mimicInit (Guid guid.Value) <| fun fileId ->
+                logInfo $"sendMimicText. mimic {guid.Value} is requesting the file: {fileId}.mp3"
                 channel.Add $"{Application.dataPath}/../Mirage/{fileId}.mp3"
         mimicId.OnValueChanged <- onMimicIdChanged
     

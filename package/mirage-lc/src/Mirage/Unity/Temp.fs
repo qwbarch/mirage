@@ -11,6 +11,9 @@ open Predictor.Utilities
 open FSharpx.Control
 open Predictor.MimicPool
 open AudioStream
+open Mirage.Core.Async.LVar
+open MimicVoice
+open FSharpPlus
 
 // Temporarily hard-coding the local user's id.
 let guid = Guid.NewGuid() // new Guid("37f6b68d-3ce2-4cde-9dc9-b6a68ccf002c")
@@ -38,12 +41,18 @@ type TranscriptionSyncer() as self =
         let gguid = Guid <| new Guid(userId)
         if gguid <> Guid guid then
             logInfo $"HeardAtom. Speaker: {guid}. Text: {text}"
-            userRegisterText <| HeardAtom
-                {   text = text
-                    start = DateTime.UtcNow
-                    speakerClass = Guid guid
-                    speakerId = Guid guid
-                }
+            let heardAtom =
+                HeardAtom
+                    {   text = text
+                        start = DateTime.UtcNow
+                        speakerClass = Guid guid
+                        speakerId = Guid guid
+                    }
+            userRegisterText heardAtom
+            Async.StartImmediate <| async {
+                let! mimics = readLVar mimicsVar
+                iter (flip mimicRegisterText heardAtom) mimics
+            }
     
     member _.SendTranscription(text) =
         logInfo "transcription syncer: sending transcription"
