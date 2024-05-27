@@ -18,8 +18,9 @@ open Mirage.Domain.Logger
 open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicPlayer
 open Mirage.Core.Async.LVar
+open GameNetcodeStuff
 
-let mimicsVar = newLVar <| new HashSet<Guid>()
+let mimicsVar = newLVar <| new HashSet<Tuple<PlayerControllerB, Guid>>()
 
 type MimicVoice() as self =
     inherit NetworkBehaviour()
@@ -87,14 +88,15 @@ type MimicVoice() as self =
                 do! consumer
             }
         Async.StartImmediate(consumer, this.destroyCancellationToken)
-        let onMimicIdChanged _ (guid: FixedString64Bytes) =
-            logInfo $"mimicId: {guid}"
+        let onMimicIdChanged _ (mimicId: FixedString64Bytes) =
+            logInfo $"mimicId: {mimicId}"
             Async.StartImmediate << modifyLVar mimicsVar <| fun mimics ->
-                ignore << mimics.Add <| new Guid(guid.Value)
+                ignore <| mimics.Add(mimicPlayer.MimickingPlayer, new Guid(mimicId.Value))
                 mimics
-            mimicInit (Guid guid.Value) <| fun fileId ->
-                logInfo $"sendMimicText. mimic {guid.Value} is requesting the file: {fileId}.mp3"
-                channel.Add $"{Application.dataPath}/../Mirage/{fileId}.mp3"
+            if mimicPlayer.MimickingPlayer = StartOfRound.Instance.localPlayerController then
+                mimicInit (Guid mimicId.Value) <| fun fileId ->
+                    logInfo $"Player #{mimicPlayer.MimickingPlayer.playerClientId} sendMimicText is requesting the file: {fileId}.mp3"
+                    channel.Add $"{Application.dataPath}/../Mirage/{fileId}.mp3"
         mimicId.OnValueChanged <- onMimicIdChanged
     
     override _.OnNetworkDespawn() =

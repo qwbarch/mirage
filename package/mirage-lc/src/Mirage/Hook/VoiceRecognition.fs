@@ -68,7 +68,10 @@ module VoiceRecognition =
                             userRegisterText <| SpokeAtom spokeAtom
                             Async.StartImmediate <| async {
                                 let! mimics = readLVar mimicsVar
-                                iter (flip mimicRegisterText <| SpokeAtom spokeAtom) mimics
+                                flip iter mimics <| fun (mimickingPlayer, mimicId) ->
+                                    if StartOfRound.Instance.localPlayerController = mimickingPlayer then
+                                        logInfo $"mimicRegisterText SpokeAtom: {mimicId}."
+                                        mimicRegisterText mimicId <| SpokeAtom spokeAtom
                             }
                             syncer.SendTranscription(getCreationTime mp3Writer, transcriptions[0].text)
                         else
@@ -90,7 +93,10 @@ module VoiceRecognition =
                             userRegisterText spokeRecordingAtom
                             Async.StartImmediate <| async {
                                 let! mimics = readLVar mimicsVar
-                                iter (flip mimicRegisterText spokeRecordingAtom) mimics
+                                flip iter mimics <| fun (mimickingPlayer, mimicId) ->
+                                    if StartOfRound.Instance.localPlayerController = mimickingPlayer then
+                                        logInfo $"mimicRegisterText SpokeRecordingAtom: {mimicId}."
+                                        mimicRegisterText mimicId spokeRecordingAtom
                             }
                         //logInfo "waiting 1 second as a test"
                         //do! Async.Sleep 1000
@@ -117,16 +123,7 @@ module VoiceRecognition =
                     | (SpeechStart, mp3Writer) ->
                         logInfo "voice recognition start"
                         sampleBuffer.Clear()
-                        let voiceActivityAtom =
-                            VoiceActivityAtom
-                                {   time = getCreationTime mp3Writer
-                                    speakerId = Guid guid
-                                }
-                        userRegisterText voiceActivityAtom
-                        Async.StartImmediate <| async {
-                            let! mimics = readLVar mimicsVar
-                            iter (flip mimicRegisterText voiceActivityAtom) mimics
-                        }
+                        syncer.VoiceActivityStart(guid, getCreationTime mp3Writer)
                     | (SpeechEnd, mp3Writer) ->
                         processSamples mp3Writer true << Array.copy <| sampleBuffer.ToArray()
                         sampleBuffer.Clear()

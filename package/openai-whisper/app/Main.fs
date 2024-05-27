@@ -68,7 +68,7 @@ let main _ =
                     | SpeechFound samples ->
                         return! addAudioFrame transcriber << Some <| toPCMBytes samples
             }
-        let speechDetector = 
+        let speechDetector =
             SpeechDetector
                 (result << detectSpeech silero)
                 onSpeechDetected

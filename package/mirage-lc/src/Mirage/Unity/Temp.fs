@@ -4,29 +4,65 @@ module Mirage.Unity.Temp
 
 open System
 open Unity.Netcode
-open UnityEngine
 open Predictor.Lib
 open Predictor.Domain
 open Predictor.Utilities
 open FSharpx.Control
-open Predictor.MimicPool
-open AudioStream
 open Mirage.Core.Async.LVar
 open MimicVoice
 open FSharpPlus
 open Newtonsoft.Json
-open Mirage.Core.Audio.File.Mp3Writer
 
 // Temporarily hard-coding the local user's id.
 let guid = Guid.NewGuid() // new Guid("37f6b68d-3ce2-4cde-9dc9-b6a68ccf002c")
 
 type private SyncAction
-    = SyncHeardAtom of Tuple<DateTime, string>
-    | SyncVoiceActivityAtom of Tuple<Guid, DateTime>
+    = SyncHeardAtom of Tuple<Guid, DateTime, string>
+    | SyncVoiceActivityAtom of Tuple<string, string>
 
 [<AllowNullLiteral>]
 type TranscriptionSyncer() as self =
     inherit NetworkBehaviour()
+
+    let sendTranscription (userId: Guid) (startTime: DateTime) (transcription: string) =
+        logInfo "received transcription"
+        let heardAtom =
+            HeardAtom
+                {   text = transcription
+                    start = startTime
+                    speakerClass = Guid userId
+                    speakerId = Guid userId
+                }
+        Async.StartImmediate <| async {
+            let! mimics = readLVar mimicsVar
+            flip iter mimics <| fun (mimickingPlayer, mimicId) ->
+                if StartOfRound.Instance.localPlayerController = mimickingPlayer then
+                    logInfo $"HeardAtom received for mimic: {mimicId}"
+                    mimicRegisterText mimicId heardAtom
+                else
+                    logInfo "HeardAtom ignored due to mimic belonging to a different player."
+        }
+        if userId <> guid then
+            logInfo $"HeardAtom. Speaker: {guid}. Text: {transcription}"
+            userRegisterText heardAtom
+
+    let voiceActivityStrat userId startTime =
+        logInfo $"voice activity started for user: {userId}"
+        let voiceActivityAtom =
+            VoiceActivityAtom
+                {   time = startTime
+                    speakerId = Guid userId
+                }
+        Async.StartImmediate <| async {
+            let! mimics = readLVar mimicsVar
+            flip iter mimics <| fun (mimickingPlayer, mimicId) ->
+                if StartOfRound.Instance.localPlayerController = mimickingPlayer then
+                    logInfo $"VoiceActivityAtom received for mimic: {mimicId}."
+                    mimicRegisterText mimicId voiceActivityAtom
+                else
+                    logInfo "VoiceActivityAtom ignored due to mimic belonging to a different player."
+        }
+        userRegisterText voiceActivityAtom
 
     let channel =
         let agent = new BlockingQueueAgent<SyncAction>(Int32.MaxValue)
@@ -34,78 +70,43 @@ type TranscriptionSyncer() as self =
             async {
                 let! action = agent.AsyncGet()
                 match action with
-                    | SyncHeardAtom (startTime, transcription) ->
+                    | SyncHeardAtom (userId, startTime, transcription) ->
                         let rpc =
                             if self.IsHost then self.SendTranscriptionClientRpc
                             else self.SendTranscriptionServerRpc
-                        rpc(guid.ToString(), transcription, JsonConvert.SerializeObject startTime)
-                        do! consumer
-                    | SyncVoiceActivityAtom (speakerId, startTime) ->
+                        rpc(userId.ToString(), startTime.ToString(), transcription)
+                    | SyncVoiceActivityAtom (userId, startTime) ->
                         let rpc =
                             if self.IsHost then self.VoiceActivityStartClientRpc
                             else self.VoiceActivityStartServerRpc
-                        rpc(speakerId.ToString(), JsonConvert.SerializeObject startTime)
+                        rpc(userId, startTime)
+                do! consumer
             }
         Async.StartImmediate consumer
         agent
-
-    let sendTranscription (userId: string) text startTime =
-        logInfo "received transcription"
-        let userGuid = Guid <| new Guid(userId)
-        let heardAtom =
-            HeardAtom
-                {   text = text
-                    start = JsonConvert.DeserializeObject<DateTime> startTime
-                    speakerClass = userGuid
-                    speakerId = userGuid
-                }
-        Async.StartImmediate <| async {
-            let! mimics = readLVar mimicsVar
-            iter (flip mimicRegisterText heardAtom) mimics
-        }
-        if userGuid <> Guid guid then
-            logInfo $"HeardAtom. Speaker: {guid}. Text: {text}"
-            userRegisterText heardAtom
-
-    let voiceActivityStrat (userId: string) startTime =
-        logInfo $"voice activity started for user: {userId}"
-        let userGuid = Guid <| new Guid(userId)
-        let voiceActivityAtom =
-            VoiceActivityAtom
-                {   time = JsonConvert.DeserializeObject<DateTime> startTime
-                    speakerId = userGuid
-                }
-        Async.StartImmediate <| async {
-            let! mimics = readLVar mimicsVar
-            iter (flip mimicRegisterText voiceActivityAtom) mimics
-        }
     
-    member _.SendTranscription(startTime, text) =
+    member _.SendTranscription(startTime: DateTime, text: string) =
         logInfo "transcription syncer: sending transcription"
-        channel.Add <| SyncHeardAtom(startTime, text)
+        channel.Add <| SyncHeardAtom(guid, startTime, text)
     
     [<ClientRpc>]
-    member this.SendTranscriptionClientRpc(userId, text, startTime) =
-        if not this.IsHost then
-            sendTranscription userId text startTime
+    member _.SendTranscriptionClientRpc(userId: string, startTime, text) =
+        sendTranscription (new Guid(userId)) (DateTime.Parse startTime) text
 
-    [<ServerRpc>]
-    member this.SendTranscriptionServerRpc(userId, text, startTime) =
+    [<ServerRpc(RequireOwnership = false)>]
+    member this.SendTranscriptionServerRpc(userId, startTime, text) =
         if this.IsHost then
-            this.SendTranscriptionClientRpc(userId, text, startTime)
-        sendTranscription userId text startTime
+            this.SendTranscriptionClientRpc(userId, startTime, text)
 
-    member _.VoiceActivityStart(speakerId, startTime) =
+    member _.VoiceActivityStart(userId: Guid, startTime: DateTime) =
         logInfo "transcription syncer: sending voice activity start"
-        channel.Add <| SyncVoiceActivityAtom(speakerId, startTime)
+        channel.Add <| SyncVoiceActivityAtom(userId.ToString(), startTime.ToString())
 
     [<ClientRpc>]
-    member this.VoiceActivityStartClientRpc(speakerId, startTime) =
-        if not this.IsHost then
-            voiceActivityStrat speakerId startTime
+    member _.VoiceActivityStartClientRpc(userId, startTime) =
+        voiceActivityStrat (new Guid(userId)) (DateTime.Parse startTime)
 
-    [<ServerRpc>]
-    member this.VoiceActivityStartServerRpc(speakerId, startTime) =
+    [<ServerRpc(RequireOwnership = false)>]
+    member this.VoiceActivityStartServerRpc(userId, startTime) =
         if this.IsHost then
-            this.VoiceActivityStartClientRpc(speakerId, startTime)
-        voiceActivityStrat speakerId startTime
+            this.VoiceActivityStartClientRpc(userId, startTime)

@@ -114,7 +114,16 @@ let transcribe whisper request =
             log $"body: {body}"
             return
                 match Option.ofObj body.response, Option.ofObj body.error with
-                    | Some response, None -> response
+                    | Some response, None ->
+                        flip map response <| fun transcription ->
+                            //let probabilities =
+                            //    softmax
+                            //        [|  MathF.Exp transcription.avgLogProb
+                            //            transcription.noSpeechProb
+                            //        |]
+                            {   transcription with
+                                    avgLogProb = MathF.Exp transcription.avgLogProb //probabilities[0]
+                            }
                     | None, Some error -> raise <| WhisperException error
                     | _, _ -> raise <| WhisperException $"Received an unexpected response from whisper-s2t. Response: {responseBody.ToString()}"
         }
