@@ -156,9 +156,5 @@ __declspec(dllexport) float detect_speech(struct SileroVAD *vad, const float *pc
     vad->api->ReleaseValue(h_tensor);
     vad->api->ReleaseValue(c_tensor);
 
-    free(probabilities);
-    free(h_output);
-    free(c_output);
-
     return probabilities[0];
 }

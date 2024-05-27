@@ -46,7 +46,9 @@ with open("pylog.txt", 'w') as file:
             while running:
                 try:
                     log("waiting recv")
-                    request = json.loads(stdin.readline().decode("utf-8-sig"))
+                    request_unparsed = stdin.readline().decode("utf-8-sig")
+                    log(f"request: {request_unparsed}")
+                    request = json.loads(request_unparsed)
                     log("recv received")
                     log("finished parsing request")
                     respond({"response": transcribe(request)})

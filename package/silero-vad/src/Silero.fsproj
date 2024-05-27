@@ -10,7 +10,7 @@
     <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=.</PathMap>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="FSharpPlus" Version="1.5.0" />
+    <PackageReference Include="FSharpPlus" Version="1.6.1" />
     <ContentWithTargetPath Include="../bin/SileroVAD.API.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>SileroVAD.API.dll</TargetPath>

@@ -10,7 +10,7 @@ open Mirage.Core.Audio.Speech
 open Mirage.Core.Audio.File.Mp3Writer
 open System.IO
 
-let [<Literal>] WindowSize = 1536
+let [<Literal>] WindowSize = 1024
 let [<Literal>] private WriterPreset = LAMEPreset.STANDARD
 let private WriterFormat = WaveFormat(16000, 1)
 
@@ -33,7 +33,7 @@ let main _ =
                     do! closeMp3Writer writer.Value
                     writer <- None
                 | SpeechFound samples ->
-                    do! writeMp3 writer.Value samples
+                    do! writeMp3File writer.Value samples
         }
     let speechDetector =  SpeechDetector (result << detectSpeech silero) onSpeechDetected
     let waveIn = new WaveInEvent()
