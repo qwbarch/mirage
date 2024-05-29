@@ -407,3 +407,5 @@ bin
 **/dist
 *.o
 *.bak
+
+model/whisper-base/model.bin
