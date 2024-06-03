@@ -11,7 +11,6 @@ open NAudio.Wave
 open NAudio.Lame
 open FSharpPlus
 open FSharpx.Control
-open UnityEngine
 open Mirage.Domain.Logger
 open Mirage.Core.Audio.Speech
 open Mirage.Core.Audio.Resampler
@@ -33,18 +32,18 @@ let private speechDetector =
     SpeechDetector (result << detectSpeech silero) <| fun speech ->
         async {
             match speech with
-                | SpeechStart ->
+                | SpeechStart _ ->
                     logInfo "speech start"
                     let directory = Path.Join(baseDirectory, "Mirage")
                     let! mp3Writer = createMp3Writer directory WriterFormat WriterPreset
                     writer <- Some mp3Writer
                     do! transcribeSpeech speech mp3Writer
-                | SpeechEnd ->
+                | SpeechEnd _ ->
                     logInfo "speech end"
                     do! closeMp3Writer writer.Value
                     do! transcribeSpeech speech writer.Value
                     writer <- None
-                | SpeechFound samples ->
+                | SpeechFound (_, samples) ->
                     do! writeMp3File writer.Value samples
                     do! transcribeSpeech speech writer.Value
         }
@@ -70,7 +69,7 @@ let private channel =
             if buffer.Count >= SamplesPerWindow then
                 let samples = buffer.GetRange(0, SamplesPerWindow).ToArray()
                 buffer.RemoveRange(0, SamplesPerWindow)
-                do! writeSamples speechDetector samples
+                do! writeSamples speechDetector samples WriterFormat // TODO: This should be frame.format when the audio samples is no longer resampled.
             do! consumer
         }
     Async.Start consumer

@@ -16,11 +16,11 @@ open Mirage.Core.Audio.PCM
 open Mirage.Core.Async.Lock
 open Mirage.Core.Audio.File.Mp3Reader
 open Mirage.Core.Audio.File.Mp3Writer
+open Mirage.Core.Async.LVar
 open Mirage.Unity.Temp
+open Mirage.Unity.MimicVoice
 
 module VoiceRecognition =
-    open Mirage.Core.Async.LVar
-    open Mirage.Unity.MimicVoice
     /// Min # of samples to wait for before transcribing.
     let [<Literal>] private MinSamples = 1024
 
@@ -42,13 +42,19 @@ module VoiceRecognition =
             syncer <- self.GetComponent<TranscriptionSyncer>()
         )
 
+    let private toActivityAtom time =
+        {   speakerId = Guid guid
+            time = time
+        }
+
     let private transcribeChannel =
         let agent = new BlockingQueueAgent<Tuple<SpeechDetection, Mp3Writer>>(Int32.MaxValue)
         let sampleBuffer = new List<byte>()
+        let mutable whisperTimings = []
         let lock = createLock()
 
         // TODO: Maybe make waiting for lock waitable from the caller?
-        let processSamples mp3Writer finalSample (samples: byte[]) =
+        let processSamples mp3Writer startTime (timings: option<list<DateTime>>) (samples: byte[]) =
             let run =
                 async {
                     //logInfo "inside processSamples"
@@ -62,48 +68,54 @@ module VoiceRecognition =
 
                         let spokeAtom =
                             {   text = transcriptions[0].text
-                                start = getCreationTime mp3Writer
+                                start = startTime
                             }
-                        if not finalSample then
-                            userRegisterText <| SpokeAtom spokeAtom
-                            Async.StartImmediate <| async {
-                                let! mimics = readLVar mimicsVar
-                                flip iter mimics <| fun (mimickingPlayer, mimicId) ->
-                                    if StartOfRound.Instance.localPlayerController = mimickingPlayer then
-                                        logInfo $"mimicRegisterText SpokeAtom: {mimicId}."
-                                        mimicRegisterText mimicId <| SpokeAtom spokeAtom
-                            }
-                            syncer.SendTranscription(getCreationTime mp3Writer, transcriptions[0].text)
-                        else
-                            logInfo "final sample, sending spokerecordingatom"
-                            let filePath = getFilePath mp3Writer
-                            logInfo $"path: {filePath}"
-                            use! file = readMp3File filePath
-                            logInfo $"SpokeRecordingAtom. Total milliseconds: {file.reader.TotalTime.TotalMilliseconds}"
-                            let spokeRecordingAtom =
-                                SpokeRecordingAtom
-                                    {   spokeAtom = spokeAtom
-                                        whisperTimings = []
-                                        vadTimings = []
-                                        audioInfo =
-                                            {   fileId = getFileId mp3Writer
-                                                duration = int file.reader.TotalTime.TotalMilliseconds
-                                            }
-                                    }
-                            userRegisterText spokeRecordingAtom
-                            Async.StartImmediate <| async {
-                                let! mimics = readLVar mimicsVar
-                                flip iter mimics <| fun (mimickingPlayer, mimicId) ->
-                                    if StartOfRound.Instance.localPlayerController = mimickingPlayer then
-                                        logInfo $"mimicRegisterText SpokeRecordingAtom: {mimicId}."
-                                        mimicRegisterText mimicId spokeRecordingAtom
-                            }
-                        //logInfo "waiting 1 second as a test"
-                        //do! Async.Sleep 1000
-                        //logInfo "done transcribing"
+                        match timings with
+                            | None ->
+                                userRegisterText <| SpokeAtom spokeAtom
+                                Async.StartImmediate <| async {
+                                    let! mimics = readLVar mimicsVar
+                                    flip iter mimics <| fun (mimickingPlayer, mimicId) ->
+                                        if StartOfRound.Instance.localPlayerController = mimickingPlayer then
+                                            logInfo $"mimicRegisterText SpokeAtom: {mimicId}."
+                                            mimicRegisterText mimicId <| SpokeAtom spokeAtom
+                                }
+                                syncer.SendTranscription(startTime, transcriptions[0].text)
+                            | Some vadTimings ->
+                                logInfo "final sample, sending spokerecordingatom"
+                                let filePath = getFilePath mp3Writer
+                                logInfo $"path: {filePath}"
+                                use! file = readMp3File filePath
+                                logInfo $"SpokeRecordingAtom. Total milliseconds: {file.reader.TotalTime.TotalMilliseconds}"
+                                let startTime = head vadTimings
+                                let msTimings =
+                                    flip map vadTimings <| fun time ->
+                                        int <| (time - startTime).TotalMilliseconds
+                                logInfo $"VAD timings: {msTimings}"
+                                let spokeRecordingAtom =
+                                    SpokeRecordingAtom
+                                        {   spokeAtom = spokeAtom
+                                            whisperTimings = []
+                                            vadTimings = toActivityAtom <!> vadTimings
+                                            audioInfo =
+                                                {   fileId = getFileId mp3Writer
+                                                    duration = int file.reader.TotalTime.TotalMilliseconds
+                                                }
+                                        }
+                                userRegisterText spokeRecordingAtom
+                                Async.StartImmediate <| async {
+                                    let! mimics = readLVar mimicsVar
+                                    flip iter mimics <| fun (mimickingPlayer, mimicId) ->
+                                        if StartOfRound.Instance.localPlayerController = mimickingPlayer then
+                                            logInfo $"mimicRegisterText SpokeRecordingAtom: {mimicId}."
+                                            mimicRegisterText mimicId spokeRecordingAtom
+                                }
+                            //logInfo "waiting 1 second as a test"
+                            //do! Async.Sleep 1000
+                            //logInfo "done transcribing"
                 }
             Async.StartImmediate <| async {
-                if finalSample then
+                if Option.isSome timings then
                     logInfo "voice recognition end"
                     logInfo "final sample. acquiring lock"
                     do! withLock' lock run
@@ -120,18 +132,18 @@ module VoiceRecognition =
                 let! speech = agent.AsyncGet()
                 //logInfo "after consumer async get"
                 match speech with
-                    | (SpeechStart, mp3Writer) ->
+                    | (SpeechStart startTime, _) ->
                         logInfo "voice recognition start"
                         sampleBuffer.Clear()
-                        syncer.VoiceActivityStart(guid, getCreationTime mp3Writer)
-                    | (SpeechEnd, mp3Writer) ->
-                        processSamples mp3Writer true << Array.copy <| sampleBuffer.ToArray()
+                        syncer.VoiceActivityStart(guid, startTime)
+                    | (SpeechEnd (_, vadTimings), mp3Writer) ->
+                        processSamples mp3Writer (head vadTimings) (Some vadTimings) << Array.copy <| sampleBuffer.ToArray()
                         sampleBuffer.Clear()
-                    | (SpeechFound samples, mp3Writer) ->
+                    | (SpeechFound (startTime, samples), mp3Writer) ->
                         //logInfo "voice recognition speech found"
                         sampleBuffer.AddRange <| toPCMBytes samples
                         //logInfo "before acquiring lock"
-                        processSamples mp3Writer false << Array.copy <| sampleBuffer.ToArray()
+                        processSamples mp3Writer startTime None << Array.copy <| sampleBuffer.ToArray()
                 do! consumer
             }
         Async.Start consumer

@@ -20,7 +20,6 @@ type Mp3Writer =
             writer: LameMP3FileWriter
             fileId: Guid
             filePath: string
-            creationTime: DateTime
         }
 
 let createMp3Writer (directory: string) inputFormat (preset: LAMEPreset) =
@@ -54,7 +53,6 @@ let createMp3Writer (directory: string) inputFormat (preset: LAMEPreset) =
             writer = writer
             fileId = fileId
             filePath = filePath
-            creationTime = DateTime.UtcNow
         }
     }
 
@@ -69,6 +67,3 @@ let getFileId mp3Writer = mp3Writer.fileId
 
 /// Get the file path of the mp3 file.
 let getFilePath mp3Writer = mp3Writer.filePath
-
-/// Get the creation time of the file.
-let getCreationTime mp3Writer = mp3Writer.creationTime

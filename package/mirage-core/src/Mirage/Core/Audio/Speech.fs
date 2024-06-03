@@ -1,9 +1,12 @@
 module Mirage.Core.Audio.Speech
 
 open System
-open FSharpx.Control
-open Mirage.Prelude
+open System.Collections.Generic
 open FSharpPlus
+open FSharpx.Control
+open NAudio.Wave
+open Mirage.Core.Audio.PCM
+open Mirage.Prelude
 
 let [<Literal>] StartThreshold = 0.6f
 let [<Literal>] EndThreshold = 0.45f
@@ -14,9 +17,9 @@ let MinSilenceSamples = float32 SamplingRate * float32 MinSilenceDurationMs / 10
 let SpeechPadSamples = float32 SamplingRate * float32 SpeechPadMs / 1000f
 
 type SpeechDetection
-    = SpeechStart
-    | SpeechFound of float32[]
-    | SpeechEnd
+    = SpeechStart of DateTime // Contains the current UTC time.
+    | SpeechFound of Tuple<DateTime, float32[]> // Current UTC time, and an array containing the current frame of audio samples.
+    | SpeechEnd of Tuple<float32[], list<DateTime>> // An array containing all audio samples, and a list containing VAD timings, relative to the starting UTC time.
 
 /// A function that detects if speech is found.<br />
 /// Assumes the given pcm data is 16khz, and contains 30ms of audio.
@@ -31,7 +34,7 @@ type OnSpeechDetected = SpeechDetection -> Async<unit>
 
 /// Detect if speech is found. All async functions are run on a separate thread.
 type SpeechDetector =
-    private { agent: BlockingQueueAgent<float32[]> }
+    private { agent: BlockingQueueAgent<Tuple<float32[], WaveFormat>> }
     interface IDisposable with
         member this.Dispose() = dispose this.agent
 
@@ -44,37 +47,47 @@ type SpeechDetector =
 /// This assumes the given audio data is 16khz and contains 30ms of audio.
 /// </returns>
 let SpeechDetector (detectSpeech: DetectSpeech) (onSpeechDetected: OnSpeechDetected) =
-    let agent = new BlockingQueueAgent<float32[]>(Int32.MaxValue)
+    let agent = new BlockingQueueAgent<Tuple<float32[], WaveFormat>>(Int32.MaxValue)
     let speechDetector = { agent = agent }
     let consumer =
         async {
-            let mutable currentSample = 0
+            let mutable startTime = None
+            let mutable vadTimings = []
+            let mutable sampleIndex = 0
             let mutable endSamples = 0
             let mutable speechDetected = false
+            let samples = new List<float32>()
             while true do
-                let! samples = agent.AsyncGet()
-                &currentSample += samples.Length
-                let! probability = detectSpeech samples
+                let! (currentSamples, waveFormat) = agent.AsyncGet()
+                &sampleIndex += currentSamples.Length
+                samples.AddRange currentSamples
+                let! probability = detectSpeech currentSamples
                 if probability >= StartThreshold then
                     if endSamples <> 0 then
                         endSamples <- 0
                     if not speechDetected then
                         speechDetected <- true
-                        do! onSpeechDetected SpeechStart
-                    do! onSpeechDetected <| SpeechFound samples
+                        startTime <- Some DateTime.UtcNow
+                        vadTimings <- [startTime.Value]
+                        do! onSpeechDetected <| SpeechStart startTime.Value
+                    else
+                        let timing = startTime.Value.AddMilliseconds << float << audioLengthMs waveFormat <| samples.ToArray()
+                        //printfn $"added ms: {audioLengthMs waveFormat <| samples.ToArray()}"
+                        vadTimings <- timing :: vadTimings
+                    do! onSpeechDetected <| SpeechFound(startTime.Value, currentSamples)
                 else if probability < EndThreshold && speechDetected then
                     if endSamples = 0 then
-                        endSamples <- currentSample
-                    if float32 (currentSample - endSamples) < MinSilenceSamples then
-                        do! onSpeechDetected <| SpeechFound samples
+                        endSamples <- sampleIndex
+                    if float32 (sampleIndex - endSamples) < MinSilenceSamples then
+                        do! onSpeechDetected <| SpeechFound(startTime.Value, currentSamples)
                     else
                         endSamples <- 0
                         speechDetected <- false
-                        do! onSpeechDetected <| SpeechFound samples
-                        do! onSpeechDetected SpeechEnd
+                        do! onSpeechDetected <| SpeechFound(startTime.Value, currentSamples)
+                        do! onSpeechDetected <| SpeechEnd(samples.ToArray(), rev vadTimings)
         }
     Async.Start consumer
     speechDetector
 
 /// Add audio samples to be processed by the speech detector.
-let writeSamples speechDetector = speechDetector.agent.AsyncAdd
+let writeSamples speechDetector = curry speechDetector.agent.AsyncAdd

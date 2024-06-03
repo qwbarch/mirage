@@ -1,6 +1,7 @@
 module Mirage.Core.Audio.PCM
 
 open System
+open NAudio.Wave
 
 let [<Literal>] BytesPerSample = 2
 
@@ -19,3 +20,8 @@ let toPCMBytes (floatData: float32[]) : byte[] =
         buffer[0] <- byte (value &&& 0xFFs)
         buffer[1] <- byte (value >>> 8 &&& 0xFFs)
         buffer[i % BytesPerSample]
+
+/// Calculates the length of the given audio samples in milliseconds.
+let audioLengthMs (waveFormat: WaveFormat) (samples: float32[]) =
+    let sampleCount = samples.Length / waveFormat.Channels
+    int <| float sampleCount / float waveFormat.SampleRate * 1000.0
