@@ -42,19 +42,21 @@ module VoiceRecognition =
             syncer <- self.GetComponent<TranscriptionSyncer>()
         )
 
-    let private toActivityAtom time =
-        {   speakerId = Guid guid
-            time = time
-        }
+    let private toVADTiming vadFrame =
+        let atom =
+            {   speakerId = Guid guid
+                prob = float vadFrame.probability
+            }
+        (vadFrame.elapsedTime, atom)
 
     let private transcribeChannel =
         let agent = new BlockingQueueAgent<Tuple<SpeechDetection, Mp3Writer>>(Int32.MaxValue)
         let sampleBuffer = new List<byte>()
-        let mutable whisperTimings = []
         let lock = createLock()
+        let mutable sentenceId = Guid.NewGuid()
 
         // TODO: Maybe make waiting for lock waitable from the caller?
-        let processSamples mp3Writer startTime (timings: option<list<DateTime>>) (samples: byte[]) =
+        let processSamples mp3Writer (currentVADFrame: option<VADFrame>) (vadFrames: option<list<VADFrame> * int>) (samples: byte[]) =
             let run =
                 async {
                     //logInfo "inside processSamples"
@@ -65,13 +67,16 @@ module VoiceRecognition =
                                 {   samplesBatch = [| samples |]
                                     language = "en"
                                 }
-
-                        let spokeAtom =
-                            {   text = transcriptions[0].text
-                                start = startTime
-                            }
-                        match timings with
-                            | None ->
+                        match (currentVADFrame, vadFrames) with
+                            // Speech is still detected. Send the current transcription.
+                            | Some vadFrame, None ->
+                                let spokeAtom =
+                                    {   text = transcriptions[0].text
+                                        sentenceId = sentenceId
+                                        elapsedMillis = vadFrame.elapsedTime
+                                        transcriptionProb = float transcriptions[0].avgLogProb
+                                        nospeechProb = float transcriptions[0].noSpeechProb
+                                    }
                                 userRegisterText <| SpokeAtom spokeAtom
                                 Async.StartImmediate <| async {
                                     let! mimics = readLVar mimicsVar
@@ -80,26 +85,35 @@ module VoiceRecognition =
                                             logInfo $"mimicRegisterText SpokeAtom: {mimicId}."
                                             mimicRegisterText mimicId <| SpokeAtom spokeAtom
                                 }
-                                syncer.SendTranscription(startTime, transcriptions[0].text)
-                            | Some vadTimings ->
+                                syncer.SendTranscription(
+                                    sentenceId,
+                                    transcriptions[0].text,
+                                    guid,
+                                    vadFrame.elapsedTime,
+                                    transcriptions[0].avgLogProb,
+                                    transcriptions[0].noSpeechProb
+                                )
+                            // Speech is over. Send the final transcription with all VAD timings.
+                            | None, Some (vadTimings, audioDuration) ->
                                 logInfo "final sample, sending spokerecordingatom"
                                 let filePath = getFilePath mp3Writer
                                 logInfo $"path: {filePath}"
-                                use! file = readMp3File filePath
-                                logInfo $"SpokeRecordingAtom. Total milliseconds: {file.reader.TotalTime.TotalMilliseconds}"
-                                let startTime = head vadTimings
-                                let msTimings =
-                                    flip map vadTimings <| fun time ->
-                                        int <| (time - startTime).TotalMilliseconds
-                                logInfo $"VAD timings: {msTimings}"
+                                logInfo $"SpokeRecordingAtom. Total milliseconds: {audioDuration}"
+                                logInfo $"VAD timings: {vadTimings}"
                                 let spokeRecordingAtom =
                                     SpokeRecordingAtom
-                                        {   spokeAtom = spokeAtom
+                                        {   spokeAtom =
+                                                {   text = transcriptions[0].text
+                                                    sentenceId = sentenceId
+                                                    elapsedMillis = audioDuration
+                                                    transcriptionProb = float transcriptions[0].avgLogProb
+                                                    nospeechProb = float transcriptions[0].noSpeechProb
+                                                }
                                             whisperTimings = []
-                                            vadTimings = toActivityAtom <!> vadTimings
+                                            vadTimings = toVADTiming <!> vadTimings
                                             audioInfo =
                                                 {   fileId = getFileId mp3Writer
-                                                    duration = int file.reader.TotalTime.TotalMilliseconds
+                                                    duration = audioDuration
                                                 }
                                         }
                                 userRegisterText spokeRecordingAtom
@@ -110,12 +124,14 @@ module VoiceRecognition =
                                             logInfo $"mimicRegisterText SpokeRecordingAtom: {mimicId}."
                                             mimicRegisterText mimicId spokeRecordingAtom
                                 }
+                                sentenceId <- Guid.NewGuid()
+                            | _, _ -> logError "Invalid state while running voice recognition."
                             //logInfo "waiting 1 second as a test"
                             //do! Async.Sleep 1000
                             //logInfo "done transcribing"
                 }
             Async.StartImmediate <| async {
-                if Option.isSome timings then
+                if Option.isSome vadFrames then
                     logInfo "voice recognition end"
                     logInfo "final sample. acquiring lock"
                     do! withLock' lock run
@@ -132,18 +148,18 @@ module VoiceRecognition =
                 let! speech = agent.AsyncGet()
                 //logInfo "after consumer async get"
                 match speech with
-                    | (SpeechStart startTime, _) ->
+                    | SpeechStart, _ ->
                         logInfo "voice recognition start"
                         sampleBuffer.Clear()
-                        syncer.VoiceActivityStart(guid, startTime)
-                    | (SpeechEnd (_, vadTimings), mp3Writer) ->
-                        processSamples mp3Writer (head vadTimings) (Some vadTimings) << Array.copy <| sampleBuffer.ToArray()
+                        syncer.VoiceActivityStart guid
+                    | SpeechEnd (vadTimings, _, audioDuration), mp3Writer ->
+                        processSamples mp3Writer None (Some (vadTimings, audioDuration)) << Array.copy <| sampleBuffer.ToArray()
                         sampleBuffer.Clear()
-                    | (SpeechFound (startTime, samples), mp3Writer) ->
+                    | SpeechFound (vadFrame, samples), mp3Writer ->
                         //logInfo "voice recognition speech found"
                         sampleBuffer.AddRange <| toPCMBytes samples
                         //logInfo "before acquiring lock"
-                        processSamples mp3Writer startTime None << Array.copy <| sampleBuffer.ToArray()
+                        processSamples mp3Writer (Some vadFrame) None << Array.copy <| sampleBuffer.ToArray()
                 do! consumer
             }
         Async.Start consumer

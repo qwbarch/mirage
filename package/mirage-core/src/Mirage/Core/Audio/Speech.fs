@@ -5,8 +5,8 @@ open System.Collections.Generic
 open FSharpPlus
 open FSharpx.Control
 open NAudio.Wave
-open Mirage.Core.Audio.PCM
 open Mirage.Prelude
+open Mirage.Core.Audio.PCM
 
 let [<Literal>] StartThreshold = 0.6f
 let [<Literal>] EndThreshold = 0.45f
@@ -16,10 +16,17 @@ let [<Literal>] SpeechPadMs = 500
 let MinSilenceSamples = float32 SamplingRate * float32 MinSilenceDurationMs / 1000f
 let SpeechPadSamples = float32 SamplingRate * float32 SpeechPadMs / 1000f
 
+type VADFrame =
+    {   sampleIndex: int
+        elapsedTime: int
+        probability: float32
+    }
+
+/// A sum type representing when speech is found or not. <b>float32[]</b> always represents audio samples.
 type SpeechDetection
-    = SpeechStart of DateTime // Contains the current UTC time.
-    | SpeechFound of Tuple<DateTime, float32[]> // Current UTC time, and an array containing the current frame of audio samples.
-    | SpeechEnd of Tuple<float32[], list<DateTime>> // An array containing all audio samples, and a list containing VAD timings, relative to the starting UTC time.
+    = SpeechStart
+    | SpeechFound of VADFrame * float32[]
+    | SpeechEnd of list<VADFrame> * float32[] * int // Final argument is the total audio duration in milliseconds.
 
 /// A function that detects if speech is found.<br />
 /// Assumes the given pcm data is 16khz, and contains 30ms of audio.
@@ -51,40 +58,43 @@ let SpeechDetector (detectSpeech: DetectSpeech) (onSpeechDetected: OnSpeechDetec
     let speechDetector = { agent = agent }
     let consumer =
         async {
-            let mutable startTime = None
-            let mutable vadTimings = []
+            let mutable vadFrames = []
             let mutable sampleIndex = 0
             let mutable endSamples = 0
             let mutable speechDetected = false
-            let samples = new List<float32>()
+            let sampleBuffer = new List<float32>()
             while true do
                 let! (currentSamples, waveFormat) = agent.AsyncGet()
                 &sampleIndex += currentSamples.Length
-                samples.AddRange currentSamples
+                sampleBuffer.AddRange currentSamples
                 let! probability = detectSpeech currentSamples
+                let samples = sampleBuffer.ToArray()
+                let vadFrame =
+                    {   sampleIndex = sampleBuffer.Count - 1
+                        elapsedTime = audioLengthMs waveFormat samples
+                        probability = probability
+                    }
                 if probability >= StartThreshold then
                     if endSamples <> 0 then
                         endSamples <- 0
                     if not speechDetected then
                         speechDetected <- true
-                        startTime <- Some DateTime.UtcNow
-                        vadTimings <- [startTime.Value]
-                        do! onSpeechDetected <| SpeechStart startTime.Value
+                        vadFrames <- [vadFrame]
+                        do! onSpeechDetected SpeechStart
                     else
-                        let timing = startTime.Value.AddMilliseconds << float << audioLengthMs waveFormat <| samples.ToArray()
-                        //printfn $"added ms: {audioLengthMs waveFormat <| samples.ToArray()}"
-                        vadTimings <- timing :: vadTimings
-                    do! onSpeechDetected <| SpeechFound(startTime.Value, currentSamples)
+                        vadFrames <- vadFrame :: vadFrames
+                    do! onSpeechDetected <| SpeechFound(vadFrame, currentSamples)
                 else if probability < EndThreshold && speechDetected then
                     if endSamples = 0 then
                         endSamples <- sampleIndex
                     if float32 (sampleIndex - endSamples) < MinSilenceSamples then
-                        do! onSpeechDetected <| SpeechFound(startTime.Value, currentSamples)
+                        do! onSpeechDetected <| SpeechFound(vadFrame, currentSamples)
                     else
                         endSamples <- 0
                         speechDetected <- false
-                        do! onSpeechDetected <| SpeechFound(startTime.Value, currentSamples)
-                        do! onSpeechDetected <| SpeechEnd(samples.ToArray(), rev vadTimings)
+                        do! onSpeechDetected <| SpeechFound(vadFrame, currentSamples)
+                        do! onSpeechDetected <| SpeechEnd(rev vadFrames, samples, vadFrame.elapsedTime)
+                        sampleBuffer.Clear()
         }
     Async.Start consumer
     speechDetector

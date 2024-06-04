@@ -32,7 +32,7 @@ let private speechDetector =
     SpeechDetector (result << detectSpeech silero) <| fun speech ->
         async {
             match speech with
-                | SpeechStart _ ->
+                | SpeechStart ->
                     logInfo "speech start"
                     let directory = Path.Join(baseDirectory, "Mirage")
                     let! mp3Writer = createMp3Writer directory WriterFormat WriterPreset
