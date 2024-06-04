@@ -38,14 +38,20 @@ let mimicRegisterTextDefault
         | Spoke ->
             SpokeAtom {
                 text = text
-                start = start
+                sentenceId = Guid.NewGuid()
+                elapsedMillis = 0
+                transcriptionProb = 0.0
+                nospeechProb = 0.0
             }
         | Heard ->
             HeardAtom {
                 text = text
                 speakerClass = EntityId.Guid speakerClass
                 speakerId = EntityId.Guid speakerId
-                start = start
+                sentenceId = Guid.NewGuid()
+                elapsedMillis = 0
+                transcriptionProb = 0.0
+                nospeechProb = 0.0
             }
 
     mimicRegisterText mimicId gameInput
@@ -69,14 +75,20 @@ let userRegisterTextDefault
         | Spoke ->
             SpokeAtom {
                 text = text
-                start = start
+                sentenceId = Guid.NewGuid()
+                elapsedMillis = 0
+                transcriptionProb = 0.0
+                nospeechProb = 0.0
             }
         | Heard ->
             HeardAtom {
                 text = text
                 speakerClass = EntityId.Guid speakerClass
                 speakerId = EntityId.Guid speakerId
-                start = start
+                sentenceId = Guid.NewGuid()
+                elapsedMillis = 0
+                transcriptionProb = 0.0
+                nospeechProb = 0.0
             }
 
     userRegisterText gameInput

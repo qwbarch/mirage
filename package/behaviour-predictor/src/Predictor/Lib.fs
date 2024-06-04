@@ -12,6 +12,7 @@ open Embedding
 open Mirage.Core.Async.LVar
 open Mirage.Core.Async.MVar
 open System.Reflection
+open Utilities
 
 let initBehaviourPredictor
     (logInfo: string -> unit)
@@ -87,9 +88,11 @@ let mimicRegisterText
     (mimicId: Guid)
     (gameInput: GameInput)
     = Async.Start <| async {
+        logInfo <| sprintf $"Called mimic register text. {mimicId} {gameInput}"
         let! _ = accessLVar mimicsLVar <| fun mimics ->
             if mimics.ContainsKey mimicId then
                 let mimicData = mimics[mimicId]
+                logInfo <| sprintf $"Found the mimic. Posting..."
                 postToStatisticsUpdater mimicData.statisticsUpdater gameInput
         ()
     }

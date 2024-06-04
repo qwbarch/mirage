@@ -21,7 +21,10 @@ type EntityClass = EntityId
 // Separate spoke and heard inputs to properly handle a user talking with its own mimic.
 type SpokeAtom =
     {   text: string
-        start: DateTime
+        sentenceId: Guid
+        elapsedMillis: int
+        transcriptionProb: double
+        nospeechProb: double
         // TODO
         // languageId: int32
     }
@@ -32,8 +35,8 @@ type AudioInfo =
     }
 
 type VoiceActivityAtom =
-    {   time: DateTime
-        speakerId: EntityId
+    {   speakerId: EntityId
+        prob: double
     }
 
 type SpokeRecordingAtom =
@@ -47,7 +50,10 @@ type HeardAtom =
     {   text: string
         speakerClass: EntityClass
         speakerId: EntityId
-        start: DateTime
+        sentenceId: Guid
+        elapsedMillis: int
+        transcriptionProb: double
+        nospeechProb: double
         // TODO
         // languageId: int32
     }
@@ -66,12 +72,12 @@ type ActivityAtom =
 // A type for a middle step between raw GameInputs and an Observation
 type GameInputStatistics =
     {   
-        spokeQueue: SortedDictionary<DateTime, SpokeAtom>
-        heardQueue: SortedDictionary<EntityId, SortedDictionary<DateTime, HeardAtom>>
+        mutable lastSpoke: (DateTime * SpokeAtom) option
+        lastHeard: SortedDictionary<EntityId, DateTime * HeardAtom>
         voiceActivityQueue: SortedDictionary<EntityId, DateTime>
     }
 
-type StatisticsUpdater = MailboxProcessor<GameInput>
+type StatisticsUpdater = MailboxProcessor<DateTime * GameInput>
 type ObservationGenerator = DisposableAsync
 
 type PartialObservation =
@@ -170,7 +176,7 @@ type MimicData =
         futureActionGenerator: FutureActionGenerator
     }
 
-type LearnerMessageHandler = AutoCancelAgent<GameInput>
+type LearnerMessageHandler = AutoCancelAgent<DateTime * GameInput>
 type ActivityHandler = AutoCancelAgent<ActivityAtom>
 type LearnerAccess =
     {   gameInputHandler: LearnerMessageHandler

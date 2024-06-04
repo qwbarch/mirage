@@ -47,6 +47,7 @@ let addEmptyObservation
     }
 
 let addSpokeResponse 
+    (arrivalTime: DateTime)
     (spokeRecordingAtom: SpokeRecordingAtom) 
     (fileHandler: PolicyFileHandler)
     = 
@@ -54,14 +55,15 @@ let addSpokeResponse
         // Get the embedding pertaining to only the user response in isolation.
         // Note that this is different from the spoken embedding from the recent statistics
         let spokeAtom = spokeRecordingAtom.spokeAtom
+        let spokeAtomStart = arrivalTime.AddMilliseconds(-spokeAtom.elapsedMillis)
         let! spokeAtomEmbedding = encodeText spokeAtom.text
 
         let! _ = accessLVar modelLVar <| fun model ->
-            let predicate (kv: KeyValuePair<DateTime, CompressedObservation * FutureAction>) = kv.Key <= spokeAtom.start
+            let predicate (kv: KeyValuePair<DateTime, CompressedObservation * FutureAction>) = kv.Key <= spokeAtomStart
             try
                 let relevantKV = Enumerable.First(model.policy, predicate)
                 let (relObs, relFuture) = relevantKV.Value
-                let timeDifferenceMillis = timeSpanToMillis <| spokeAtom.start - relObs.time
+                let timeDifferenceMillis = timeSpanToMillis <| spokeAtomStart - relObs.time
                 if timeDifferenceMillis < 3 * config.MIL_PER_OBS then
                     let queueAction: QueueActionInfo = {
                         action = 
@@ -96,14 +98,14 @@ let createLearnerMessageHandler
     AutoCancelAgent.Start(fun inbox ->
     let rec loop () =
         async {
-            let! gameInput = inbox.Receive()
+            let! arrivalTime, gameInput = inbox.Receive()
             // If the person spoke and it corresponds to a saved recording, we update the model.
             logInfo $"{gameInput}"
             match gameInput with
             | SpokeAtom _ ->
                 ()
             | SpokeRecordingAtom spokeRecordingAtom ->
-                do! addSpokeResponse spokeRecordingAtom fileHandler
+                do! addSpokeResponse arrivalTime spokeRecordingAtom fileHandler
             | HeardAtom _ ->
                 ()
             | VoiceActivityAtom vaAtom ->
@@ -119,7 +121,7 @@ let createLearnerMessageHandler
 let postToLearnerHandler
     (handler: LearnerMessageHandler)
     (gameInput: GameInput) =
-    handler.Post(gameInput)
+    handler.Post(DateTime.UtcNow, gameInput)
 
 let learnerObservationSampler
     (fileHandler: PolicyFileHandler)

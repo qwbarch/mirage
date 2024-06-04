@@ -13,8 +13,8 @@ open Mirage.Core.Async.LVar
 open Mirage.Core.Async.MVar
 
 let defaultGameInputStatistics () =
-    {   spokeQueue = SortedDictionary()
-        heardQueue = SortedDictionary()
+    {   lastSpoke = None
+        lastHeard = SortedDictionary()
         voiceActivityQueue = SortedDictionary()
     }
 
@@ -47,27 +47,30 @@ let createStatisticsUpdater
     (currentStatistics: LVar<GameInputStatistics>) 
     (notifyUpdate: MVar<int>)
     : StatisticsUpdater = 
-    MailboxProcessor<GameInput>.Start(fun inbox ->
+    MailboxProcessor<DateTime * GameInput>.Start(fun inbox ->
         let rec loop () =
             async {
                 do! async {
                     // Consume all unprocessed inputs
-                    let! item = inbox.Receive()
+                    let! arrivalTime, item = inbox.Receive()
                     let! __ = accessLVar currentStatistics <| fun stats ->
                         match item with
                         | SpokeAtom spokeAtom ->
-                            replaceDict stats.spokeQueue spokeAtom.start spokeAtom
+                            stats.lastSpoke <- Some (arrivalTime, spokeAtom)
                         | SpokeRecordingAtom spokeRecordingAtom ->
                             let spokeAtom = spokeRecordingAtom.spokeAtom
-                            replaceDict stats.spokeQueue spokeAtom.start spokeAtom
+                            stats.lastSpoke <- Some (arrivalTime, spokeAtom)
                         | HeardAtom heardAtom ->
-                            if not <| stats.heardQueue.ContainsKey heardAtom.speakerId then
-                                stats.heardQueue.Add(heardAtom.speakerId, SortedDictionary())
-                            replaceDict stats.heardQueue[heardAtom.speakerId] heardAtom.start heardAtom
+                            if not <| stats.lastHeard.ContainsKey heardAtom.speakerId then
+                                stats.lastHeard.Add(heardAtom.speakerId, (arrivalTime, heardAtom))
+                            else
+                                replaceDict stats.lastHeard heardAtom.speakerId (arrivalTime, heardAtom)
                         | VoiceActivityAtom vaAtom -> 
-                            if (not <| stats.voiceActivityQueue.ContainsKey(vaAtom.speakerId)) || stats.voiceActivityQueue[vaAtom.speakerId] < vaAtom.time then
-                                replaceDict stats.voiceActivityQueue vaAtom.speakerId vaAtom.time
+                            if not <| stats.voiceActivityQueue.ContainsKey vaAtom.speakerId then
+                                stats.voiceActivityQueue.Add(vaAtom.speakerId, arrivalTime)
+                            replaceDict stats.voiceActivityQueue vaAtom.speakerId arrivalTime
 
+                    logInfo "Notifying..."
                     ignore <| tryPutMVar notifyUpdate 1 
                 }
                 
@@ -79,22 +82,32 @@ let createStatisticsUpdater
 let postToStatisticsUpdater
     (statisticsUpdater: StatisticsUpdater)
     (message: GameInput)
-    = statisticsUpdater.Post(message)
+    = statisticsUpdater.Post((DateTime.UtcNow,  message))
 
 let statisticsToPartialObservation (entityId: EntityId) (statistics: GameInputStatistics) : Async<PartialObservation> =
     async {
-        let spokeAccum = List<string>()
-        let heardAccum = List<string>()
-        for kv in statistics.spokeQueue do
-            spokeAccum.Add(kv.Value.text)
-        for kv in statistics.heardQueue do
-            for kv2 in kv.Value do
-                heardAccum.Add(kv2.Value.text)
+        let spokeString =
+            match statistics.lastSpoke with
+            | None -> ""
+            | Some (_, spokeAtom) -> spokeAtom.text
 
-        let spokeConcat = String.concat ". " spokeAccum
-        let heardConcat = String.concat ". " heardAccum
+        let heardString =
+            if statistics.lastHeard.Count = 0 then
+                ""
+            else
+                let mutable latestTime = DateTime.MinValue
+                let mutable latestHeard = snd <| statistics.lastHeard.Values.First()
+                for time, heardAtom in statistics.lastHeard.Values do
+                    if time > latestTime then
+                        latestTime <- time
+                        latestHeard <- heardAtom
+                latestHeard.text
+
         // TODO properly do batching so that it is impossible for these two to be in separate BERT runs
-        let! embedding = Async.Parallel [encodeText spokeConcat; encodeText heardConcat]
+        let! embedding = Async.Parallel [encodeText spokeString; encodeText heardString]
+        logInfo <| sprintf $"Spoke: {spokeString}"
+        logInfo <| sprintf $"Heard: {heardString}"
+
         let spokeEmbedding = embedding[0]
         let heardEmbedding = embedding[1]
         let partialObservation : PartialObservation =
@@ -102,10 +115,17 @@ let statisticsToPartialObservation (entityId: EntityId) (statistics: GameInputSt
                 heardEmbedding = heardEmbedding
                 lastSpokeDate = statistics.voiceActivityQueue.GetValueOrDefault(entityId, startDate)
                 lastHeardDate = 
+                    logInfo <| sprintf $"Voice activity queue: {statistics.voiceActivityQueue.Count} {entityId}"
+                    for k in statistics.voiceActivityQueue.Keys do
+                        let v = statistics.voiceActivityQueue[k]
+                        let tt = timeSpanToMillis <| DateTime.UtcNow - v
+                        logInfo <| sprintf $"kv pair {k} {tt}"
+                        
                     let heard = Map.remove entityId <| sortedDictToMap statistics.voiceActivityQueue
                     if heard.Count = 0 then
                         startDate
                     else
+                        logInfo <| sprintf $"Selected timing {heard |> Map.toSeq |> Seq.map snd |> Seq.max}"
                         heard |> Map.toSeq |> Seq.map snd |> Seq.max
             }   
         return partialObservation
@@ -119,9 +139,10 @@ let createObservationGeneratorAsync
         let rec loop () =
             async {
                 let! __ = takeMVar notifyUpdateStatistics
+                logInfo <| sprintf $"Got an update notification {entityId}"
                 let! statisticsSnapshot = accessLVar currentStatisticsLVar <| fun stats ->
-                    {   spokeQueue = SortedDictionary(stats.spokeQueue)
-                        heardQueue = deepCopyNestedDict stats.heardQueue
+                    {   lastSpoke = stats.lastSpoke
+                        lastHeard = SortedDictionary(stats.lastHeard)
                         voiceActivityQueue = SortedDictionary(stats.voiceActivityQueue)
                     }
                 
@@ -133,46 +154,31 @@ let createObservationGeneratorAsync
         loop()
 
 let reduceSpoke 
-    (queue: SortedDictionary<DateTime, SpokeAtom>)
+    (stats: GameInputStatistics)
     (lastActivity: DateTime) =
     let mutable reduced = false
     let cutoff = DateTime.UtcNow.AddMilliseconds(-config.VOICE_BUFFER)
-    while queue.Count > 1 && queue.First().Key < cutoff do
-        let _ = queue.Remove(queue.First().Key)
-        reduced <- true
-        ()
-
-    if queue.Count > 0 && DateTime.UtcNow > lastActivity.AddMilliseconds(config.VOICE_BUFFER) then
-        queue.Clear()
-        reduced <- true
+    if stats.lastSpoke.IsSome then
+        let arrivalTime, lastSpoke = stats.lastSpoke.Value
+        if arrivalTime < cutoff then
+            reduced <- true
+            stats.lastSpoke <- None
     reduced
 
 let reduceHeard
-    (queue: SortedDictionary<DateTime, HeardAtom>)
-    (lastActivity: DateTime) =
+    (queue: SortedDictionary<EntityId, DateTime * HeardAtom>) : bool
+    =
     let mutable reduced = false
     let cutoff = DateTime.UtcNow.AddMilliseconds(-config.VOICE_BUFFER)
-    while queue.Count > 1 && queue.First().Key < cutoff do
-        let _ = queue.Remove(queue.First().Key)
-        reduced <- true
-        ()
-
-    if queue.Count > 0 && DateTime.UtcNow > lastActivity.AddMilliseconds(config.VOICE_BUFFER) then
-        queue.Clear()
-        reduced <- true
-    reduced
-
-let reduceHeardQueue
-    (stats: GameInputStatistics) =
-    let mutable reduced = false
-    for kv in stats.heardQueue do
-        let lastDateTime =
-            if stats.voiceActivityQueue.ContainsKey(kv.Key) then
-                stats.voiceActivityQueue[kv.Key]
-            else
-                DateTime.MinValue
-        if reduceHeard kv.Value lastDateTime then
+    let toRemove: List<EntityId> = List()
+    for kv in queue do
+        let arrivalTime, heardAtom = kv.Value
+        if arrivalTime < cutoff then
             reduced <- true
+            toRemove.Add(kv.Key)
+
+    for key in toRemove do
+        ignore <| queue.Remove(key)
     reduced
 
 let createStatisticsCutoffHandler 
@@ -186,8 +192,8 @@ let createStatisticsCutoffHandler
                     stats.voiceActivityQueue[entityId]
                 else
                     DateTime.MinValue
-            let spokeReduce = reduceSpoke stats.spokeQueue userLastDateTime
-            let heardReduce = reduceHeardQueue stats
+            let spokeReduce = reduceSpoke stats userLastDateTime
+            let heardReduce = reduceHeard stats.lastHeard
             spokeReduce || heardReduce
         if reduced then
             ignore <| tryPutMVar notifyUpdate 1

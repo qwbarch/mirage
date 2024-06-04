@@ -60,6 +60,7 @@ let mimicLifetime (id: Guid) (sendMimicText: Guid -> unit) =
         // Add to the mimics pool
         let! __ = accessLVar mimicsLVar <| fun mimics ->
             if not <| mimics.ContainsKey id then
+                logInfo <| sprintf $"Added to the mimic pool: {id}"
                 mimics.Add(id, mimicData)
 
         // Teardown thread. From here on we assume that no other threads have access to mimicData.
@@ -91,6 +92,7 @@ let mimicKill (id: Guid) =
             else
                 let mimicData = mimicDataOption.Value
                 let! __ = putMVar mimicData.killSignal 1
+                logInfo <| sprintf $"Mimic removed from the pool: {id}"
                 return true
         }
     Async.Start <| exponentialRepeat 200 10 killjob
