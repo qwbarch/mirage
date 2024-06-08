@@ -78,6 +78,7 @@ let SpeechDetector (detectSpeech: DetectSpeech) (onSpeechDetected: OnSpeechDetec
                     if endSamples <> 0 then
                         endSamples <- 0
                     if not speechDetected then
+                        sampleBuffer.Clear()
                         speechDetected <- true
                         vadFrames <- [vadFrame]
                         do! onSpeechDetected SpeechStart
@@ -94,7 +95,6 @@ let SpeechDetector (detectSpeech: DetectSpeech) (onSpeechDetected: OnSpeechDetec
                         speechDetected <- false
                         do! onSpeechDetected <| SpeechFound(vadFrame, currentSamples)
                         do! onSpeechDetected <| SpeechEnd(rev vadFrames, samples, vadFrame.elapsedTime)
-                        sampleBuffer.Clear()
         }
     Async.Start consumer
     speechDetector

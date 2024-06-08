@@ -50,6 +50,12 @@ type internal LocalConfig(config: ConfigFile) =
                 AcceptableValueRange<float32>(0f, 1f)
             )
         )
+    member val AnglerMimic =
+        config.Bind<bool>(
+            enemySection,
+            "AnglerMimic",
+            true
+        )
     member val ToolkitWhisk =
         config.Bind<bool>(
             enemySection,
@@ -167,6 +173,7 @@ type internal LocalConfig(config: ConfigFile) =
 type internal SyncedConfig =
     {   mimicMinDelay: int
         mimicMaxDelay: int
+        anglerMimic: bool
         toolkitWhisk: bool
         zombe: bool
         flicker: bool
@@ -191,6 +198,7 @@ type internal SyncedConfig =
 let private toSyncedConfig (config: LocalConfig) =
     {   mimicMinDelay = config.MimicMinDelay.Value
         mimicMaxDelay = config.MimicMaxDelay.Value
+        anglerMimic = config.AnglerMimic.Value
         toolkitWhisk = config.ToolkitWhisk.Value
         zombe = config.Zombe.Value
         flicker = config.Flicker.Value

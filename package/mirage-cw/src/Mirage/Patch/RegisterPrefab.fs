@@ -10,6 +10,7 @@ open Photon.Voice.Unity
 open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicVoice
 open Mirage.Unity.MimicPlayer
+open Mirage.Core.Logger
 
 type RegisterPrefab() =
     static let mutable registered = false
@@ -47,3 +48,18 @@ type RegisterPrefab() =
                                 typeof<MimicPlayer>
                                 typeof<MimicVoice>
                             ]
+
+    [<HarmonyPostfix>]
+    [<HarmonyPatch(typeof<Player>, "Awake")>]
+    static member ``register prefab for angler mimic``(__instance: Player) =
+        logInfo $"name: {__instance.name}"
+        if __instance.name = "AnglerMimic(Clone)" then
+            let parentTransform =
+                __instance.GetComponentsInChildren<Transform>()
+                    |> tryFind _.name.StartsWith("Bot")
+            flip iter parentTransform <| fun parent ->
+                iter (ignore << parent.gameObject.AddComponent)
+                    [   typeof<AudioStream>
+                        typeof<MimicPlayer>
+                        typeof<MimicVoice>
+                    ]

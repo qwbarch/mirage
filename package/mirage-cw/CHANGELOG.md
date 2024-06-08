@@ -1,5 +1,9 @@
 ## Changelog
 
+### 1.4.0
+
+- Added support for ``AnglerMimic``.
+
 ### 1.3.0
 
 - Enemies mimicking voices now respects the volume slider for the player it mimics.

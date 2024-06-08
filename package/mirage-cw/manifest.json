@@ -1,6 +1,6 @@
 {
     "name": "Mirage",
-    "version_number": "1.3.0",
+    "version_number": "1.4.0",
     "website_url": "https://github.com/qwbarch/mirage/tree/main/package/mirage-cw",
     "description": "Every enemy can mimic the voice of any player currently in the game.",
     "dependencies": [

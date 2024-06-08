@@ -10,7 +10,6 @@ open Mirage.Core.Logger
 open Mirage.Core.Config
 open Mirage.Core.Monad
 open AudioStream
-open UnityEngine
 
 /// Holds what players that can be mimicked, to avoid duplicates.
 let playerPool = new List<Player>()
@@ -26,6 +25,7 @@ type MimicPlayer() as self =
     let isEnemyEnabled () =
         let config = getConfig()
         match self.transform.parent.gameObject.name.Replace("(Clone)", zero) with
+            | "AnglerMimic" -> config.anglerMimic
             | "Toolkit_Whisk" -> config.toolkitWhisk
             | "Zombe" -> config.zombe
             | "Flicker" -> config.flicker
