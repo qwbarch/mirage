@@ -27,6 +27,8 @@ type ConfigHandler() =
                 [|  config.mimicMinDelay
                     config.mimicMaxDelay
                     config.anglerMimic
+                    config.streamer
+                    config.infiltrator
                     config.toolkitWhisk
                     config.zombe
                     config.flicker
@@ -53,6 +55,8 @@ type ConfigHandler() =
         mimicMinDelay,
         mimicMaxDelay,
         anglerMimic,
+        streamer,
+        infiltrator,
         toolkitWhisk,
         zombe,
         flicker,
@@ -78,6 +82,8 @@ type ConfigHandler() =
                 {   mimicMinDelay = mimicMinDelay
                     mimicMaxDelay = mimicMaxDelay
                     anglerMimic = anglerMimic
+                    streamer = streamer
+                    infiltrator = infiltrator
                     toolkitWhisk = toolkitWhisk
                     zombe = zombe
                     flicker = flicker

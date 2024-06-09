@@ -26,6 +26,8 @@ type MimicPlayer() as self =
         let config = getConfig()
         match self.transform.parent.gameObject.name.Replace("(Clone)", zero) with
             | "AnglerMimic" -> config.anglerMimic
+            | "Streamer" -> config.streamer
+            | "Infiltrator2" -> config.infiltrator
             | "Toolkit_Whisk" -> config.toolkitWhisk
             | "Zombe" -> config.zombe
             | "Flicker" -> config.flicker

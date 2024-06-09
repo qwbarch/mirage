@@ -51,13 +51,18 @@ type RegisterPrefab() =
     [<HarmonyPostfix>]
     [<HarmonyPatch(typeof<Player>, "Awake")>]
     static member ``register prefab for angler mimic``(__instance: Player) =
-        if __instance.name = "AnglerMimic(Clone)" then
-            let parentTransform =
-                __instance.GetComponentsInChildren<Transform>()
-                    |> tryFind _.name.StartsWith("Bot")
-            flip iter parentTransform <| fun parent ->
-                iter (ignore << parent.gameObject.AddComponent)
-                    [   typeof<AudioStream>
-                        typeof<MimicPlayer>
-                        typeof<MimicVoice>
-                    ]
+        let targets =
+            [   "AnglerMimic"
+                "Infiltrator2"
+            ]
+        flip iter targets <| fun target ->
+            if __instance.name = $"{target}(Clone)" then
+                let parentTransform =
+                    __instance.GetComponentsInChildren<Transform>()
+                        |> tryFind _.name.StartsWith("Bot")
+                flip iter parentTransform <| fun parent ->
+                    iter (ignore << parent.gameObject.AddComponent)
+                        [   typeof<AudioStream>
+                            typeof<MimicPlayer>
+                            typeof<MimicVoice>
+                        ]

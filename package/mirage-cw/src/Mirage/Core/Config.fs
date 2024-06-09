@@ -56,6 +56,18 @@ type internal LocalConfig(config: ConfigFile) =
             "AnglerMimic",
             true
         )
+    member val Streamer =
+        config.Bind<bool>(
+            enemySection,
+            "Streamer",
+            true
+        )
+    member val Infiltrator =
+        config.Bind<bool>(
+            enemySection,
+            "Infiltrator",
+            true
+        )
     member val ToolkitWhisk =
         config.Bind<bool>(
             enemySection,
@@ -174,6 +186,8 @@ type internal SyncedConfig =
     {   mimicMinDelay: int
         mimicMaxDelay: int
         anglerMimic: bool
+        streamer: bool
+        infiltrator: bool
         toolkitWhisk: bool
         zombe: bool
         flicker: bool
@@ -199,6 +213,8 @@ let private toSyncedConfig (config: LocalConfig) =
     {   mimicMinDelay = config.MimicMinDelay.Value
         mimicMaxDelay = config.MimicMaxDelay.Value
         anglerMimic = config.AnglerMimic.Value
+        streamer = config.Streamer.Value
+        infiltrator = config.Infiltrator.Value
         toolkitWhisk = config.ToolkitWhisk.Value
         zombe = config.Zombe.Value
         flicker = config.Flicker.Value

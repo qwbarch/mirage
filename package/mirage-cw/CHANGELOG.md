@@ -1,5 +1,10 @@
 ## Changelog
 
+### 1.5.0
+
+- Added support for ``Streamer``.
+- Added support for ``Infiltrator``.
+
 ### 1.4.0
 
 - Added support for ``AnglerMimic``.
