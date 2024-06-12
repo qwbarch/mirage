@@ -14,16 +14,12 @@ open Mirage.Domain.Logger
 open Mirage.Core.Audio.Speech
 open Mirage.Core.Audio.PCM
 open Mirage.Core.Async.Lock
-open Mirage.Core.Audio.File.Mp3Reader
 open Mirage.Core.Audio.File.Mp3Writer
 open Mirage.Core.Async.LVar
 open Mirage.Unity.Temp
 open Mirage.Unity.MimicVoice
 
 module VoiceRecognition =
-    /// Min # of samples to wait for before transcribing.
-    let [<Literal>] private MinSamples = 1024
-
     let private whisper, useCuda =
         logInfo "Loading WhisperS2T."
         Async.RunSynchronously startWhisper
@@ -126,9 +122,6 @@ module VoiceRecognition =
                                 }
                                 sentenceId <- Guid.NewGuid()
                             | _, _ -> logError "Invalid state while running voice recognition."
-                            //logInfo "waiting 1 second as a test"
-                            //do! Async.Sleep 1000
-                            //logInfo "done transcribing"
                 }
             Async.StartImmediate <| async {
                 if Option.isSome vadFrames then
@@ -141,12 +134,9 @@ module VoiceRecognition =
                     finally lockRelease lock
             }
 
-        //logInfo "consumer start (before voice recog)"
         let rec consumer =
             async {
-                //logInfo "before consumer async get"
                 let! speech = agent.AsyncGet()
-                //logInfo "after consumer async get"
                 match speech with
                     | SpeechStart, _ ->
                         logInfo "voice recognition start"
@@ -156,9 +146,7 @@ module VoiceRecognition =
                         processSamples mp3Writer None (Some (vadTimings, audioDuration)) << Array.copy <| sampleBuffer.ToArray()
                         sampleBuffer.Clear()
                     | SpeechFound (vadFrame, samples), mp3Writer ->
-                        //logInfo "voice recognition speech found"
                         sampleBuffer.AddRange <| toPCMBytes samples
-                        //logInfo "before acquiring lock"
                         processSamples mp3Writer (Some vadFrame) None << Array.copy <| sampleBuffer.ToArray()
                 do! consumer
             }
