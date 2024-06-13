@@ -1,4 +1,4 @@
-module Mirage.Core.Audio.Voice.Recognition
+module Mirage.Core.Audio.Microphone.Recognition
 
 #nowarn "40"
 
@@ -7,7 +7,7 @@ open FSharpPlus
 open FSharpx.Control
 open NAudio.Wave
 open Mirage.Core.Audio.File.Mp3Writer
-open Mirage.Core.Audio.Resampler
+open Mirage.Core.Audio.Microphone.Resampler
 
 /// A sum type representing stages of a live transcription.
 type TranscribeAction
@@ -40,4 +40,5 @@ let VoiceTranscriber (onTranscribe: OnTranscribe) =
             //    ()
             do! consumer
         }
+    Async.Start consumer
     { agent = agent }

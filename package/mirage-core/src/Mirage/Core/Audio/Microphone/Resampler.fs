@@ -1,4 +1,4 @@
-module Mirage.Core.Audio.Resampler
+module Mirage.Core.Audio.Microphone.Resampler
 
 #nowarn "40"
 
@@ -81,4 +81,8 @@ let Resampler (onAudioFrame: OnAudioFrame) =
                 do! onAudioFrame resampledAudio
             do! consumer
         }
+    Async.Start consumer
     { agent = agent }
+
+/// Add audio samples to be processed by the resampler.
+let writeResampler = _.agent.AsyncAdd

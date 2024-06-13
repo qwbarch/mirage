@@ -1,4 +1,4 @@
-module Mirage.Core.Audio.Voice.Detection
+module Mirage.Core.Audio.Microphone.Detection
 
 #nowarn "40"
 
@@ -9,7 +9,7 @@ open FSharpx.Control
 open NAudio.Wave
 open Mirage.Prelude
 open Mirage.Core.Audio.PCM
-open Mirage.Core.Audio.Resampler
+open Mirage.Core.Audio.Microphone.Resampler
 
 let [<Literal>] private StartThreshold = 0.6f
 let [<Literal>] private EndThreshold = 0.45f
@@ -21,6 +21,11 @@ type VADFrame =
     {   sampleIndex: int
         elapsedTime: int
         probability: float32
+    }
+
+type DetectStart =
+    {   originalFormat: WaveFormat
+        resampledFormat: WaveFormat
     }
 
 type DetectFound =
@@ -36,7 +41,7 @@ type DetectEnd =
 
 /// A sum type representing when speech is found or not.
 type DetectAction
-    = DetectStart
+    = DetectStart of DetectStart
     | DetectFound of DetectFound
     | DetectEnd of DetectEnd
 
@@ -109,7 +114,10 @@ let VoiceDetector (detectSpeech: DetectVoice) (onVoiceDetected: OnVoiceDetected)
                     resampledBuffer.Clear()
                     voiceDetected <- true
                     vadFrames <- [vadFrame]
-                    do! onVoiceDetected DetectStart
+                    do! onVoiceDetected << DetectStart <|
+                        {   originalFormat = audio.original.format
+                            resampledFormat = audio.resampled.format
+                        }
                 else
                     vadFrames <- vadFrame :: vadFrames
                 do! onVoiceDetected detectFound
@@ -132,5 +140,5 @@ let VoiceDetector (detectSpeech: DetectVoice) (onVoiceDetected: OnVoiceDetected)
     Async.Start consumer
     { agent = agent }
 
-/// Add audio samples to be processed by the speech detector.
-let writeAudioDetector = _.agent.AsyncAdd
+/// Add audio samples to be processed by the voice detector.
+let writeDetector = _.agent.AsyncAdd
