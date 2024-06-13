@@ -43,8 +43,8 @@
     <Compile Include="Mirage/Core/Audio/File/Mp3Writer.fs" />
     <Compile Include="Mirage/Core/Audio/Microphone/Resampler.fs" />
     <Compile Include="Mirage/Core/Audio/Microphone/Detection.fs" />
-    <Compile Include="Mirage/Core/Audio/Microphone/Recognition.fs" />
     <Compile Include="Mirage/Core/Audio/Microphone/Recorder.fs" />
+    <Compile Include="Mirage/Core/Audio/Microphone/Recognition.fs" />
     <Compile Include="Properties/AssemblyInfo.fs" />
   </ItemGroup>
 </Project>
