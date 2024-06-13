@@ -26,7 +26,7 @@ let createMp3Writer (directory: string) inputFormat (preset: LAMEPreset) =
     async {
         // Create the directory on a background thread.
         do! forkReturn <| async {
-            ignore << Directory.CreateDirectory <| Path.GetDirectoryName directory
+            ignore <| Directory.CreateDirectory directory
         }
         let fileId = Guid.NewGuid()
         let filePath = Path.Join(directory, $"{fileId}.mp3")

@@ -38,16 +38,13 @@ type ResampledAudio =
         resampled: AudioFrame
     }
 
-/// A function that runs when the minimum buffer of audio is filled.
-type OnAudioFrame = ResampledAudio -> Async<Unit>
-
 /// A live resampler for a microphone's input.
 type Resampler =
     private { agent: BlockingQueueAgent<AudioFrame> }
     interface IDisposable with
         member this.Dispose() = dispose this.agent
 
-let Resampler (onAudioFrame: OnAudioFrame) =
+let Resampler (onResampled: ResampledAudio -> Async<Unit>) =
     let resampler = WdlResampler()
     resampler.SetMode(true, 2, false)
     resampler.SetFilterParms()
@@ -78,7 +75,7 @@ let Resampler (onAudioFrame: OnAudioFrame) =
                     }
                 originalSamples.Clear()
                 buffer.RemoveRange(0, SamplesPerWindow)
-                do! onAudioFrame resampledAudio
+                do! onResampled resampledAudio
             do! consumer
         }
     Async.Start consumer

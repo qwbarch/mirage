@@ -18,8 +18,7 @@ let [<Literal>] private MinSilenceDurationMs = 600
 let private MinSilenceSamples = float32 SamplingRate * float32 MinSilenceDurationMs / 1000f
 
 type VADFrame =
-    {   sampleIndex: int
-        elapsedTime: int
+    {   elapsedTime: int
         probability: float32
     }
 
@@ -53,25 +52,16 @@ type DetectAction
 /// The closer to 1f, the more likely speech is detected.
 type DetectVoice = Samples -> Async<float32>
 
-/// A function that executes whenever speech is detected.
-type OnVoiceDetected = DetectAction -> Async<unit>
-
-/// Data to be passed to the voice detector.
-type DetectionInput =
-    {   audio: ResampledAudio
-        waveFormat: WaveFormat
-    }
-
 /// Detect if speech is found. All async functions are run on a separate thread.
 type VoiceDetector =
-    private { agent: BlockingQueueAgent<DetectionInput> }
+    private { agent: BlockingQueueAgent<ResampledAudio> }
     interface IDisposable with
         member this.Dispose() = dispose this.agent
 
 /// Initialize a vad detector by providing a vad algorithm, an action to
 /// perform when speech is detected, as well as a source to read samples from.
-let VoiceDetector (detectSpeech: DetectVoice) (onVoiceDetected: OnVoiceDetected) =
-    let agent = new BlockingQueueAgent<DetectionInput>(Int32.MaxValue)
+let VoiceDetector (detectSpeech: DetectVoice) (onVoiceDetected: DetectAction -> Async<Unit>) =
+    let agent = new BlockingQueueAgent<ResampledAudio>(Int32.MaxValue)
     let mutable vadFrames = []
     let mutable sampleIndex = 0
     let mutable endSamples = 0
@@ -80,25 +70,11 @@ let VoiceDetector (detectSpeech: DetectVoice) (onVoiceDetected: OnVoiceDetected)
     let resampledBuffer = new List<float32>()
     let rec consumer =
         async {
-            let! input = agent.AsyncGet()
-            &sampleIndex += input.audio.original.samples.Length
-            originalBuffer.AddRange input.audio.original.samples
-            resampledBuffer.AddRange input.audio.resampled.samples
-            let! probability = detectSpeech input.audio.resampled.samples
-            let samples = resampledBuffer.ToArray()
-            let audio =
-                {   original =
-                        {   samples = originalBuffer.ToArray()
-                            format = input.audio.original.format
-                        }
-                    resampled =
-                        {   samples = resampledBuffer.ToArray()
-                            format = input.audio.resampled.format
-                        }
-                }
+            let! audio = agent.AsyncGet()
+            &sampleIndex += audio.original.samples.Length
+            let! probability = detectSpeech audio.resampled.samples
             let vadFrame =
-                {   sampleIndex = resampledBuffer.Count - 1
-                    elapsedTime = audioLengthMs input.waveFormat samples
+                {   elapsedTime = audioLengthMs audio.resampled.format <| resampledBuffer.ToArray()
                     probability = probability
                 }
             let detectFound =
@@ -133,7 +109,16 @@ let VoiceDetector (detectSpeech: DetectVoice) (onVoiceDetected: OnVoiceDetected)
                     do! onVoiceDetected << DetectEnd <|
                         {   vadTimings = rev vadFrames
                             audioDurationMs = vadFrame.elapsedTime
-                            audio = audio
+                            audio =
+                                {   original =
+                                        {   samples = originalBuffer.ToArray()
+                                            format = audio.original.format
+                                        }
+                                    resampled =
+                                        {   samples = resampledBuffer.ToArray()
+                                            format = audio.resampled.format
+                                        }
+                                }
                         }
             do! consumer
         }

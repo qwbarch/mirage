@@ -39,16 +39,13 @@ type RecordAction
     | RecordFound of RecordFound
     | RecordEnd of RecordEnd
 
-/// A function that executes whenever a recording is in progress.
-type OnRecording = RecordAction -> Async<Unit>
-
 /// Records audio from a live microphone feed.
 type Recorder =
     private { agent: BlockingQueueAgent<DetectAction> }
     interface IDisposable with
         member this.Dispose() = dispose this.agent
 
-let Recorder directory (onRecording: OnRecording) =
+let Recorder directory (onRecording: RecordAction -> Async<Unit>) =
     let agent = new BlockingQueueAgent<DetectAction>(Int32.MaxValue)
     let mutable mp3Writer = None
     let rec consumer =
