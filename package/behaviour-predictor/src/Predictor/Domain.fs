@@ -13,7 +13,7 @@ type EitherSpokeHeard = Spoke | Heard
 
 type EntityId = 
     | Guid of Guid
-    | Int of int64
+    | Int of uint64
 
 type EntityClass = EntityId
 

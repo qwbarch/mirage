@@ -5,8 +5,7 @@ open Unity.Netcode
 open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicVoice
 open Mirage.Unity.MimicPlayer
-
-let mutable internal maskedPrefab: MaskedPlayerEnemy = null
+open Mirage.Unity.Predictor
 
 let registerPrefab () =
     On.GameNetworkManager.add_Start(fun orig self ->
@@ -22,5 +21,10 @@ let registerPrefab () =
                         typeof<MimicVoice>
                     ]
                 if enemyAI :? MaskedPlayerEnemy then
-                    maskedPrefab <- enemyAI :?> MaskedPlayerEnemy
+                    ignore <| enemyAI.gameObject.AddComponent<Predictor>()
+    )
+
+    On.GameNetcodeStuff.PlayerControllerB.add_Awake(fun orig self ->
+        orig.Invoke self
+        ignore <| self.gameObject.AddComponent<Predictor>()
     )

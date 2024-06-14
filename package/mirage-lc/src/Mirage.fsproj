@@ -60,6 +60,7 @@
     <Compile Include="Mirage/Unity/AudioStream.fs" />
     <Compile Include="Mirage/Unity/MimicPlayer.fs" />
     <Compile Include="Mirage/Unity/MimicVoice.fs" />
+    <Compile Include="Mirage/Unity/Predictor.fs" />
     <Compile Include="Mirage/Hook/AudioSpatializer.fs" />
     <Compile Include="Mirage/Hook/Microphone.fs" />
     <Compile Include="Mirage/Hook/RegisterPrefab.fs" />

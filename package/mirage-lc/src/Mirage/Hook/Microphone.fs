@@ -4,6 +4,7 @@ open FSharpPlus
 open Silero.API
 open Whisper.API
 open NAudio.Wave
+open Predictor.Domain
 open Mirage.Domain.Logger
 open Mirage.Core.Audio.PCM
 open Mirage.Core.Audio.Microphone.Resampler
@@ -13,24 +14,21 @@ open Mirage.Core.Audio.Microphone.Recognition
 
 type private MicrophoneSubscriber(whisper, silero, recordingDirectory) =
     let transcribeAudio (request: TranscribeRequest) =
-        async {
-            let! transcriptions =
-                transcribe whisper
-                    {   samplesBatch = toPCMBytes <!> request.samplesBatch
-                        language = request.language
-                    }
-            return
-                flip map transcriptions <| fun transcription ->
-                    {   text = transcription.text
-                        avgLogProb = transcription.avgLogProb
-                        noSpeechProb = transcription.noSpeechProb
-                    }
-        }
+        transcribe whisper
+            {   samplesBatch = toPCMBytes <!> request.samplesBatch
+                language = request.language
+            }
     let transcriber = VoiceTranscriber transcribeAudio <| fun action ->
         async {
             match action with
                 | TranscribeStart ->
                     logInfo "Transcription start"
+                    let voiceActivityAtom =
+                        VoiceActivityAtom
+                            {   speakerId = Int StartOfRound.Instance.localPlayerController.playerSteamId
+                                prob = 1.0
+                            }
+                    ()
                 | TranscribeEnd payload ->
                     logInfo $"Transcription end. text: {payload.transcriptions[0].text}"
                 | TranscribeFound payload ->

@@ -29,25 +29,25 @@ type Transcription =
     }
 
 /// This action only runs when samples are available (array length is > 0).
-type TranscribeFound =
+type TranscribeFound<'Transcription> =
     {   mp3Writer: Mp3Writer
         vadFrame: VADFrame
         audio: ResampledAudio
-        transcriptions: Transcription[]
+        transcriptions: 'Transcription[]
     }
 
-type TranscribeEnd =
+type TranscribeEnd<'Transcription> =
     {   mp3Writer: Mp3Writer
         vadTimings: list<VADFrame>
         audioDurationMs: int
-        transcriptions: Transcription[]
+        transcriptions: 'Transcription[]
     }
 
 /// A sum type representing stages of a live transcription.
-type TranscribeAction
+type TranscribeAction<'Transcription>
     = TranscribeStart
-    | TranscribeFound of TranscribeFound
-    | TranscribeEnd of TranscribeEnd
+    | TranscribeFound of TranscribeFound<'Transcription>
+    | TranscribeEnd of TranscribeEnd<'Transcription>
 
 // Transcribe voice audio into text.
 type VoiceTranscriber =
@@ -55,7 +55,7 @@ type VoiceTranscriber =
     interface IDisposable with
         member this.Dispose() = dispose this.agent
 
-let VoiceTranscriber (transcribe: TranscribeRequest -> Async<Transcription[]>) (onTranscribe: TranscribeAction -> Async<Unit>) =
+let VoiceTranscriber<'Transcription> (transcribe: TranscribeRequest -> Async<'Transcription[]>) (onTranscribe: TranscribeAction<'Transcription> -> Async<Unit>) =
     let agent = new BlockingQueueAgent<TranscriberInput>(Int32.MaxValue)
     let lock = createLock()
     let mutable language = "en"

@@ -3,10 +3,11 @@ module Mirage.Unity.MimicPlayer
 open System
 open System.Collections.Generic
 open FSharpPlus
-open Unity.Netcode
 open GameNetcodeStuff
+open Unity.Netcode
+open Unity.Collections
 open Mirage.Domain.Logger
-open AudioStream
+open Mirage.Unity.AudioStream
 
 /// Holds what players that can be mimicked, to avoid duplicates.
 let private playerPool = new List<int>()
@@ -19,12 +20,13 @@ let private playerPool = new List<int>()
 type MimicPlayer() =
     inherit NetworkBehaviour()
 
+    let mimicId = new NetworkVariable<FixedString64Bytes>()
+
     let random = new Random()
     let mutable enemyAI: EnemyAI = null
-    let mutable logId: string = null
     let mutable mimickingPlayer: PlayerControllerB = null
 
-    let logMimic message = logInfo $"{enemyAI.GetType().Name}({logId}) - {message}"
+    let logMimic message = logInfo $"{enemyAI.GetType().Name}({mimicId.Value.Value}) - {message}"
 
     let rec randomPlayer () =
         let round = StartOfRound.Instance
@@ -54,16 +56,23 @@ type MimicPlayer() =
     member this.Awake() = enemyAI <- this.GetComponent<EnemyAI>()
 
     member this.Start() =
+        if this.IsHost then
+            mimicId.Value <- FixedString64Bytes(Guid.NewGuid().ToString())
         // StartMimicking for masked enemies gets run via a patch instead,
         // to ensure the mimickingPlayer is set before other mods try to interact with it.
         if isNull <| this.GetComponent<MaskedPlayerEnemy>() then
             this.StartMimicking()
 
+    override this.OnNetworkSpawn() =
+        let onMimicIdChanged _ mimicId =
+            // TODO: mimicInit
+            ()
+        mimicId.OnValueChanged <- onMimicIdChanged
+
+    member _.GetMimicId() = new Guid(mimicId.Value.Value)
+
     member this.StartMimicking() =
         if this.IsHost then
-            if isNull logId then
-                logId <- Guid.NewGuid().ToString()
-                this.SetLogIdClientRpc logId
             let maskedEnemy = this.GetComponent<MaskedPlayerEnemy>()
             let mimickingPlayer =
                 if (enemyAI : EnemyAI) :? MaskedPlayerEnemy then
@@ -101,11 +110,6 @@ type MimicPlayer() =
     member this.ResetMimicPlayerClientRpc() =
         if not this.IsHost then
             this.ResetMimicPlayer()
-
-    [<ClientRpc>]
-    member this.SetLogIdClientRpc(id) =
-        if not this.IsHost then
-            logId <- id
 
     member this.Update() =
         if this.IsHost then
