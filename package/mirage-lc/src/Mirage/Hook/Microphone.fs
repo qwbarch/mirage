@@ -36,12 +36,7 @@ type private MicrophoneSubscriber(whisper, silero, recordingDirectory) =
                 | TranscribeFound payload ->
                     logInfo $"Transcription found. text: {payload.transcriptions[0].text}"
         }
-    let recorder = Recorder recordingDirectory <| fun x ->
-        async {
-            //logInfo "before transcriber"
-            do! writeTranscriber transcriber <| Transcribe x
-            //logInfo "after transcriber"
-        }
+    let recorder = Recorder recordingDirectory (writeTranscriber transcriber << Transcribe)
     let detector = VoiceDetector (result << detectSpeech silero) (writeRecorder recorder)
     let resampler = Resampler <| writeDetector detector
 

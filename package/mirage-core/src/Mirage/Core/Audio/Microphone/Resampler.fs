@@ -12,6 +12,7 @@ open Mirage.Core.Audio.PCM
 
 let [<Literal>] private SampleRate = 16000
 let [<Literal>] private SamplesPerWindow = 1024
+let private WindowDuration = float SamplesPerWindow / float SampleRate
 let private WriterFormat = WaveFormat(SampleRate, 1)
 
 /// Resamples the given audio samples using the resampler's configured in/out sample rates.<br />
@@ -51,30 +52,37 @@ let Resampler (onResampled: ResampledAudio -> Async<Unit>) =
     resampler.SetFeedMode true
     let agent = new BlockingQueueAgent<AudioFrame>(Int32.MaxValue)    
     let originalSamples = new List<float32>()
-    let buffer = new List<float32>()
+    let resampledSamples = new List<float32>()
     let rec consumer =
         async {
             let! frame = agent.AsyncGet()
             originalSamples.AddRange frame.samples
-            buffer.AddRange <|
+            resampledSamples.AddRange <|
                 if frame.format.SampleRate <> SampleRate then
                     resampler.SetRates(frame.format.SampleRate, SampleRate)
                     resample resampler frame.samples
                 else
                     frame.samples
-            if buffer.Count >= SamplesPerWindow then
+            if resampledSamples.Count >= SamplesPerWindow then
+                let original =
+                    let sampleSize = int <| WindowDuration * float frame.format.SampleRate
+                    let samples = originalSamples.GetRange(0, sampleSize)
+                    originalSamples.RemoveRange(0, sampleSize)
+                    samples.ToArray()
+                let resampled =
+                    let samples = resampledSamples.GetRange(0, SamplesPerWindow)
+                    resampledSamples.RemoveRange(0, SamplesPerWindow)
+                    samples.ToArray()
                 let resampledAudio =
                     {   original =
-                            {   samples = originalSamples.ToArray()
+                            {   samples = original
                                 format = frame.format
                             }
                         resampled =
-                            {   samples = buffer.GetRange(0, SamplesPerWindow).ToArray()
+                            {   samples = resampled
                                 format = WriterFormat
                             }
                     }
-                originalSamples.Clear()
-                buffer.RemoveRange(0, SamplesPerWindow)
                 do! onResampled resampledAudio
             do! consumer
         }

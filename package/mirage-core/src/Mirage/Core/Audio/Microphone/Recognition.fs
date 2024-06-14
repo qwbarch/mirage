@@ -72,31 +72,24 @@ let VoiceTranscriber (transcribe: TranscribeRequest -> Async<Transcription[]>) (
                                 samplesBuffer.Clear()
                                 do! onTranscribe TranscribeStart
                             | RecordEnd payload ->
-                                try
-                                    printfn "recordend before lock"
-                                    do! withLock' lock <| async {
-                                        printfn "recordend inside lock"
-                                        let! transcriptions =
-                                            transcribe
-                                                {   samplesBatch = [|samplesBuffer.ToArray()|]
-                                                    language = language
-                                                }
-                                        printfn "done transcription"
-                                        do! onTranscribe << TranscribeEnd <|
-                                            {   mp3Writer = payload.mp3Writer
-                                                vadTimings = payload.vadTimings
-                                                audioDurationMs = payload.audioDurationMs
-                                                transcriptions = transcriptions
+                                do! withLock' lock <| async {
+                                    let! transcriptions =
+                                        transcribe
+                                            {   samplesBatch = [|samplesBuffer.ToArray()|]
+                                                language = language
                                             }
+                                    do! onTranscribe << TranscribeEnd <|
+                                        {   mp3Writer = payload.mp3Writer
+                                            vadTimings = payload.vadTimings
+                                            audioDurationMs = payload.audioDurationMs
+                                            transcriptions = transcriptions
                                         }
-                                    with | exn ->  printfn $"exn found while transcribing: {exn}"
+                                    }
                             | RecordFound payload ->
                                 samplesBuffer.AddRange <| payload.audio.resampled.samples
                                 let samples = samplesBuffer.ToArray()
                                 if samples.Length > 0 then
-                                    printfn "tryAcquire (recordfound)"
                                     if tryAcquire lock then
-                                        printfn "inside tryAcquire"
                                         try
                                             let! transcriptions =
                                                 transcribe
