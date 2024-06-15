@@ -69,7 +69,7 @@ type MimicPlayer() =
             ()
         mimicId.OnValueChanged <- onMimicIdChanged
 
-    member _.GetMimicId() = new Guid(mimicId.Value.Value)
+    member _.MimicId with get() = new Guid(mimicId.Value.Value)
 
     member this.StartMimicking() =
         if this.IsHost then

@@ -19,9 +19,8 @@ let registerPrefab () =
                     [   typeof<AudioStream>
                         typeof<MimicPlayer>
                         typeof<MimicVoice>
+                        typeof<Predictor>
                     ]
-                if enemyAI :? MaskedPlayerEnemy then
-                    ignore <| enemyAI.gameObject.AddComponent<Predictor>()
     )
 
     On.GameNetcodeStuff.PlayerControllerB.add_Awake(fun orig self ->

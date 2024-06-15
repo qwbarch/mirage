@@ -34,6 +34,9 @@
     <Reference Include="MMHOOK_Unity.Netcode.Runtime">
       <HintPath>../../../lib/MMHOOK/MMHOOK_Unity.Netcode.Runtime.dll</HintPath>
     </Reference>
+    <Reference Include="MMHOOK_Facepunch Transport for Netcode for GameObjects.dll">
+      <HintPath>../../../lib/MMHOOK/MMHOOK_Facepunch Transport for Netcode for GameObjects.dll</HintPath>
+    </Reference>
     <Reference Include="NAudio" Publicize="true">
       <HintPath>../../../lib/NAudio/NAudio.dll</HintPath>
     </Reference>
@@ -61,6 +64,7 @@
     <Compile Include="Mirage/Unity/MimicPlayer.fs" />
     <Compile Include="Mirage/Unity/MimicVoice.fs" />
     <Compile Include="Mirage/Unity/Predictor.fs" />
+    <Compile Include="Mirage/Hook/Predictor.fs" />
     <Compile Include="Mirage/Hook/AudioSpatializer.fs" />
     <Compile Include="Mirage/Hook/Microphone.fs" />
     <Compile Include="Mirage/Hook/RegisterPrefab.fs" />

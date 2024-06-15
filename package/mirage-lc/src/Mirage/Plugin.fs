@@ -3,6 +3,7 @@ namespace Mirage
 open BepInEx
 open System.IO
 open System.Diagnostics
+open Silero.API
 open Predictor.Lib
 open NAudio.Lame
 open Whisper.API
@@ -14,7 +15,7 @@ open Mirage.Hook.RegisterPrefab
 open Mirage.Hook.Dissonance
 open Mirage.Hook.MaskedPlayerEnemy
 open Mirage.Domain.Logger
-open Silero.API
+open Mirage.Hook.Predictor
 
 
 [<BepInPlugin(pluginId, pluginName, pluginVersion)>]
@@ -36,8 +37,6 @@ type Plugin() =
                 let recordingDirectory = mirageDirectory "Recording"
                 let predictorDirectory = mirageDirectory "Predictor"
 
-                logInfo $"recording directory: {recordingDirectory}"
-
                 logInfo "Initializing Whisper."
                 let! (whisper, cudaAvailable) = startWhisper
                 logInfo $"Cuda available: {cudaAvailable}"
@@ -45,7 +44,6 @@ type Plugin() =
                 logInfo "Initializing SileroVAD."
                 let silero = SileroVAD SamplesPerWindow
 
-                //do! initBehaviourPredictor logInfo logWarning logError guid $"{baseDirectory}/Mirage/Predictor" Int32.MaxValue // Size limit
 
                 // TODO: Do this properly.
                 let rec keepActive =
@@ -62,4 +60,5 @@ type Plugin() =
                 readMicrophone whisper silero recordingDirectory
                 fetchDissonance()
                 initMaskedEnemy()
+                initPredictor predictorDirectory
             }

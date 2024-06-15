@@ -3,11 +3,13 @@ module Mirage.Unity.Predictor
 #nowarn "40"
 
 open System
+open System.Collections.Generic
 open GameNetcodeStuff
 open FSharpx.Control
 open Unity.Netcode
 open Predictor.Domain
 open Predictor.Lib
+open Mirage.Core.Async.LVar
 open Mirage.Unity.MimicPlayer
 
 /// EntityId is a sum type. To serialize it for rpc methods, entity ids are converted to a string.
@@ -41,13 +43,28 @@ type Predictor() as self =
     let registerPredictor =
         if isNull mimic
             then userRegisterText
-            else mimicRegisterText <| mimic.GetMimicId()
+            else mimicRegisterText <| mimic.MimicId
+
+    /// Predictor instance for the local player.
+    static member val LocalPlayer = null with set, get
+
+    /// Enemies with a predictor component.
+    static member val Enemies = newLVar <| new List<Predictor>()
+
+    member _.SpeakerId
+        with get() =
+            if isNull player
+                then Guid <| mimic.MimicId
+                else Int player.playerSteamId
 
     member this.Awake() =
         mimic <- this.GetComponent<MimicPlayer>()
         player <- this.GetComponent<PlayerControllerB>()
 
     member this.Start() =
+        if player = StartOfRound.Instance.localPlayerController then
+            Predictor.LocalPlayer <- this
+
         // Since rpc methods can only be called on the unity thread,
         // game inputs are pulled into the consumer which executes actions on the unity thread.
         let rec consumer =
@@ -77,7 +94,7 @@ type Predictor() as self =
                             toIdType payload.speakerClass,
                             toIdString payload.speakerId,
                             toIdType payload.speakerId,
-                            payload.sentenceId,
+                            payload.sentenceId.ToString(),
                             payload.elapsedMillis,
                             payload.transcriptionProb,
                             payload.nospeechProb
@@ -85,9 +102,17 @@ type Predictor() as self =
                 do! consumer
             }
         Async.StartImmediate(consumer, this.destroyCancellationToken)
+        Async.StartImmediate <<
+            accessLVar Predictor.Enemies <| fun enemies ->
+                enemies.Add this
 
-    /// Run an action with the predictor. This function is thread-safe.
-    member _.RunAction(gameInput) = agent.Add gameInput
+    override this.OnDestroy() =
+        Async.StartImmediate <<
+            accessLVar Predictor.Enemies <| fun enemies ->
+                ignore <| enemies.Remove this
+
+    /// Register an action with the predictor. This function is thread-safe.
+    member _.Register(gameInput) = agent.Add gameInput
 
     [<ClientRpc>]
     member private _.SyncHeardAtomClientRpc(text, speakerClass, speakerClassType, speakerId, speakerIdType, sentenceId, elapsedTime, avgLogProb, noSpeechProb) =
@@ -95,7 +120,7 @@ type Predictor() as self =
             {   text = text
                 speakerClass = toEntityId speakerClass speakerClassType
                 speakerId = toEntityId speakerId speakerIdType
-                sentenceId = sentenceId
+                sentenceId = new Guid(sentenceId)
                 elapsedMillis = elapsedTime
                 transcriptionProb = avgLogProb
                 nospeechProb = noSpeechProb
