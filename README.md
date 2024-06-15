@@ -6,7 +6,7 @@ Mirage is a mod that gives any enemy the ability to mimic a player's voice (full
 > This mod comes with features you might not want by default (such as masked enemies spawning on every moon), and will require you to [tweak the configuration](https://github.com/qwbarch/mirage/tree/production#why-does-this-mod-come-with-so-many-features-i-only-want-skinwalkers-but-with-synced-voices).
 
 <a href="https://youtu.be/yThkkWAOc6Q">
-  <img src="https://markdown-videos-api.jorgenkh.no/url?url=https%3A%2F%2Fyoutu.be%2FyThkkWAOc6Q" alt="Mod showcase" title="Mod showcase" width="40%"/>
+  <img src="https://markdown-videos-api.jorgenkh.no/url?url=https%3A%2F%2Fyoutu.be%2FyThkkWAOc6Q" alt="Mod showcase" title="Mod showcase" width="500vw"/>
 </a>
 
 ## Features (all features listed below are configurable)

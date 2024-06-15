@@ -56,7 +56,13 @@ type Plugin() =
             initLobbyCompatibility()
             initNetcodePatcher()
             return! initConfig this.Config
-            ignore <| LameDLL.LoadNativeDLL [|Path.GetDirectoryName this.Info.Location|]
+            let lameDllPath = Path.GetDirectoryName this.Info.Location
+            let lameLoaded = LameDLL.LoadNativeDLL [|lameDllPath|]
+            if not lameLoaded then
+                logError <|
+                    "Failed to load NAudio.Lame. This means no monsters will be able to play your voice.\n"
+                        + "Please report this to qwbarch at https://github.com/qwbarch/mirage/issues\n"
+                        + $"Path failed: {lameDllPath}"
             deleteRecordings()
             Application.add_quitting deleteRecordings
             let harmony = new Harmony(pluginId)

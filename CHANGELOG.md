@@ -1,5 +1,9 @@
 ## Changelog
 
+### 1.7.1
+
+- Fixed a bug that caused non-ascii file paths to fail to load. This means players with non-english usernames will finally be able to hear their own voices.
+
 ### 1.7.0
 
 - Added a config entry ``RecordWhileDead``, that continues to record a player's voice while they're dead. Default value: ``false``.
