@@ -6,6 +6,7 @@ open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicVoice
 open Mirage.Unity.MimicPlayer
 open Mirage.Unity.Predictor
+open Mirage.Unity.Recognition
 
 let registerPrefab () =
     On.GameNetworkManager.add_Start(fun orig self ->
@@ -25,5 +26,8 @@ let registerPrefab () =
 
     On.GameNetcodeStuff.PlayerControllerB.add_Awake(fun orig self ->
         orig.Invoke self
-        ignore <| self.gameObject.AddComponent<Predictor>()
+        iter (ignore << self.gameObject.AddComponent)
+            [   typeof<Predictor>
+                typeof<RemoteTranscriber>
+            ]
     )

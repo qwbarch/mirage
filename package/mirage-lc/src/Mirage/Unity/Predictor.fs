@@ -49,7 +49,7 @@ type Predictor() as self =
     static member val LocalPlayer = null with set, get
 
     /// Enemies with a predictor component.
-    static member val Enemies = newLVar <| new List<Predictor>()
+    static member val Enemies = newLVar <| List<Predictor>()
 
     member _.SpeakerId
         with get() =
@@ -102,11 +102,15 @@ type Predictor() as self =
                 do! consumer
             }
         Async.StartImmediate(consumer, this.destroyCancellationToken)
+
+    override this.OnNetworkSpawn() =
+        base.OnNetworkSpawn()
         Async.StartImmediate <<
             accessLVar Predictor.Enemies <| fun enemies ->
                 enemies.Add this
 
-    override this.OnDestroy() =
+    override this.OnNetworkDespawn() =
+        base.OnNetworkDespawn()
         Async.StartImmediate <<
             accessLVar Predictor.Enemies <| fun enemies ->
                 ignore <| enemies.Remove this

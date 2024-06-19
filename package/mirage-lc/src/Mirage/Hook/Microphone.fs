@@ -1,108 +1,67 @@
-module Mirage.Hook.Microphone
+namespace Mirage.Hook
 
-open System
-open Silero.API
-open FSharpPlus
-open Whisper.API
 open NAudio.Wave
-open Predictor.Domain
-open Mirage.Domain.Logger
-open Mirage.Core.Audio.PCM
+open StaticNetcodeLib
+open Unity.Netcode
+open Mirage.Domain.Audio.Microphone
 open Mirage.Core.Audio.Microphone.Resampler
-open Mirage.Core.Audio.Microphone.Detection
-open Mirage.Core.Audio.Microphone.Recorder
-open Mirage.Core.Audio.Microphone.Recognition
-open Mirage.Core.Audio.File.Mp3Writer
-open Mirage.Unity.Predictor
 open Mirage.Core.Async.LVar
 
-type private MicrophoneSubscriber(whisper, silero, recordingDirectory) =
-    let transcribeAudio (request: TranscribeRequest) =
-        transcribe whisper
-            {   samplesBatch = toPCMBytes <!> request.samplesBatch
-                language = request.language
-            }
-    let transcriber =
-        let mutable sentenceId = Guid.NewGuid()
-        VoiceTranscriber transcribeAudio <| fun action ->
-            async {
-                match action with
-                    | TranscribeStart ->
-                        logInfo "Transcription start"
-                        Predictor.LocalPlayer.Register <|
-                            VoiceActivityAtom
-                                {   speakerId = Int StartOfRound.Instance.localPlayerController.playerSteamId
-                                    prob = 1.0
-                                }
-                        sentenceId <- Guid.NewGuid()
-                    | TranscribeEnd payload ->
-                        logInfo $"Transcription end. text: {payload.transcriptions[0].text}"
-                        let! enemies = accessLVar Predictor.Enemies List.ofSeq
-                        let toVADTiming vadFrame =
-                            let atom =
-                                {   speakerId = Predictor.LocalPlayer.SpeakerId
-                                    prob = float vadFrame.probability
-                                }
-                            (vadFrame.elapsedTime, atom)
-                        let spokeRecordingAtom =
-                            SpokeRecordingAtom
-                                {   spokeAtom =
-                                        {   text = payload.transcriptions[0].text
-                                            sentenceId = sentenceId
-                                            elapsedMillis = payload.audioDurationMs
-                                            transcriptionProb = float payload.transcriptions[0].avgLogProb
-                                            nospeechProb = float payload.transcriptions[0].noSpeechProb
-                                        }
-                                    whisperTimings = []
-                                    vadTimings = toVADTiming <!> payload.vadTimings
-                                    audioInfo =
-                                        {   fileId = getFileId payload.mp3Writer
-                                            duration = payload.audioDurationMs
-                                        }
-                                }
-                        Predictor.LocalPlayer.Register spokeRecordingAtom
-                        flip iter enemies <| fun enemy ->
-                            enemy.Register spokeRecordingAtom
-                    | TranscribeFound payload ->
-                        logInfo $"Transcription found. text: {payload.transcriptions[0].text}"
-                        let! enemies = accessLVar Predictor.Enemies List.ofSeq
-                        let spokeAtom =
-                            SpokeAtom
-                                {   text = payload.transcriptions[0].text
-                                    sentenceId = sentenceId
-                                    transcriptionProb = float payload.transcriptions[0].avgLogProb
-                                    nospeechProb = float payload.transcriptions[0].noSpeechProb
-                                    elapsedMillis = payload.vadFrame.elapsedTime
-                                }
-                        Predictor.LocalPlayer.Register spokeAtom
-                        flip iter enemies <| fun enemy ->
-                            enemy.Register spokeAtom
-                        Predictor.LocalPlayer.Register <|
-                            HeardAtom
-                                {   text = payload.transcriptions[0].text
-                                    speakerClass = Predictor.LocalPlayer.SpeakerId
-                                    speakerId = Predictor.LocalPlayer.SpeakerId
-                                    sentenceId = sentenceId
-                                    elapsedMillis = payload.vadFrame.elapsedTime
-                                    transcriptionProb = float payload.transcriptions[0].avgLogProb
-                                    nospeechProb = float payload.transcriptions[0].noSpeechProb
-                                }
-            }
-    let recorder = Recorder recordingDirectory (writeTranscriber transcriber << Transcribe)
-    let detector = VoiceDetector (result << detectSpeech silero) (writeRecorder recorder)
-    let resampler = Resampler <| writeDetector detector
+[<StaticNetcode>]
+module Microphone =
+    let mutable private cudaAvailable = false
+    let mutable private transcribeViaHost = None
 
-    interface Dissonance.Audio.Capture.IMicrophoneSubscriber with
-        member _.ReceiveMicrophoneData(buffer, format) =
-            Async.StartImmediate <|
-                writeResampler resampler
-                    {   samples = buffer.ToArray()
-                        format = WaveFormat(format.SampleRate, format.Channels)
-                    }
-        member _.Reset() = ()
+    [<AllowNullLiteral>]
+    type MicrophoneSubscriber(param) as self =
+        do MicrophoneSubscriber.Instance <- self
 
-let readMicrophone whisper silero recordingDirectory =
-    On.Dissonance.DissonanceComms.add_Start(fun orig self ->
-        orig.Invoke self
-        self.SubscribeToRecordedAudio <| MicrophoneSubscriber(whisper, silero, recordingDirectory)
-    )
+        static member val Instance = null with get, set
+        member val MicrophoneProcessor = MicrophoneProcessor param
+
+        interface Dissonance.Audio.Capture.IMicrophoneSubscriber with
+            member this.ReceiveMicrophoneData(buffer, format) =
+                Async.StartImmediate <|
+                    processMicrophone this.MicrophoneProcessor
+                        {   samples = buffer.ToArray()
+                            format = WaveFormat(format.SampleRate, format.Channels)
+                        }
+            member _.Reset() = ()
+
+    [<ClientRpc>]
+    let private transcribeViaHostClientRpc (_: ClientRpcParams) useHost =
+        if not <| StartOfRound.Instance.IsHost then
+            Async.StartImmediate <| writeLVar_ transcribeViaHost.Value (useHost) //&& cudaAvailable)
+
+    let readMicrophone param =
+        cudaAvailable <- param.cudaAvailable
+        transcribeViaHost <- Some param.transcribeViaHost
+
+        On.Dissonance.DissonanceComms.add_Start(fun orig self ->
+            orig.Invoke self
+            self.SubscribeToRecordedAudio <| MicrophoneSubscriber param
+        )
+
+        // Normally during the opening doors sequence, the game suffers from dropped audio frames, causing recordings to sound glitchy.
+        // To reduce the likelihood of recording glitched sounds, audio recordings only start after the sequence is completely finished.
+        On.StartOfRound.add_openingDoorsSequence(fun orig self ->
+            Async.StartImmediate <| writeLVar_ param.isReady true
+            orig.Invoke self
+        )
+
+        On.StartOfRound.add_OnDestroy(fun orig self ->
+            orig.Invoke self
+            Async.StartImmediate <| async {
+                do! writeLVar_ param.isReady false
+                do! writeLVar_ param.transcribeViaHost false
+            }
+        )
+
+        // This hook only runs on the host.
+        On.StartOfRound.add_OnClientConnect(fun orig self clientId ->
+            orig.Invoke(self, clientId)
+            let mutable rpcParams = ClientRpcParams()
+            rpcParams.Send <- ClientRpcSendParams()
+            rpcParams.Send.TargetClientIds <- [|clientId|]
+            transcribeViaHostClientRpc rpcParams param.cudaAvailable
+        )

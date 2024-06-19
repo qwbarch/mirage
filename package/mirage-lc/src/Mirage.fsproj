@@ -21,7 +21,7 @@
     <PackageReference Include="BepInEx.Core" Version="5.4.21" />
     <PackageReference Include="LethalCompany.GameLibs.Steam" Version="50.0.1-ngd.0" Publicize="true" />
     <PackageReference Include="FSharpPlus" Version="1.6.1" />
-    <PackageReference Include="Xilophor.StaticNetcodeLib" Version="1.0.3" />
+    <PackageReference Include="Xilophor.StaticNetcodeLib" Version="1.1.0" />
     <Reference Include="FSharpx.Async">
       <HintPath>../../../lib/FSharpx.Async/FSharpx.Async.dll</HintPath>
     </Reference>
@@ -59,14 +59,16 @@
     <Compile Include="Mirage/Domain/Audio/Sender.fs" />
     <Compile Include="Mirage/Domain/Audio/Receiver.fs" />
     <Compile Include="Mirage/Domain/Audio/Recording.fs" />
+    <Compile Include="Mirage/Domain/Audio/Microphone.fs" />
     <Compile Include="Mirage/Hook/Dissonance.fs" />
     <Compile Include="Mirage/Unity/AudioStream.fs" />
     <Compile Include="Mirage/Unity/MimicPlayer.fs" />
     <Compile Include="Mirage/Unity/MimicVoice.fs" />
     <Compile Include="Mirage/Unity/Predictor.fs" />
+    <Compile Include="Mirage/Hook/Microphone.fs" />
+    <Compile Include="Mirage/Unity/Recognition.fs" />
     <Compile Include="Mirage/Hook/Predictor.fs" />
     <Compile Include="Mirage/Hook/AudioSpatializer.fs" />
-    <Compile Include="Mirage/Hook/Microphone.fs" />
     <Compile Include="Mirage/Hook/RegisterPrefab.fs" />
     <Compile Include="Mirage/Hook/MaskedPlayerEnemy.fs" />
     <Compile Include="Mirage/Plugin.fs" />
