@@ -1,5 +1,10 @@
 ## Changelog
 
+### 1.7.2
+
+- Added a config option to set the maximum number of naturally spawned masked enemies. By default, this is set to 2.
+  Masked enemy spawns have already been capped at 2 since ``v1.7.1``, this update simply allows you to adjust that value.
+
 ### 1.7.1
 
 - Fixed a bug that caused non-ascii file paths to fail to load. This means players with non-english usernames will finally be able to hear their own voices.

@@ -288,6 +288,13 @@ type internal LocalConfig(config: ConfigFile) =
             true,
             "Uses a custom spawn curve that makes masked enemies spawn later in the day, rather than the default way masked enemies spawn.\nNote: This is only used when EnableOverrideSpawnChance is enabled."
         )
+    member val MaxMasked =
+        config.Bind<int>(
+            maskedSection,
+            "MaxMasked",
+            2,
+            "Maximum number of natural spawns a masked enemy should have."
+        )
     member val SpawnOnPlayerDeath =
         config.Bind<int>(
             maskedSection,
