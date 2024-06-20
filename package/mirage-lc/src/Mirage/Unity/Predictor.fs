@@ -52,11 +52,14 @@ type Predictor() as self =
     /// Enemies with a predictor component.
     static member val Enemies = newLVar <| List<Predictor>()
 
+    /// EntityId of the speaker. If this predictor belongs to a non-local player, it will return an empty guid.
     member _.SpeakerId
         with get() =
-            if isNull player
-                then Guid <| mimic.MimicId
-                else Int player.playerSteamId
+            if isNull player then Guid <| mimic.MimicId
+            else if player = StartOfRound.Instance.localPlayerController then
+                Int player.playerSteamId
+            else
+                Guid Guid.Empty
 
     member this.Awake() =
         mimic <- this.GetComponent<MimicPlayer>()

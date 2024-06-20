@@ -145,6 +145,9 @@ let VoiceTranscriber<'PlayerId, 'Transcription>
                     printfn $"samples[{i}].Length: {samples[i].Length}"
                 printfn "before transcriptions (mirage.core)"
                 if samples.Length > 0 then
+                    printfn $"before transcribe. samplesBatch.Length: {samples.Length}"
+                    for i in 0 .. samples.Length - 1 do
+                        printfn $"samplesBatch[{i}].Length: {samples[i].Length}"
                     let! transcriptions =
                         transcribe
                             {   samplesBatch = samples

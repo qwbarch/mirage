@@ -91,7 +91,6 @@ type MimicPlayer() =
         this.GetComponent<AudioStream>().AllowedSenderId <- Some player.actualClientId
         if this.IsHost then
             this.MimicPlayerClientRpc(playerId, mimicId.ToString())
-        logInfo "running onSetMimicId"
         onSetMimicId.Trigger mimicId
 
     [<ClientRpc>]
