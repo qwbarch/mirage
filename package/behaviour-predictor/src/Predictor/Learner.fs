@@ -166,13 +166,13 @@ let learnerThread
         let currentStatistics = newLVar(defaultGameInputStatistics());
         let notifyUpdateStatistics = createEmptyMVar<int>()
         let statisticsUpdater = createStatisticsUpdater currentStatistics notifyUpdateStatistics 
-        let statisticsCutoffHandler = createStatisticsCutoffHandler (Guid userId) currentStatistics notifyUpdateStatistics
+        let statisticsCutoffHandler = createStatisticsCutoffHandler userId currentStatistics notifyUpdateStatistics
 
         let messageHandler = createLearnerMessageHandler fileHandler statisticsUpdater
 
         let observationChannel = newLVar(insertObsTime defaultPartialObservation)
         let _ : ObservationGenerator = 
-            startAsyncAsDisposable <| createObservationGeneratorAsync (Guid userId) currentStatistics notifyUpdateStatistics observationChannel 
+            startAsyncAsDisposable <| createObservationGeneratorAsync userId currentStatistics notifyUpdateStatistics observationChannel 
 
         let _ = startAsyncAsDisposable <| learnerObservationSampler fileHandler observationChannel isActiveLVar
 

@@ -59,12 +59,12 @@
     <Compile Include="Mirage/Domain/Audio/Sender.fs" />
     <Compile Include="Mirage/Domain/Audio/Receiver.fs" />
     <Compile Include="Mirage/Domain/Audio/Recording.fs" />
-    <Compile Include="Mirage/Domain/Audio/Microphone.fs" />
     <Compile Include="Mirage/Hook/Dissonance.fs" />
     <Compile Include="Mirage/Unity/AudioStream.fs" />
     <Compile Include="Mirage/Unity/MimicPlayer.fs" />
     <Compile Include="Mirage/Unity/MimicVoice.fs" />
     <Compile Include="Mirage/Unity/Predictor.fs" />
+    <Compile Include="Mirage/Domain/Audio/Microphone.fs" />
     <Compile Include="Mirage/Hook/Microphone.fs" />
     <Compile Include="Mirage/Unity/Recognition.fs" />
     <Compile Include="Mirage/Hook/Predictor.fs" />

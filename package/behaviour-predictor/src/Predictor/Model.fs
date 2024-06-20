@@ -7,7 +7,7 @@ open Utilities
 open Mirage.Core.Async.LVar
 open PolicyFileHandler
 
-let mutable userId = Guid.Empty
+let mutable userId = Int 0uL
 
 // Sort by decreasing time since iteration forwards quickly is possible but idk how to iterate backwards.
 type ModelPolicyComparator() =

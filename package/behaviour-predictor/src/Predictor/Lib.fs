@@ -18,7 +18,7 @@ let initBehaviourPredictor
     (logInfo: string -> unit)
     (logWarning: string -> unit)
     (logError: string -> unit)
-    (userId: Guid)
+    (userId: EntityId)
     (fileDir: string)
     (sizeLimit: int64) : Async<unit> =
         async {

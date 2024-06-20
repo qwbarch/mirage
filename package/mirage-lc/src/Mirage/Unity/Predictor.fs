@@ -11,6 +11,7 @@ open Predictor.Domain
 open Predictor.Lib
 open Mirage.Core.Async.LVar
 open Mirage.Unity.MimicPlayer
+open Mirage.Domain.Logger
 
 /// EntityId is a sum type. To serialize it for rpc methods, entity ids are converted to a string.
 /// This enum helps clients know how to deserialize it once they receive the value.
@@ -46,7 +47,7 @@ type Predictor() as self =
             else mimicRegisterText <| mimic.MimicId
 
     /// Predictor instance for the local player.
-    static member val LocalPlayer = null with set, get
+    static member val LocalPlayer: Predictor = null with set, get
 
     /// Enemies with a predictor component.
     static member val Enemies = newLVar <| List<Predictor>()
@@ -62,28 +63,34 @@ type Predictor() as self =
         player <- this.GetComponent<PlayerControllerB>()
 
     member this.Start() =
-        if player = StartOfRound.Instance.localPlayerController then
-            Predictor.LocalPlayer <- this
-
         // Since rpc methods can only be called on the unity thread,
         // game inputs are pulled into the consumer which executes actions on the unity thread.
         let rec consumer =
             async {
                 let! gameInput = agent.AsyncGet()
+                logInfo "Predictor component received game input"
                 match gameInput with
-                    | SpokeAtom payload -> registerPredictor <| SpokeAtom payload
-                    | SpokeRecordingAtom payload -> registerPredictor <| SpokeRecordingAtom payload
+                    | SpokeAtom payload ->
+                        logInfo "Predictor received SpokeAtom payload"
+                        registerPredictor <| SpokeAtom payload
+                    | SpokeRecordingAtom payload ->
+                        logInfo "Predictor received SpokeRecordingAtom payload"
+                        registerPredictor <| SpokeRecordingAtom payload
                     | VoiceActivityAtom payload ->
+                        logInfo "before voice activity atom"
                         let rpc =
                             if self.IsHost
                                 then self.SyncVoiceActivityAtomClientRpc
                                 else self.SyncVoiceActivityAtomServerRpc
+                        logInfo "middle voice activity atom"
                         rpc(
                             toIdString payload.speakerId,
                             toIdType payload.speakerId,
                             payload.prob
                         )
+                        logInfo "end voice activity atom"
                     | HeardAtom payload ->
+                        logInfo "Predictor received HeardAtom payload"
                         let rpc =
                             if self.IsHost
                                 then self.SyncHeardAtomClientRpc
@@ -116,7 +123,9 @@ type Predictor() as self =
                 ignore <| enemies.Remove this
 
     /// Register an action with the predictor. This function is thread-safe.
-    member _.Register(gameInput) = agent.Add gameInput
+    member _.Register(gameInput) =
+        logInfo "Predictor.Register called"
+        agent.Add gameInput
 
     [<ClientRpc>]
     member private _.SyncHeardAtomClientRpc(text, speakerClass, speakerClassType, speakerId, speakerIdType, sentenceId, elapsedTime, avgLogProb, noSpeechProb) =

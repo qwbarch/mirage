@@ -31,3 +31,8 @@ let registerPrefab () =
                 typeof<RemoteTranscriber>
             ]
     )
+
+    On.GameNetcodeStuff.PlayerControllerB.add_ConnectClientToPlayerObject(fun orig self ->
+        orig.Invoke self
+        Predictor.LocalPlayer <- StartOfRound.Instance.localPlayerController.GetComponent<Predictor>()
+    )
