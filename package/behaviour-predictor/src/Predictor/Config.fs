@@ -14,5 +14,5 @@ let mutable config =
         AFK_MILLIS = 10000
         FILE_SPLIT_SIZE = 300
         MIMIC_POLICY_UPDATE_REPEAT = 500
-        SCORE_TALK_BIAS = 1.0
+        SCORE_TALK_BIAS = 10.0
     }
