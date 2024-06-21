@@ -77,6 +77,7 @@ let clearMemory =
 let userRegisterText
     (gameInput: GameInput)
     = Async.Start <| async {
+        logInfo "Got user register"
         let! _ = accessLVar learnerLVar <| fun learnerOption ->
             match learnerOption with
             | None -> ()

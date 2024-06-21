@@ -78,7 +78,7 @@ let addSpokeResponse
                     model.policy[relObs.time] <- (relObs, QueueAction queueAction)
                     Async.RunSynchronously <| sendUpdateToMimics relObs.time relObs (QueueAction queueAction)
                     fileHandler.Post <| Update (relObs.time, QueueAction queueAction)
-                    logInfo $"Added a response"
+                    logInfo $"Added a response."
                     ()
                 else
                     logInfo $"Large time gap {timeDifferenceMillis} {relObs}"
