@@ -40,11 +40,19 @@ type Predictor() as self =
     let mutable mimic: MimicPlayer = null
     let mutable player: PlayerControllerB = null
 
+    /// Whether or not a payload received via a client rpc should be executed.
+    let shouldRegister () =
+        not (isNull player) || not (isNull mimic) && mimic.MimickingPlayer = StartOfRound.Instance.localPlayerController
+
     let agent = new BlockingQueueAgent<GameInput>(Int32.MaxValue)
-    let registerPredictor =
+    let registerPredictor gameInput =
         if isNull mimic
-            then userRegisterText
-            else mimicRegisterText <| mimic.MimicId
+            then
+                logInfo "mimic is null: predictor will run userRegisterText"
+                userRegisterText gameInput
+            else
+                logInfo "mimic is not null: predictor will run mimicRegisterText"
+                mimicRegisterText mimic.MimicId gameInput
 
     /// Predictor instance for the local player.
     static member val LocalPlayer: Predictor = null with set, get
@@ -52,14 +60,14 @@ type Predictor() as self =
     /// Enemies with a predictor component.
     static member val Enemies = newLVar <| List<Predictor>()
 
-    /// EntityId of the speaker. If this predictor belongs to a non-local player, it will return an empty guid.
+    /// EntityId of the speaker. If this predictor belongs to a non-local player, this will throw an error.
     member _.SpeakerId
         with get() =
             if isNull player then Guid <| mimic.MimicId
             else if player = StartOfRound.Instance.localPlayerController then
                 Int player.playerSteamId
             else
-                Guid Guid.Empty
+                invalidOp "Cannot retrieve the SpeakerId of the non-local player."
 
     member this.Awake() =
         mimic <- this.GetComponent<MimicPlayer>()
@@ -132,15 +140,16 @@ type Predictor() as self =
 
     [<ClientRpc>]
     member private _.SyncHeardAtomClientRpc(text, speakerClass, speakerClassType, speakerId, speakerIdType, sentenceId, elapsedTime, avgLogProb, noSpeechProb) =
-        registerPredictor << HeardAtom <|
-            {   text = text
-                speakerClass = toEntityId speakerClass speakerClassType
-                speakerId = toEntityId speakerId speakerIdType
-                sentenceId = new Guid(sentenceId)
-                elapsedMillis = elapsedTime
-                transcriptionProb = avgLogProb
-                nospeechProb = noSpeechProb
-            }
+        if shouldRegister() then
+            registerPredictor << HeardAtom <|
+                {   text = text
+                    speakerClass = toEntityId speakerClass speakerClassType
+                    speakerId = toEntityId speakerId speakerIdType
+                    sentenceId = new Guid(sentenceId)
+                    elapsedMillis = elapsedTime
+                    transcriptionProb = avgLogProb
+                    nospeechProb = noSpeechProb
+                }
 
     [<ServerRpc>]
     member private this.SyncHeardAtomServerRpc(text, speakerClass, speakerClassType, speakerId, speakerIdType, sentenceId, elapsedTime, avgLogProb, noSpeechProb) =
@@ -149,10 +158,11 @@ type Predictor() as self =
 
     [<ClientRpc>]
     member private _.SyncVoiceActivityAtomClientRpc(speakerId, speakerIdType, probability) =
-        registerPredictor << VoiceActivityAtom <|
-            {   speakerId = toEntityId speakerId speakerIdType
-                prob = probability
-            }
+        if shouldRegister() then
+            registerPredictor << VoiceActivityAtom <|
+                {   speakerId = toEntityId speakerId speakerIdType
+                    prob = probability
+                }
 
     [<ServerRpc>]
     member private this.SyncVoiceActivityAtomServerRpc(speakerId, speakerIdType, probability) =

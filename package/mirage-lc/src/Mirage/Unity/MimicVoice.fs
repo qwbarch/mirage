@@ -83,7 +83,7 @@ type MimicVoice() as self =
                 logInfo $"OnNetworkSpawn mimicId: {mimicPlayer.MimicId}"
                 mimicInit mimicId <| fun fileId ->
                     logInfo $"Player #{mimicPlayer.MimickingPlayer.playerClientId} sendMimicText is requesting the file: {fileId}.mp3"
-                    channel.Add $"{Application.dataPath}/../Mirage/{fileId}.mp3"
+                    channel.Add $"{Application.dataPath}/../Mirage/Recording/{fileId}.mp3"
     
     override _.OnNetworkDespawn() =
         base.OnDestroy()

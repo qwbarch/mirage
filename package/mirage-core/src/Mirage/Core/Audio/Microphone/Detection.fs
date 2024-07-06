@@ -29,13 +29,19 @@ type DetectStart =
 
 type DetectFound =
     {   vadFrame: VADFrame
-        audio: ResampledAudio
+        /// Samples containing only the current audio frame.
+        currentAudio: ResampledAudio
+        /// Samples containing the entirety of speech being detected.
+        fullAudio: ResampledAudio
     }
 
 type DetectEnd =
     {   vadTimings: list<VADFrame>
-        audio: ResampledAudio
         audioDurationMs: int
+        /// Samples containing only the current audio frame.
+        currentAudio: ResampledAudio
+        /// Samples containing the entirety of speech being detected.
+        fullAudio: ResampledAudio
     }
 
 /// A sum type representing when speech is found or not.
@@ -62,64 +68,75 @@ type VoiceDetector =
 /// perform when speech is detected, as well as a source to read samples from.
 let VoiceDetector (detectSpeech: DetectVoice) (onVoiceDetected: DetectAction -> Async<Unit>) =
     let agent = new BlockingQueueAgent<ResampledAudio>(Int32.MaxValue)
+    let samples =
+        {|  original = new List<float32>()
+            resampled = new List<float32>()
+        |}
     let mutable vadFrames = []
-    let mutable sampleIndex = 0
-    let mutable endSamples = 0
+    let mutable currentIndex = 0
+    let mutable endIndex = 0
     let mutable voiceDetected = false
-    let originalBuffer = new List<float32>()
-    let resampledBuffer = new List<float32>()
     let rec consumer =
         async {
-            let! audio = agent.AsyncGet()
-            &sampleIndex += audio.original.samples.Length
-            let! probability = detectSpeech audio.resampled.samples
+            let! currentAudio = agent.AsyncGet()
+            &currentIndex += currentAudio.original.samples.Length
+            samples.original.AddRange currentAudio.original.samples
+            samples.resampled.AddRange currentAudio.resampled.samples
+            let! probability = detectSpeech currentAudio.resampled.samples
+            let fullAudio =
+                {   original =
+                        {   format = currentAudio.original.format
+                            samples = samples.original.ToArray()
+                        }
+                    resampled =
+                        {   format = currentAudio.resampled.format
+                            samples = samples.resampled.ToArray()
+                        }
+                }
             let vadFrame =
-                {   elapsedTime = audioLengthMs audio.resampled.format <| resampledBuffer.ToArray()
+                {   elapsedTime = audioLengthMs fullAudio.original.format fullAudio.original.samples
                     probability = probability
                 }
             let detectFound =
                 DetectFound
                     {   vadFrame = vadFrame
-                        audio = audio
+                        currentAudio = currentAudio
+                        fullAudio = fullAudio
                     }
             if probability >= StartThreshold then
-                if endSamples <> 0 then
-                    endSamples <- 0
+                if endIndex <> 0 then
+                    endIndex <- 0
                 if not voiceDetected then
-                    originalBuffer.Clear()
-                    resampledBuffer.Clear()
                     voiceDetected <- true
                     vadFrames <- [vadFrame]
                     do! onVoiceDetected << DetectStart <|
-                        {   originalFormat = audio.original.format
-                            resampledFormat = audio.resampled.format
+                        {   originalFormat = currentAudio.original.format
+                            resampledFormat = currentAudio.resampled.format
                         }
                 else
                     vadFrames <- vadFrame :: vadFrames
                 do! onVoiceDetected detectFound
             else if probability < EndThreshold && voiceDetected then
-                if endSamples = 0 then
-                    endSamples <- sampleIndex
-                if float32 (sampleIndex - endSamples) < MinSilenceSamples then
+                if endIndex = 0 then
+                    endIndex <- currentIndex
+                if float32 (currentIndex - endIndex) < MinSilenceSamples then
                     do! onVoiceDetected detectFound
                 else
-                    endSamples <- 0
+                    endIndex <- 0
                     voiceDetected <- false
                     do! onVoiceDetected <| detectFound
                     do! onVoiceDetected << DetectEnd <|
                         {   vadTimings = rev vadFrames
                             audioDurationMs = vadFrame.elapsedTime
-                            audio =
-                                {   original =
-                                        {   samples = originalBuffer.ToArray()
-                                            format = audio.original.format
-                                        }
-                                    resampled =
-                                        {   samples = resampledBuffer.ToArray()
-                                            format = audio.resampled.format
-                                        }
-                                }
+                            currentAudio = currentAudio
+                            fullAudio = fullAudio
                         }
+                    vadFrames <- []
+                    samples.original.Clear()
+                    samples.resampled.Clear()
+            else if not voiceDetected then
+                samples.original.Clear()
+                samples.resampled.Clear()
             do! consumer
         }
     Async.Start consumer

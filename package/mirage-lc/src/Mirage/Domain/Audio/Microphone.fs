@@ -172,8 +172,19 @@ let MicrophoneProcessor param =
                                             elapsedMillis = payload.vadFrame.elapsedTime
                                         }
                                 Predictor.LocalPlayer.Register spokeAtom
+                                let heardAtom =
+                                    HeardAtom
+                                        {   text = payload.transcription.text
+                                            speakerClass = Predictor.LocalPlayer.SpeakerId
+                                            speakerId = Predictor.LocalPlayer.SpeakerId
+                                            sentenceId = sentenceId
+                                            elapsedMillis = payload.vadFrame.elapsedTime
+                                            transcriptionProb = float payload.transcription.noSpeechProb
+                                            nospeechProb = float payload.transcription.noSpeechProb
+                                        }
                                 flip iter enemies <| fun enemy ->
                                     enemy.Register spokeAtom
+                                    enemy.Register heardAtom
                                 Predictor.LocalPlayer.Register <|
                                     HeardAtom
                                         {   text = payload.transcription.text
@@ -210,7 +221,7 @@ let MicrophoneProcessor param =
                             do! remoteAction << RemoteFound <|
                                 {   playerId = playerId
                                     sentenceId = sentenceId
-                                    samples = payload.audio.resampled.samples
+                                    samples = payload.currentAudio.resampled.samples
                                 }
             }
     let detector = VoiceDetector (result << detectSpeech param.silero) <| fun action ->
