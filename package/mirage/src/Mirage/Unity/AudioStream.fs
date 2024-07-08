@@ -106,8 +106,6 @@ type AudioStream() =
             }
         }
 
-    member this.Awake() = setNullable AudioSource <| this.gameObject.AddComponent<AudioSource>()
-
     override _.OnDestroy() =
         try canceller.Cancel()
         with | _ -> ()

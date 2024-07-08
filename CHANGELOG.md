@@ -1,5 +1,11 @@
 ## Changelog
 
+### 1.8.0
+
+- Added support for the following v56 enemies:
+    - Clay Surgeon
+    - Bush Wolf
+
 ### 1.7.2
 
 - Added a config option to set the maximum number of naturally spawned masked enemies. By default, this is set to 2.

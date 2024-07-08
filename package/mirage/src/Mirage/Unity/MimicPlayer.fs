@@ -85,6 +85,8 @@ type MimicPlayer() =
             | "ButlerEnemyAI" -> config.enableButler
             | "FlowerSnakeEnemy" -> config.enableFlowerSnake
             | "RadMechAI" -> config.enableOldBird
+            | "ClaySurgeonAI" -> config.enableClaySurgeon
+            | "BushWolfEnemy" -> config.enableBushWolf
             | _ -> config.enableModdedEnemies
 
     member this.Awake() =

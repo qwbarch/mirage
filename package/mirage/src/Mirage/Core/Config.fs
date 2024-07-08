@@ -252,6 +252,20 @@ type internal LocalConfig(config: ConfigFile) =
             false,
             "Whether or not the old bird should mimic voices."
         )
+    member val EnableClaySurgeon =
+        config.Bind<bool>(
+            imitateSection,
+            "EnableClaySurgeon",
+            false,
+            "Whether or not the clay surgeon should mimic voices."
+        )
+    member val EnableBushWolf =
+        config.Bind<bool>(
+            imitateSection,
+            "EnableBushWolf",
+            false,
+            "Whether or not the bush wolf should mimic voices."
+        )
     member val EnableModdedEnemies =
         config.Bind<bool>(
             imitateSection,
@@ -363,6 +377,8 @@ type internal SyncedConfig =
         enableButler: bool
         enableFlowerSnake: bool
         enableOldBird: bool
+        enableClaySurgeon: bool
+        enableBushWolf: bool
         enableModdedEnemies: bool
         enablePenalty: bool
         enableOverrideSpawnChance: bool
@@ -410,6 +426,8 @@ let private toSyncedConfig (config: LocalConfig) =
         enableButler = config.EnableButler.Value
         enableFlowerSnake = config.EnableFlowerSnake.Value
         enableOldBird = config.EnableOldBird.Value
+        enableClaySurgeon = config.EnableClaySurgeon.Value
+        enableBushWolf = config.EnableBushWolf.Value
         enableModdedEnemies = config.EnableModdedEnemies.Value
         enablePenalty = config.EnablePenalty.Value
         enableOverrideSpawnChance = config.EnableOverrideSpawnChance.Value
