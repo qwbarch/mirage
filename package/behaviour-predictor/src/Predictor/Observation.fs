@@ -106,7 +106,7 @@ let statisticsToPartialObservation (entityId: EntityId) (statistics: GameInputSt
 
         // TODO properly do batching so that it is impossible for these two to be in separate BERT runs
         let! embedding = Async.Parallel [encodeText spokeString; encodeText heardString]
-        logInfo <| sprintf $"Spoke: {spokeString}, {spokeDate}"
+        logInfo <| sprintf $"Spoke: {spokeString}, {spokeDate} as id: {entityId}"
         logInfo <| sprintf $"Heard: {heardString}, {heardDate}"
 
         let spokeEmbedding = embedding[0]

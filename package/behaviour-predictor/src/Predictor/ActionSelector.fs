@@ -11,7 +11,7 @@ open Mirage.Core.Async.LVar
 
 // When comparing to a past observation with no speech context,
 // Add a score if in the current observation there is also no speech
-let NOSPEECH_NOSPEECH = 2.0
+let NOSPEECH_NOSPEECH = 0.0
 // Add a score if the current observation has speech and the prior observation had no speech
 let SPEECH_NOSPEECH = 0.0
 
@@ -21,7 +21,7 @@ let SPEECH_NOSPEECH = 0.0
 let SIM_OFFSET = -0.2
 let SIM_SCALE = 10.0
 
-let TIME_AREA = 5.0
+let TIME_AREA = 2.0
 let TIME_SIGNAL = 9.0
 let SCORE_SPEAK_FACTOR = 1.0
 
@@ -81,16 +81,18 @@ let computeScores
         match action with
         | NoAction -> 
             if totalCost > maxNoAction then
+                logInfo <| sprintf "NoAction %f %f %f %f %f %O %O" totalCost spokeSim heardSim speakTimeCost hearTimeCost policyObs action
                 maxNoAction <- totalCost
                 timeNoActionCount <- 1
             if abs (totalCost - maxNoAction) < 1e-5 then
                 timeNoActionCount <- timeNoActionCount + 1
             ()
         | QueueAction _ -> 
-            if heardSim > 3.0 then
-                logInfo <| sprintf "action %f %f %f %f %f %O %O" totalCost spokeSim heardSim speakTimeCost hearTimeCost policyObs action
+            logInfo <| sprintf "action %f %f %f %f %f %O %O" totalCost spokeSim heardSim speakTimeCost hearTimeCost policyObs action
+            // logInfo <| sprintf $"Diff {policyObs.lastHeard} {observation.lastHeard}"
+            // if heardSim > 3.0 then
+            //     logInfo <| sprintf "action %f %f %f %f %f %O %O" totalCost spokeSim heardSim speakTimeCost hearTimeCost policyObs action
                 // logInfo <| 
-                //     // printf $"Diff {policyObs.lastHeard} {observation.lastHeard}"
                 //     let _ = speakOrHearDiffToCost policyObs.lastHeard observation.lastHeard rngSource true
                     // ""
         // | QueueAction _ -> logInfo <| sprintf "action %f %f %d %O %O" totalCost hearTimeCost policyObs.lastHeard policyObs action
