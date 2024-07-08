@@ -134,14 +134,13 @@ let MicrophoneProcessor param =
                                 logInfo "Transcription start finished"
                             | TranscribeRecordingEnd payload ->
                                 logInfo $"Transcription end. text: {payload.transcription.text}"
-                                let! enemies = accessLVar Predictor.Enemies List.ofSeq
                                 let toVADTiming vadFrame =
                                     let atom =
                                         {   speakerId = Predictor.LocalPlayer.SpeakerId
                                             prob = float vadFrame.probability
                                         }
                                     (vadFrame.elapsedTime, atom)
-                                let spokeRecordingAtom =
+                                Predictor.LocalPlayer.Register <|
                                     SpokeRecordingAtom
                                         {   spokeAtom =
                                                 {   text = payload.transcription.text
@@ -157,9 +156,6 @@ let MicrophoneProcessor param =
                                                     duration = payload.audioDurationMs
                                                 }
                                         }
-                                Predictor.LocalPlayer.Register spokeRecordingAtom
-                                flip iter enemies <| fun enemy ->
-                                    enemy.Register spokeRecordingAtom
                             | TranscribeRecordingFound payload ->
                                 logInfo $"Transcription found. text: {payload.transcription.text}"
                                 let! enemies = accessLVar Predictor.Enemies List.ofSeq
@@ -179,11 +175,10 @@ let MicrophoneProcessor param =
                                             speakerId = Predictor.LocalPlayer.SpeakerId
                                             sentenceId = sentenceId
                                             elapsedMillis = payload.vadFrame.elapsedTime
-                                            transcriptionProb = float payload.transcription.noSpeechProb
+                                            transcriptionProb = float payload.transcription.avgLogProb
                                             nospeechProb = float payload.transcription.noSpeechProb
                                         }
                                 flip iter enemies <| fun enemy ->
-                                    enemy.Register spokeAtom
                                     enemy.Register heardAtom
                                 Predictor.LocalPlayer.Register <|
                                     HeardAtom
