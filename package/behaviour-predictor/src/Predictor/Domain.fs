@@ -187,6 +187,7 @@ type LearnerAccess =
 
 type Model =
     {   policy: Policy
+        availableRecordings: HashSet<Guid>
         // Store some helper data to do some operations faster
         mutable lastSpokeEncoding: Option<string * TextEmbedding> option
         mutable lastHeardEncoding: Option<string * TextEmbedding> option

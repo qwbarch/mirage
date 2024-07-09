@@ -23,9 +23,10 @@ let mimicLifetime (id: Guid) (sendMimicText: Guid -> unit) =
         // Setup thread
         use killSignal = createEmptyMVar<int>()
 
-        let! initialPolicy = copyModelPolicy
+        let! (initialPolicy, initialExistingRecordings) = copyModelData
         use internalPolicy = newLVar(initialPolicy)
-        use policyUpdater = createPolicyUpdater internalPolicy
+        use internalRecordings = newLVar(initialExistingRecordings)
+        use policyUpdater = createPolicyUpdater internalPolicy internalRecordings
 
         use currentStatistics = newLVar(defaultGameInputStatistics());
         use notifyUpdateStatistics = createEmptyMVar<int>()
@@ -40,7 +41,7 @@ let mimicLifetime (id: Guid) (sendMimicText: Guid -> unit) =
         let sendToActionEmitter (action: FutureAction) = actionEmitter.Post action
         let rngSource = MathNet.Numerics.Random.Mcg31m1()
         use futureActionGenerator : FutureActionGenerator = 
-            startAsyncAsDisposable <| createFutureActionGeneratorAsync internalPolicy observationChannel sendToActionEmitter rngSource
+            startAsyncAsDisposable <| createFutureActionGeneratorAsync internalPolicy internalRecordings observationChannel sendToActionEmitter rngSource
 
 
         let mimicData: MimicData = {

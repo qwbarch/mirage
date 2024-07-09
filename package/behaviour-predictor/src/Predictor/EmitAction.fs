@@ -16,6 +16,8 @@ let createActionEmitter
                     let action = queueAction.action
                     do! Async.Sleep delay
                     sendMimicText action.fileId
+                    Utilities.logInfo <| sprintf $"Emitting action with whisper: {queueAction.action.whisperTimings}"
+                    Utilities.logInfo <| sprintf $"Emitting action with vad: {queueAction.action.vadTimings}"
                     do! Async.Sleep (action.duration + 10)
 
                     // Consume actions that accumulated

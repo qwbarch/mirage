@@ -17,29 +17,43 @@ type ModelPolicyComparator() =
 
 let emptyModel () : Model = {
     policy = SortedDictionary(ModelPolicyComparator())
+    availableRecordings = HashSet()
     lastSpokeEncoding = None
     lastHeardEncoding = None
 }
 
 let modelLVar = newLVar(emptyModel())
 
-let copyModelPolicy : Async<Policy> =
+let copyModelData : Async<Policy * HashSet<Guid>> =
     async {
-        let! contentsCopy = accessLVar modelLVar <| fun model ->
-            let contents = List<KeyValuePair<DateTime, CompressedObservation * FutureAction>>()
+        let! policyContentsCopy, existingRecordingsCopy = accessLVar modelLVar <| fun model ->
+            let policyContents = List<KeyValuePair<DateTime, CompressedObservation * FutureAction>>()
             for kv in model.policy do
-                contents.Add(kv)
-            contents
+                policyContents.Add(kv)
+            
+            let existingRecordingsContents: List<Guid> = List()
+            for existingRecording in model.availableRecordings do
+                existingRecordingsContents.Add(existingRecording)
+            policyContents, existingRecordingsContents
         
         let policy = SortedDictionary<DateTime, CompressedObservation * FutureAction>(ModelPolicyComparator())
-        for (kv: KeyValuePair<DateTime, CompressedObservation * FutureAction>) in contentsCopy do
+        for (kv: KeyValuePair<DateTime, CompressedObservation * FutureAction>) in policyContentsCopy do
             policy.Add(kv.Key, kv.Value)
-        return policy
+
+        let existingRecordings: HashSet<Guid> = HashSet()
+        for existingRecording in existingRecordingsCopy do
+            ignore <| existingRecordings.Add(existingRecording)
+        logInfo <| sprintf $"Spawning mimic. Policy size: {policy.Count}, Recordings: {existingRecordings.Count}"
+        return policy, existingRecordings
     }
 
-let loadModel (fileState: PolicyFileState) = async {
+let loadModel (fileState: PolicyFileState) (existingRecordingsList: Guid list) = async {
     logInfo "Called loadModel"
     let! _ = accessLVar modelLVar <| fun model ->
+        for existingRecording in existingRecordingsList do
+            ignore <| model.availableRecordings.Add(existingRecording)
+
+        logInfo <| sprintf $"Got {model.availableRecordings.Count} recordings."
         for kv in fileState.fileToData do
             let data = kv.Value
             let mutable failCount = 0

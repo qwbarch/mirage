@@ -76,6 +76,7 @@ let addSpokeResponse
                         delay = timeDifferenceMillis
                     }
                     model.policy[relObs.time] <- (relObs, QueueAction queueAction)
+                    ignore <| model.availableRecordings.Add(queueAction.action.fileId)
                     Async.RunSynchronously <| sendUpdateToMimics relObs.time relObs (QueueAction queueAction)
                     fileHandler.Post <| Update (relObs.time, QueueAction queueAction)
                     logInfo $"Added a response."

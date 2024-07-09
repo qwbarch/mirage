@@ -173,6 +173,7 @@ let observationToFutureAction (internalPolicy: LVar<Policy>) (observation : Obse
 
 let createFutureActionGeneratorAsync
     (internalPolicy: LVar<Policy>)
+    (internalRecordings: LVar<HashSet<Guid>>)
     (observationChannel: LVar<DateTime -> Observation>)
     (sendToActionEmitter: FutureAction -> unit)
     (rngSource: RandomSource) =
