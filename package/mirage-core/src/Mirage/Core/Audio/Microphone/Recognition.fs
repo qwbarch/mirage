@@ -65,7 +65,8 @@ type TranscribeRequest =
 type TranscribeRecordingFound<'Transcription> =
     {   mp3Writer: Mp3Writer
         vadFrame: VADFrame
-        audio: ResampledAudio
+        fullAudio: ResampledAudio
+        currentAudio: ResampledAudio
         transcription: 'Transcription
     }
 
@@ -118,21 +119,21 @@ let VoiceTranscriber<'PlayerId, 'Transcription>
     (onTranscribe: TranscribeAction<'PlayerId, 'Transcription> -> Async<Unit>) =
         let agent = new BlockingQueueAgent<TranscriberInput<'PlayerId>>(Int32.MaxValue)
         let lock = createLock()
-        let sampleBuffer = new List<float32>()
         let mutable language = "en"
         let mutable sentences: Map<Guid, SentenceState<'PlayerId>> = Map.empty
 
         /// Attempts to batch transcription jobs if the sentences map contains samples.
         /// If a batch job is done, this will also run the appropriate TranscribeSentenceAction for it as well.
-        let transcribeAudio =
+        let transcribeAudio (samples: Samples) =
             async {
                 // WhisperS2T processes an array of samples.
                 // In order to know which index is the host's transriptions vs non-host transcriptions,
                 // a temporary "hostId" is added to the map, along with its current audio samples.
+                printfn "transcribeAudio start"
                 let hostId = Guid.NewGuid()
                 let samplesMap =
                     flip Map.mapValues sentences _.samples
-                        |> Map.add hostId sampleBuffer
+                        |> Map.add hostId (List samples)
                         |> Map.filter (fun _ value -> value.Count > 0)
                 printfn $"# of sentences: {samplesMap.Count}"
                 let sentenceIds = Array.ofSeq <| Map.keys samplesMap
@@ -145,6 +146,9 @@ let VoiceTranscriber<'PlayerId, 'Transcription>
                     printfn $"samples[{i}].Length: {samples[i].Length}"
                 printfn "before transcriptions (mirage.core)"
                 if samples.Length > 0 then
+                    printfn $"before transcribe. samplesBatch.Length: {samples.Length}"
+                    for i in 0 .. samples.Length - 1 do
+                        printfn $"samplesBatch[{i}].Length: {samples[i].Length}"
                     let! transcriptions =
                         transcribe
                             {   samplesBatch = samples
@@ -189,12 +193,12 @@ let VoiceTranscriber<'PlayerId, 'Transcription>
                 match input with
                     | SetLanguage lang -> language <- lang
                     | TranscribeSentence action ->
-                        let tryTranscribeAudio =
+                        let tryTranscribeAudio samples =
                             Async.StartImmediate <|
                                 async {
                                     if tryAcquire lock then
                                         printfn "lock acquired"
-                                        try do! ignore <!> transcribeAudio
+                                        try do! ignore <!> transcribeAudio samples
                                         finally
                                             lockRelease lock
                                             printfn "lock released"
@@ -219,7 +223,7 @@ let VoiceTranscriber<'PlayerId, 'Transcription>
                                     | Some sentence ->
                                         sentence.finished <- true
                                         printfn "before transcribeAudio SentenceEnd"
-                                        tryTranscribeAudio
+                                        tryTranscribeAudio zero
                             | SentenceFound payload ->
                                 printfn $"SentenceFound (mirage.core): {payload.sentenceId}"
                                 match Map.tryFind payload.sentenceId sentences with
@@ -228,16 +232,15 @@ let VoiceTranscriber<'PlayerId, 'Transcription>
                                         if payload.samples.Length > 0 then
                                             sentence.samples.AddRange payload.samples
                                             printfn "before transcribeAudio SentenceFound"
-                                            tryTranscribeAudio
+                                            tryTranscribeAudio zero
                     | TranscribeRecording action ->
                         match action with
                             | RecordStart _ ->
-                                sampleBuffer.Clear()
                                 Async.StartImmediate << onTranscribe <| TranscribeRecordingAction TranscribeRecordingStart
                             | RecordEnd payload ->
                                 Async.StartImmediate << withLock' lock <| async {
                                     printfn "before transcribeAudio RecordEnd"
-                                    let! transcription = transcribeAudio
+                                    let! transcription = transcribeAudio payload.fullAudio.resampled.samples
                                     printfn "after transcribeAudio RecordEnd"
                                     Async.StartImmediate << onTranscribe << TranscribeRecordingAction << TranscribeRecordingEnd <|
                                         {   mp3Writer = payload.mp3Writer
@@ -247,19 +250,19 @@ let VoiceTranscriber<'PlayerId, 'Transcription>
                                         }
                                     }
                             | RecordFound payload ->
-                                sampleBuffer.AddRange <| payload.audio.resampled.samples
-                                let samples = sampleBuffer.ToArray()
+                                let samples = payload.fullAudio.resampled.samples
                                 if samples.Length > 0 then
                                     if tryAcquire lock then
                                         try
                                             Async.StartImmediate <| async {
                                                 printfn "before transcribeAudio RecordFound"
-                                                let! transcription = transcribeAudio
+                                                let! transcription = transcribeAudio payload.fullAudio.resampled.samples
                                                 printfn "after transcribeAudio RecordFound"
                                                 do! onTranscribe << TranscribeRecordingAction << TranscribeRecordingFound <|
                                                     {   mp3Writer = payload.mp3Writer
                                                         vadFrame = payload.vadFrame
-                                                        audio = payload.audio
+                                                        fullAudio = payload.fullAudio
+                                                        currentAudio = payload.currentAudio
                                                         transcription = transcription.Value
                                                     }
                                             }

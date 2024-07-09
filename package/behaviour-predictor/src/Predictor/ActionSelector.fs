@@ -9,7 +9,10 @@ open Embedding
 open FSharpPlus
 open Mirage.Core.Async.LVar
 
+// When comparing to a past observation with no speech context,
+// Add a score if in the current observation there is also no speech
 let NOSPEECH_NOSPEECH = 2.0
+// Add a score if the current observation has speech and the prior observation had no speech
 let SPEECH_NOSPEECH = 0.0
 
 // Notes:
@@ -77,16 +80,19 @@ let computeScores
         let totalCost = heardSim + spokeSim + talkBias + speakOrHearTimeCost
         match action with
         | NoAction -> 
-            maxNoAction <- max maxNoAction totalCost
-            if hearTimeCost = TIME_SIGNAL then
+            if totalCost > maxNoAction then
+                maxNoAction <- totalCost
+                timeNoActionCount <- 1
+            if abs (totalCost - maxNoAction) < 1e-5 then
                 timeNoActionCount <- timeNoActionCount + 1
             ()
         | QueueAction _ -> 
-            logInfo <| sprintf "action %f %f %f %f %f %O %O" totalCost spokeSim heardSim speakTimeCost hearTimeCost policyObs action
-            logInfo <| 
-                // printf $"Diff {policyObs.lastHeard} {observation.lastHeard}"
-                let _ = speakOrHearDiffToCost policyObs.lastHeard observation.lastHeard rngSource true
-                ""
+            if heardSim > 3.0 then
+                logInfo <| sprintf "action %f %f %f %f %f %O %O" totalCost spokeSim heardSim speakTimeCost hearTimeCost policyObs action
+                // logInfo <| 
+                //     // printf $"Diff {policyObs.lastHeard} {observation.lastHeard}"
+                //     let _ = speakOrHearDiffToCost policyObs.lastHeard observation.lastHeard rngSource true
+                    // ""
         // | QueueAction _ -> logInfo <| sprintf "action %f %f %d %O %O" totalCost hearTimeCost policyObs.lastHeard policyObs action
 
         totalCost, action

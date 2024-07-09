@@ -18,7 +18,7 @@ let initBehaviourPredictor
     (logInfo: string -> unit)
     (logWarning: string -> unit)
     (logError: string -> unit)
-    (userId: Guid)
+    (userId: EntityId)
     (fileDir: string)
     (sizeLimit: int64) : Async<unit> =
         async {
@@ -77,6 +77,7 @@ let clearMemory =
 let userRegisterText
     (gameInput: GameInput)
     = Async.Start <| async {
+        logInfo "Got user register"
         let! _ = accessLVar learnerLVar <| fun learnerOption ->
             match learnerOption with
             | None -> ()

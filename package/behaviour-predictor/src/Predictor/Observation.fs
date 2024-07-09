@@ -53,6 +53,7 @@ let createStatisticsUpdater
                 do! async {
                     // Consume all unprocessed inputs
                     let! arrivalTime, item = inbox.Receive()
+                    logInfo <| sprintf $"Got {item}"
                     let! __ = accessLVar currentStatistics <| fun stats ->
                         match item with
                         | SpokeAtom spokeAtom ->
@@ -86,47 +87,47 @@ let postToStatisticsUpdater
 
 let statisticsToPartialObservation (entityId: EntityId) (statistics: GameInputStatistics) : Async<PartialObservation> =
     async {
-        let spokeString =
+        let spokeString, spokeDate =
             match statistics.lastSpoke with
-            | None -> ""
-            | Some (_, spokeAtom) -> spokeAtom.text
+            | None -> "", startDate
+            | Some (spokeDate, spokeAtom) -> spokeAtom.text, spokeDate
 
-        let heardString =
+        let heardString, heardDate =
             if statistics.lastHeard.Count = 0 then
-                ""
+                "", startDate
             else
-                let mutable latestTime = DateTime.MinValue
+                let mutable latestTime = startDate
                 let mutable latestHeard = snd <| statistics.lastHeard.Values.First()
                 for time, heardAtom in statistics.lastHeard.Values do
                     if time > latestTime then
                         latestTime <- time
                         latestHeard <- heardAtom
-                latestHeard.text
+                latestHeard.text, latestTime
 
         // TODO properly do batching so that it is impossible for these two to be in separate BERT runs
         let! embedding = Async.Parallel [encodeText spokeString; encodeText heardString]
-        logInfo <| sprintf $"Spoke: {spokeString}"
-        logInfo <| sprintf $"Heard: {heardString}"
+        logInfo <| sprintf $"Spoke: {spokeString}, {spokeDate}"
+        logInfo <| sprintf $"Heard: {heardString}, {heardDate}"
 
         let spokeEmbedding = embedding[0]
         let heardEmbedding = embedding[1]
         let partialObservation : PartialObservation =
             {   spokeEmbedding = spokeEmbedding
                 heardEmbedding = heardEmbedding
-                lastSpokeDate = statistics.voiceActivityQueue.GetValueOrDefault(entityId, startDate)
-                lastHeardDate = 
-                    logInfo <| sprintf $"Voice activity queue: {statistics.voiceActivityQueue.Count} {entityId}"
-                    for k in statistics.voiceActivityQueue.Keys do
-                        let v = statistics.voiceActivityQueue[k]
-                        let tt = timeSpanToMillis <| DateTime.UtcNow - v
-                        logInfo <| sprintf $"kv pair {k} {tt}"
+                lastSpokeDate = spokeDate
+                lastHeardDate = heardDate
+                    // logInfo <| sprintf $"Voice activity queue: {statistics.voiceActivityQueue.Count} {entityId}"
+                    // for k in statistics.voiceActivityQueue.Keys do
+                    //     let v = statistics.voiceActivityQueue[k]
+                    //     let tt = timeSpanToMillis <| DateTime.UtcNow - v
+                    //     logInfo <| sprintf $"kv pair {k} {tt}"
                         
-                    let heard = Map.remove entityId <| sortedDictToMap statistics.voiceActivityQueue
-                    if heard.Count = 0 then
-                        startDate
-                    else
-                        logInfo <| sprintf $"Selected timing {heard |> Map.toSeq |> Seq.map snd |> Seq.max}"
-                        heard |> Map.toSeq |> Seq.map snd |> Seq.max
+                    // let heard = Map.remove entityId <| sortedDictToMap statistics.voiceActivityQueue
+                    // if heard.Count = 0 then
+                    //     startDate
+                    // else
+                    //     logInfo <| sprintf $"Selected timing {heard |> Map.toSeq |> Seq.map snd |> Seq.max}"
+                    //     heard |> Map.toSeq |> Seq.map snd |> Seq.max
             }   
         return partialObservation
     }

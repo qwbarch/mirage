@@ -9,12 +9,15 @@ open FSharpPlus
 open Whisper.API
 open NAudio.Wave
 open Mirage.Domain.Logger
+open Mirage.Unity.Predictor
 open Mirage.Core.Audio.Microphone.Resampler
 open Mirage.Core.Audio.Microphone.Detection
 open Mirage.Core.Audio.Microphone.Recorder
 open Mirage.Core.Audio.Microphone.Recognition
 open Mirage.Core.Audio.PCM
 open Mirage.Core.Async.LVar
+open Predictor.Domain
+open Mirage.Core.Audio.File.Mp3Writer
 
 type RemoteStart =
     {   playerId: uint64
@@ -82,38 +85,112 @@ let MicrophoneProcessor param =
     let transcriber =
         let mutable sentenceId = Guid.NewGuid()
         VoiceTranscriber<uint64, Transcription> transcribeAudio <| fun action ->
-            match action with
-                | TranscribeRecordingAction action ->
-                    async {
-                        match action with
+            //match action with
+            //    | TranscribeRecordingAction action ->
+            //        async {
+            //            match action with
+            //                | TranscribeRecordingStart ->
+            //                    logInfo "TranscribeRecordingStart"
+            //                | TranscribeRecordingEnd payload ->
+            //                    logInfo $"TranscribeRecordingEnd. Text: {payload.transcription.text}"
+            //                | TranscribeRecordingFound payload  ->
+            //                    //logInfo $"TranscribeRecordingFound. Text: {payload.transcription.text}"
+            //                    ()
+            //        }
+            //    | TranscribeSentenceAction action ->
+            //        async {
+            //            match action with
+            //                | TranscribeSentenceFound payload ->
+            //                    logInfo "TranscribeSentenceFound (mirage.lc)"
+            //                    do! param.sentenceAction payload.playerId << RemoteSentenceFound <|
+            //                        {   sentenceId = payload.sentenceId
+            //                            text = payload.transcription.text
+            //                            avgLogProb = payload.transcription.avgLogProb
+            //                            noSpeechProb = payload.transcription.noSpeechProb
+            //                        }
+            //                | TranscribeSentenceEnd payload ->
+            //                    logInfo "TranscribeSentenceEnd (mirage.lc)"
+            //                    do! param.sentenceAction payload.playerId << RemoteSentenceEnd <|
+            //                        {   sentenceId = payload.sentenceId
+            //                            text = payload.transcription.text
+            //                            avgLogProb = payload.transcription.avgLogProb
+            //                            noSpeechProb = payload.transcription.noSpeechProb
+            //                        }
+            //        }
+
+            async {
+                match action with
+                    | TranscribeSentenceAction _ -> ()
+                    | TranscribeRecordingAction recordingAction ->
+                        match recordingAction with
                             | TranscribeRecordingStart ->
-                                logInfo "TranscribeRecordingStart"
+                                logInfo "Transcription start"
+                                Predictor.LocalPlayer.Register <|
+                                    VoiceActivityAtom
+                                        {   speakerId = Int StartOfRound.Instance.localPlayerController.playerSteamId
+                                            prob = 1.0
+                                        }
+                                sentenceId <- Guid.NewGuid()
+                                logInfo "Transcription start finished"
                             | TranscribeRecordingEnd payload ->
-                                logInfo $"TranscribeRecordingEnd. Text: {payload.transcription.text}"
-                            | TranscribeRecordingFound payload  ->
-                                //logInfo $"TranscribeRecordingFound. Text: {payload.transcription.text}"
-                                ()
-                    }
-                | TranscribeSentenceAction action ->
-                    async {
-                        match action with
-                            | TranscribeSentenceFound payload ->
-                                logInfo "TranscribeSentenceFound (mirage.lc)"
-                                do! param.sentenceAction payload.playerId << RemoteSentenceFound <|
-                                    {   sentenceId = payload.sentenceId
-                                        text = payload.transcription.text
-                                        avgLogProb = payload.transcription.avgLogProb
-                                        noSpeechProb = payload.transcription.noSpeechProb
-                                    }
-                            | TranscribeSentenceEnd payload ->
-                                logInfo "TranscribeSentenceEnd (mirage.lc)"
-                                do! param.sentenceAction payload.playerId << RemoteSentenceEnd <|
-                                    {   sentenceId = payload.sentenceId
-                                        text = payload.transcription.text
-                                        avgLogProb = payload.transcription.avgLogProb
-                                        noSpeechProb = payload.transcription.noSpeechProb
-                                    }
-                    }
+                                logInfo $"Transcription end. text: {payload.transcription.text}"
+                                let toVADTiming vadFrame =
+                                    let atom =
+                                        {   speakerId = Predictor.LocalPlayer.SpeakerId
+                                            prob = float vadFrame.probability
+                                        }
+                                    (vadFrame.elapsedTime, atom)
+                                Predictor.LocalPlayer.Register <|
+                                    SpokeRecordingAtom
+                                        {   spokeAtom =
+                                                {   text = payload.transcription.text
+                                                    sentenceId = sentenceId
+                                                    elapsedMillis = payload.audioDurationMs
+                                                    transcriptionProb = float payload.transcription.avgLogProb
+                                                    nospeechProb = float payload.transcription.noSpeechProb
+                                                }
+                                            whisperTimings = []
+                                            vadTimings = toVADTiming <!> payload.vadTimings
+                                            audioInfo =
+                                                {   fileId = getFileId payload.mp3Writer
+                                                    duration = payload.audioDurationMs
+                                                }
+                                        }
+                            | TranscribeRecordingFound payload ->
+                                logInfo $"Transcription found. text: {payload.transcription.text}"
+                                let! enemies = accessLVar Predictor.Enemies List.ofSeq
+                                let spokeAtom =
+                                    SpokeAtom
+                                        {   text = payload.transcription.text
+                                            sentenceId = sentenceId
+                                            transcriptionProb = float payload.transcription.avgLogProb
+                                            nospeechProb = float payload.transcription.noSpeechProb
+                                            elapsedMillis = payload.vadFrame.elapsedTime
+                                        }
+                                Predictor.LocalPlayer.Register spokeAtom
+                                let heardAtom =
+                                    HeardAtom
+                                        {   text = payload.transcription.text
+                                            speakerClass = Predictor.LocalPlayer.SpeakerId
+                                            speakerId = Predictor.LocalPlayer.SpeakerId
+                                            sentenceId = sentenceId
+                                            elapsedMillis = payload.vadFrame.elapsedTime
+                                            transcriptionProb = float payload.transcription.avgLogProb
+                                            nospeechProb = float payload.transcription.noSpeechProb
+                                        }
+                                flip iter enemies <| fun enemy ->
+                                    enemy.Register heardAtom
+                                Predictor.LocalPlayer.Register <|
+                                    HeardAtom
+                                        {   text = payload.transcription.text
+                                            speakerClass = Predictor.LocalPlayer.SpeakerId
+                                            speakerId = Predictor.LocalPlayer.SpeakerId
+                                            sentenceId = sentenceId
+                                            elapsedMillis = payload.vadFrame.elapsedTime
+                                            transcriptionProb = float payload.transcription.avgLogProb
+                                            nospeechProb = float payload.transcription.noSpeechProb
+                                        }
+            }
 
     let recorder =
         let mutable sentenceId = Guid.NewGuid()
@@ -121,8 +198,7 @@ let MicrophoneProcessor param =
             async {
                 let! transcribeViaHost = readLVar param.transcribeViaHost
                 if StartOfRound.Instance.IsHost || not transcribeViaHost then
-                    //do! writeTranscriber transcriber <| TranscribeRecording action
-                    ()
+                    do! writeTranscriber transcriber <| TranscribeRecording action
                 else if transcribeViaHost then
                     logInfo "transcribing via host"
                     let remoteAction = param.remoteAction StartOfRound.Instance.localPlayerController.playerClientId
@@ -140,7 +216,7 @@ let MicrophoneProcessor param =
                             do! remoteAction << RemoteFound <|
                                 {   playerId = playerId
                                     sentenceId = sentenceId
-                                    samples = payload.audio.resampled.samples
+                                    samples = payload.currentAudio.resampled.samples
                                 }
             }
     let detector = VoiceDetector (result << detectSpeech param.silero) <| fun action ->
@@ -158,67 +234,3 @@ let processMicrophone processor = writeResampler processor.resampler
 
 /// Send an action for the microphone processor's transcriber to be processed.
 let processTranscriber processor = writeTranscriber processor.transcriber
-
-//async {
-//    match action with
-//        | TranscribeRecordingStart ->
-//            logInfo "Transcription start"
-//            //Predictor.LocalPlayer.Register <|
-//            //    VoiceActivityAtom
-//            //        {   speakerId = Int StartOfRound.Instance.localPlayerController.playerSteamId
-//            //            prob = 1.0
-//            //        }
-//            //sentenceId <- Guid.NewGuid()
-//        | TranscribeRecordingEnd payload ->
-//            //logInfo $"Transcription end. text: {payload.transcriptions[0].text}"
-//            //let! enemies = accessLVar Predictor.Enemies List.ofSeq
-//            //let toVADTiming vadFrame =
-//            //    let atom =
-//            //        {   speakerId = Predictor.LocalPlayer.SpeakerId
-//            //            prob = float vadFrame.probability
-//            //        }
-//            //    (vadFrame.elapsedTime, atom)
-//            //let spokeRecordingAtom =
-//            //    SpokeRecordingAtom
-//            //        {   spokeAtom =
-//            //                {   text = payload.transcriptions[0].text
-//            //                    sentenceId = sentenceId
-//            //                    elapsedMillis = payload.audioDurationMs
-//            //                    transcriptionProb = float payload.transcriptions[0].avgLogProb
-//            //                    nospeechProb = float payload.transcriptions[0].noSpeechProb
-//            //                }
-//            //            whisperTimings = []
-//            //            vadTimings = toVADTiming <!> payload.vadTimings
-//            //            audioInfo =
-//            //                {   fileId = getFileId payload.mp3Writer
-//            //                    duration = payload.audioDurationMs
-//            //                }
-//            //        }
-//            //Predictor.LocalPlayer.Register spokeRecordingAtom
-//            //flip iter enemies <| fun enemy ->
-//            //    enemy.Register spokeRecordingAtom
-//        | TranscribeFound payload ->
-//            logInfo $"Transcription found. text: {payload.transcriptions[0].text}"
-//            //let! enemies = accessLVar Predictor.Enemies List.ofSeq
-//            //let spokeAtom =
-//            //    SpokeAtom
-//            //        {   text = payload.transcriptions[0].text
-//            //            sentenceId = sentenceId
-//            //            transcriptionProb = float payload.transcriptions[0].avgLogProb
-//            //            nospeechProb = float payload.transcriptions[0].noSpeechProb
-//            //            elapsedMillis = payload.vadFrame.elapsedTime
-//            //        }
-//            //Predictor.LocalPlayer.Register spokeAtom
-//            //flip iter enemies <| fun enemy ->
-//            //    enemy.Register spokeAtom
-//            //Predictor.LocalPlayer.Register <|
-//            //    HeardAtom
-//            //        {   text = payload.transcriptions[0].text
-//            //            speakerClass = Predictor.LocalPlayer.SpeakerId
-//            //            speakerId = Predictor.LocalPlayer.SpeakerId
-//            //            sentenceId = sentenceId
-//            //            elapsedMillis = payload.vadFrame.elapsedTime
-//            //            transcriptionProb = float payload.transcriptions[0].avgLogProb
-//            //            nospeechProb = float payload.transcriptions[0].noSpeechProb
-//            //        }
-//}

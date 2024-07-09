@@ -11,6 +11,7 @@ open Predictor.Domain
 open Predictor.Lib
 open Mirage.Core.Async.LVar
 open Mirage.Unity.MimicPlayer
+open Mirage.Domain.Logger
 
 /// EntityId is a sum type. To serialize it for rpc methods, entity ids are converted to a string.
 /// This enum helps clients know how to deserialize it once they receive the value.
@@ -39,51 +40,68 @@ type Predictor() as self =
     let mutable mimic: MimicPlayer = null
     let mutable player: PlayerControllerB = null
 
+    /// Whether or not a payload received via a client rpc should be executed.
+    let shouldRegister () =
+        not (isNull player) || not (isNull mimic) && mimic.MimickingPlayer = StartOfRound.Instance.localPlayerController
+
     let agent = new BlockingQueueAgent<GameInput>(Int32.MaxValue)
-    let registerPredictor =
+    let registerPredictor gameInput =
         if isNull mimic
-            then userRegisterText
-            else mimicRegisterText <| mimic.MimicId
+            then
+                logInfo "mimic is null: predictor will run userRegisterText"
+                userRegisterText gameInput
+            else
+                logInfo "mimic is not null: predictor will run mimicRegisterText"
+                mimicRegisterText mimic.MimicId gameInput
 
     /// Predictor instance for the local player.
-    static member val LocalPlayer = null with set, get
+    static member val LocalPlayer: Predictor = null with set, get
 
     /// Enemies with a predictor component.
     static member val Enemies = newLVar <| List<Predictor>()
 
+    /// EntityId of the speaker. If this predictor belongs to a non-local player, this will throw an error.
     member _.SpeakerId
         with get() =
-            if isNull player
-                then Guid <| mimic.MimicId
-                else Int player.playerSteamId
+            if isNull player then Guid <| mimic.MimicId
+            else if player = StartOfRound.Instance.localPlayerController then
+                Int player.playerSteamId
+            else
+                invalidOp "Cannot retrieve the SpeakerId of the non-local player."
 
     member this.Awake() =
         mimic <- this.GetComponent<MimicPlayer>()
         player <- this.GetComponent<PlayerControllerB>()
 
     member this.Start() =
-        if player = StartOfRound.Instance.localPlayerController then
-            Predictor.LocalPlayer <- this
-
         // Since rpc methods can only be called on the unity thread,
         // game inputs are pulled into the consumer which executes actions on the unity thread.
         let rec consumer =
             async {
                 let! gameInput = agent.AsyncGet()
+                logInfo "Predictor component received game input"
                 match gameInput with
-                    | SpokeAtom payload -> registerPredictor <| SpokeAtom payload
-                    | SpokeRecordingAtom payload -> registerPredictor <| SpokeRecordingAtom payload
+                    | SpokeAtom payload ->
+                        logInfo "Predictor received SpokeAtom payload"
+                        registerPredictor <| SpokeAtom payload
+                    | SpokeRecordingAtom payload ->
+                        logInfo "Predictor received SpokeRecordingAtom payload"
+                        registerPredictor <| SpokeRecordingAtom payload
                     | VoiceActivityAtom payload ->
+                        logInfo "before voice activity atom"
                         let rpc =
                             if self.IsHost
                                 then self.SyncVoiceActivityAtomClientRpc
                                 else self.SyncVoiceActivityAtomServerRpc
+                        logInfo "middle voice activity atom"
                         rpc(
                             toIdString payload.speakerId,
                             toIdType payload.speakerId,
                             payload.prob
                         )
+                        logInfo "end voice activity atom"
                     | HeardAtom payload ->
+                        logInfo "Predictor received HeardAtom payload"
                         let rpc =
                             if self.IsHost
                                 then self.SyncHeardAtomClientRpc
@@ -116,19 +134,22 @@ type Predictor() as self =
                 ignore <| enemies.Remove this
 
     /// Register an action with the predictor. This function is thread-safe.
-    member _.Register(gameInput) = agent.Add gameInput
+    member _.Register(gameInput) =
+        logInfo "Predictor.Register called"
+        agent.Add gameInput
 
     [<ClientRpc>]
     member private _.SyncHeardAtomClientRpc(text, speakerClass, speakerClassType, speakerId, speakerIdType, sentenceId, elapsedTime, avgLogProb, noSpeechProb) =
-        registerPredictor << HeardAtom <|
-            {   text = text
-                speakerClass = toEntityId speakerClass speakerClassType
-                speakerId = toEntityId speakerId speakerIdType
-                sentenceId = new Guid(sentenceId)
-                elapsedMillis = elapsedTime
-                transcriptionProb = avgLogProb
-                nospeechProb = noSpeechProb
-            }
+        if shouldRegister() then
+            registerPredictor << HeardAtom <|
+                {   text = text
+                    speakerClass = toEntityId speakerClass speakerClassType
+                    speakerId = toEntityId speakerId speakerIdType
+                    sentenceId = new Guid(sentenceId)
+                    elapsedMillis = elapsedTime
+                    transcriptionProb = avgLogProb
+                    nospeechProb = noSpeechProb
+                }
 
     [<ServerRpc>]
     member private this.SyncHeardAtomServerRpc(text, speakerClass, speakerClassType, speakerId, speakerIdType, sentenceId, elapsedTime, avgLogProb, noSpeechProb) =
@@ -137,10 +158,11 @@ type Predictor() as self =
 
     [<ClientRpc>]
     member private _.SyncVoiceActivityAtomClientRpc(speakerId, speakerIdType, probability) =
-        registerPredictor << VoiceActivityAtom <|
-            {   speakerId = toEntityId speakerId speakerIdType
-                prob = probability
-            }
+        if shouldRegister() then
+            registerPredictor << VoiceActivityAtom <|
+                {   speakerId = toEntityId speakerId speakerIdType
+                    prob = probability
+                }
 
     [<ServerRpc>]
     member private this.SyncVoiceActivityAtomServerRpc(speakerId, speakerIdType, probability) =

@@ -73,7 +73,7 @@ let Resampler (onResampled: ResampledAudio -> Async<Unit>) =
                     let samples = resampledSamples.GetRange(0, SamplesPerWindow)
                     resampledSamples.RemoveRange(0, SamplesPerWindow)
                     samples.ToArray()
-                let resampledAudio =
+                do! onResampled <|
                     {   original =
                             {   samples = original
                                 format = frame.format
@@ -83,7 +83,6 @@ let Resampler (onResampled: ResampledAudio -> Async<Unit>) =
                                 format = WriterFormat
                             }
                     }
-                do! onResampled resampledAudio
             do! consumer
         }
     Async.Start consumer

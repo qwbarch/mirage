@@ -5,7 +5,6 @@ open System.Collections.Generic
 open FSharpPlus
 open GameNetcodeStuff
 open Unity.Netcode
-open Unity.Collections
 open Mirage.Domain.Logger
 open Mirage.Unity.AudioStream
 
@@ -20,13 +19,14 @@ let private playerPool = new List<int>()
 type MimicPlayer() =
     inherit NetworkBehaviour()
 
-    let mimicId = new NetworkVariable<FixedString64Bytes>()
+    let onSetMimicId = new Event<Guid>()
 
     let random = new Random()
     let mutable enemyAI: EnemyAI = null
+    let mutable mimicId: Guid = Guid.Empty
     let mutable mimickingPlayer: PlayerControllerB = null
 
-    let logMimic message = logInfo $"{enemyAI.GetType().Name}({mimicId.Value.Value}) - {message}"
+    let logMimic message = logInfo $"{enemyAI.GetType().Name}({mimicId}) - {message}"
 
     let rec randomPlayer () =
         let round = StartOfRound.Instance
@@ -53,26 +53,23 @@ type MimicPlayer() =
 
     member _.MimickingPlayer with get() = mimickingPlayer
 
+    /// This event is called when mimic id is set.
+    [<CLIEvent>]
+    member _.OnSetMimicId = onSetMimicId.Publish
+
     member this.Awake() = enemyAI <- this.GetComponent<EnemyAI>()
 
     member this.Start() =
-        if this.IsHost then
-            mimicId.Value <- FixedString64Bytes(Guid.NewGuid().ToString())
         // StartMimicking for masked enemies gets run via a patch instead,
         // to ensure the mimickingPlayer is set before other mods try to interact with it.
         if isNull <| this.GetComponent<MaskedPlayerEnemy>() then
             this.StartMimicking()
 
-    override this.OnNetworkSpawn() =
-        let onMimicIdChanged _ mimicId =
-            // TODO: mimicInit
-            ()
-        mimicId.OnValueChanged <- onMimicIdChanged
-
-    member _.MimicId with get() = new Guid(mimicId.Value.Value)
+    member _.MimicId with get() = mimicId
 
     member this.StartMimicking() =
         if this.IsHost then
+            mimicId <- Guid.NewGuid()
             let maskedEnemy = this.GetComponent<MaskedPlayerEnemy>()
             let mimickingPlayer =
                 if (enemyAI : EnemyAI) :? MaskedPlayerEnemy then
@@ -81,7 +78,7 @@ type MimicPlayer() =
                 //else if mimicEnemyEnabled enemyAI then Some <| randomPlayer()
                 else None
             flip iter mimickingPlayer <| fun player ->
-                this.MimicPlayer <| int player.playerClientId
+                this.MimicPlayer(int player.playerClientId)
 
     /// <summary>
     /// Mimic the given player locally. An attached <b>MimicVoice</b> automatically uses the mimicked player for voices.
@@ -93,11 +90,13 @@ type MimicPlayer() =
         mimicPlayer player <| this.GetComponent<MaskedPlayerEnemy>()
         this.GetComponent<AudioStream>().AllowedSenderId <- Some player.actualClientId
         if this.IsHost then
-            this.MimicPlayerClientRpc playerId
+            this.MimicPlayerClientRpc(playerId, mimicId.ToString())
+        onSetMimicId.Trigger mimicId
 
     [<ClientRpc>]
-    member this.MimicPlayerClientRpc(playerId) =
+    member this.MimicPlayerClientRpc(playerId, mimicId') =
         if not this.IsHost then
+            mimicId <- new Guid(mimicId')
             this.MimicPlayer(playerId)
 
     member this.ResetMimicPlayer() =

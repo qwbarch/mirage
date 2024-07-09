@@ -22,14 +22,16 @@ type RecordStart =
 type RecordFound =
     {   mp3Writer: Mp3Writer
         vadFrame: VADFrame
-        audio: ResampledAudio
+        fullAudio: ResampledAudio
+        currentAudio: ResampledAudio
     }
 
 /// Note: After the callback finishes for this action, the mp3 writer is disposed.
 type RecordEnd =
     {   mp3Writer: Mp3Writer
         vadTimings: list<VADFrame>
-        audio: ResampledAudio
+        fullAudio: ResampledAudio
+        currentAudio: ResampledAudio
         audioDurationMs: int
     }
 
@@ -64,16 +66,18 @@ let Recorder directory (onRecording: RecordAction -> Async<Unit>) =
                     do! onRecording << RecordEnd <|
                         {   mp3Writer = mp3Writer.Value
                             vadTimings = payload.vadTimings
-                            audio = payload.audio
+                            fullAudio = payload.fullAudio
+                            currentAudio = payload.currentAudio
                             audioDurationMs = payload.audioDurationMs
                         }
                     do! closeMp3Writer mp3Writer.Value
                 | DetectFound payload ->
-                    do! writeMp3File mp3Writer.Value payload.audio.original.samples
+                    do! writeMp3File mp3Writer.Value payload.currentAudio.original.samples
                     do! onRecording << RecordFound <|
                         {   mp3Writer = mp3Writer.Value
                             vadFrame = payload.vadFrame
-                            audio = payload.audio
+                            fullAudio = payload.fullAudio
+                            currentAudio = payload.currentAudio
                         }
             do! consumer
         }

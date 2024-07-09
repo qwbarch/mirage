@@ -11,15 +11,14 @@ open Mirage.Domain.Logger
 
 let initPredictor predictorDirectory =
     let initModel (steamId: EntityId) =
-        ()
-        //Async.Start <|
-        //    initBehaviourPredictor
-        //        logInfo
-        //        logWarning
-        //        logError
-        //        steamId
-        //        predictorDirectory
-        //        Int32.MaxValue // Size limit
+        Async.Start <|
+            initBehaviourPredictor
+                logInfo
+                logWarning
+                logError
+                steamId
+                predictorDirectory
+                Int32.MaxValue // Size limit
     On.Netcode.Transports.Facepunch.FacepunchTransport.add_Awake(fun _ self ->
         try
             try
@@ -30,7 +29,7 @@ let initPredictor predictorDirectory =
             if self.LogLevel <= LogLevel.Error then
                 Debug.LogError $"[FacepunchTransport] - Caught an exeption during initialization of Steam client: {error}"
             initModel <| Int 0uL
-            logWarning "Steam is not initialized. Behaviour predictor may not work as expected."
+            logWarning "Steam is not initialized. MirageAI may not work as expected."
     )
     On.Netcode.Transports.Facepunch.FacepunchTransport.add_InitSteamworks(fun orig self ->
         seq {

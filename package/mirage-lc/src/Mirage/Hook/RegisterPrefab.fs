@@ -25,9 +25,14 @@ let registerPrefab () =
     )
 
     On.GameNetcodeStuff.PlayerControllerB.add_Awake(fun orig self ->
-        orig.Invoke self
         iter (ignore << self.gameObject.AddComponent)
             [   typeof<Predictor>
                 typeof<RemoteTranscriber>
             ]
+        orig.Invoke self
+    )
+
+    On.GameNetcodeStuff.PlayerControllerB.add_ConnectClientToPlayerObject(fun orig self ->
+        orig.Invoke self
+        Predictor.LocalPlayer <- StartOfRound.Instance.localPlayerController.GetComponent<Predictor>()
     )
