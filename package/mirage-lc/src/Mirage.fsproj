@@ -19,7 +19,7 @@
     <ProjectReference Include="../../behaviour-predictor/src/Predictor.fsproj" />
     <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1" PrivateAssets="all" />
     <PackageReference Include="BepInEx.Core" Version="5.4.21" />
-    <PackageReference Include="LethalCompany.GameLibs.Steam" Version="50.0.1-ngd.0" Publicize="true" />
+    <PackageReference Include="LethalCompany.GameLibs.Steam" Version="56.0.0-ngd.0" Publicize="true" />
     <PackageReference Include="FSharpPlus" Version="1.6.1" />
     <PackageReference Include="Xilophor.StaticNetcodeLib" Version="1.1.0" />
     <Reference Include="FSharpx.Async">
