@@ -36,7 +36,9 @@ type DetectFound =
     }
 
 type DetectEnd =
-    {   vadTimings: list<VADFrame>
+    {   /// VAD timing for the final frame.
+        vadFrame: VADFrame
+        vadTimings: list<VADFrame>
         audioDurationMs: int
         /// Samples containing only the current audio frame.
         currentAudio: ResampledAudio
@@ -126,7 +128,8 @@ let VoiceDetector (detectSpeech: DetectVoice) (onVoiceDetected: DetectAction -> 
                     voiceDetected <- false
                     do! onVoiceDetected <| detectFound
                     do! onVoiceDetected << DetectEnd <|
-                        {   vadTimings = rev vadFrames
+                        {   vadFrame = vadFrame
+                            vadTimings = rev vadFrames
                             audioDurationMs = vadFrame.elapsedTime
                             currentAudio = currentAudio
                             fullAudio = fullAudio

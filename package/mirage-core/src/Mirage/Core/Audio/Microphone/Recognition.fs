@@ -16,40 +16,45 @@ open Mirage.Core.Audio.Microphone.Detection
 
 /// State of a transcription for a sentence.
 type private SentenceState<'PlayerId> =
-    {   playerId: 'PlayerId
+    {   fileId: Guid
+        playerId: 'PlayerId
         /// Current samples to be transcribed.
         samples: List<float32>
+        /// Vad timing for the latest frame.
+        mutable vadFrame: VADFrame
         /// Whether or not the transcription should be the final one for this sentence.
         mutable finished: bool
     }
 
-/// Data required for when the transcriber should start a new sentence.
-type SentenceStart<'PlayerId> =
-    {   playerId: 'PlayerId
+/// Data required for when the transcriber should start transcribing another player's audio.
+type BatchedStart<'PlayerId> =
+    {   fileId: Guid
+        playerId: 'PlayerId
         sentenceId: Guid
     }
 
-/// Samples that should be transcribed.
-type SentenceFound<'PlayerId> =
+/// Samples that should be transcribed for another player.
+type BatchedFound<'PlayerId> =
     {   playerId: 'PlayerId
         sentenceId: Guid
         samples: Samples
+        vadFrame: VADFrame
     }
 
-/// Identifier required to finish a transcription for the given sentence.
-type SentenceEnd = { sentenceId: Guid }
+/// Action to run when a transcription is finished processing for another player.
+type BatchedEnd = { sentenceId: Guid }
 
 /// Audio samples that should be transcribed as a sentence.
-type TranscribeSentence<'PlayerId>
-    = SentenceStart of SentenceStart<'PlayerId>
-    | SentenceFound of SentenceFound<'PlayerId>
-    | SentenceEnd of SentenceEnd
+type TranscribeBatched<'PlayerId>
+    = BatchedStart of BatchedStart<'PlayerId>
+    | BatchedFound of BatchedFound<'PlayerId>
+    | BatchedEnd of BatchedEnd
 
 type TranscriberInput<'PlayerId> =
-    /// Transcribe audio from a recording (in-progress).
-    | TranscribeRecording of RecordAction
-    /// Transcribe audio from a given set of samples, as a single sentence.
-    | TranscribeSentence of TranscribeSentence<'PlayerId>
+    /// Transcribe audio for the local player.
+    | TranscribeLocal of RecordAction
+    /// Transcribe audio from another player.
+    | TranscribeBatched of TranscribeBatched<'PlayerId>
     /// Language that should be used during inference for all transcriptions.
     /// While WhisperS2T does support setting per-transcription languages, this is simplified
     /// to be set for all transcriptions, since everyone in a single lobby should be using the same language anyways.
@@ -62,51 +67,53 @@ type TranscribeRequest =
     }
 
 /// This action only runs when samples are available (array length is > 0).
-type TranscribeRecordingFound<'Transcription> =
-    {   mp3Writer: Mp3Writer
+type TranscribeFound<'Transcription> =
+    {   fileId: Guid
         vadFrame: VADFrame
-        fullAudio: ResampledAudio
-        currentAudio: ResampledAudio
         transcription: 'Transcription
     }
 
 /// The transcription is finished.
-type TranscribeRecordingEnd<'Transcription> =
-    {   mp3Writer: Mp3Writer
+type TranscribeEnd<'Transcription> =
+    {   fileId: Guid
+        vadFrame: VADFrame
         vadTimings: list<VADFrame>
-        audioDurationMs: int
         transcription: 'Transcription
     }
 
 /// A sum type representing stages of transcribing a recording.
-type TranscribeRecordingAction<'Transcription>
-    = TranscribeRecordingStart
-    | TranscribeRecordingFound of TranscribeRecordingFound<'Transcription>
-    | TranscribeRecordingEnd of TranscribeRecordingEnd<'Transcription>
+type TranscribeLocalAction<'Transcription>
+    = TranscribeStart
+    | TranscribeFound of TranscribeFound<'Transcription>
+    | TranscribeEnd of TranscribeEnd<'Transcription>
 
 /// A transcription of the currently processed samples.
-type TranscribeSentenceFound<'PlayerId, 'Transcription> =
-    {   playerId: 'PlayerId
+type TranscribeBatchedFound<'PlayerId, 'Transcription> =
+    {   fileId: Guid
+        playerId: 'PlayerId
         sentenceId: Guid
+        vadFrame: VADFrame
         transcription: 'Transcription
     }
 
 /// A transcription of the full recording.
-type TranscribeSentenceEnd<'PlayerId, 'Transcription> =
-    {   playerId: 'PlayerId
+type TranscribeBatchedEnd<'PlayerId, 'Transcription> =
+    {   fileId: Guid
+        playerId: 'PlayerId
         sentenceId: Guid
+        vadFrame: VADFrame
         transcription: 'Transcription
     }
 
 /// A sum type representing stages of transcribing a sentence.
-type TranscribeSentenceAction<'PlayerId, 'Transcription>
-    = TranscribeSentenceFound of TranscribeSentenceFound<'PlayerId, 'Transcription>
-    | TranscribeSentenceEnd of TranscribeSentenceEnd<'PlayerId, 'Transcription>
+type TranscribeBatchedAction<'PlayerId, 'Transcription>
+    = TranscribeBatchedFound of TranscribeBatchedFound<'PlayerId, 'Transcription>
+    | TranscribeBatchedEnd of TranscribeBatchedEnd<'PlayerId, 'Transcription>
 
 /// This action is run whenever a transcription is available.
 type TranscribeAction<'PlayerId, 'Transcription>
-    = TranscribeRecordingAction of TranscribeRecordingAction<'Transcription>
-    | TranscribeSentenceAction of TranscribeSentenceAction<'PlayerId, 'Transcription>
+    = TranscribeLocalAction of TranscribeLocalAction<'Transcription>
+    | TranscribeBatchedAction of TranscribeBatchedAction<'PlayerId, 'Transcription>
 
 // Transcribe voice audio into text.
 type VoiceTranscriber<'PlayerId> =
@@ -168,16 +175,20 @@ let VoiceTranscriber<'PlayerId, 'Transcription>
                                 if sentence.finished then
                                     printfn "state finished. removing sentence"
                                     &sentences %= Map.remove sentenceIds[i]
-                                    do! onTranscribe << TranscribeSentenceAction << TranscribeSentenceEnd <|
-                                        {   playerId = sentence.playerId
+                                    do! onTranscribe << TranscribeBatchedAction << TranscribeBatchedEnd <|
+                                        {   fileId = sentence.fileId
+                                            playerId = sentence.playerId
                                             sentenceId = sentenceIds[i]
+                                            vadFrame = sentence.vadFrame
                                             transcription = transcriptions[i]
                                         }
                                 else
                                     printfn "state in progress."
-                                    do! onTranscribe << TranscribeSentenceAction << TranscribeSentenceFound <|
-                                        {   playerId = sentence.playerId
+                                    do! onTranscribe << TranscribeBatchedAction << TranscribeBatchedFound <|
+                                        {   fileId = sentence.fileId
+                                            playerId = sentence.playerId
                                             sentenceId = sentenceIds[i]
+                                            vadFrame = sentence.vadFrame
                                             transcription = transcriptions[i]
                                         }
                     printfn "before return"
@@ -192,7 +203,7 @@ let VoiceTranscriber<'PlayerId, 'Transcription>
                 let! input = agent.AsyncGet()
                 match input with
                     | SetLanguage lang -> language <- lang
-                    | TranscribeSentence action ->
+                    | TranscribeBatched action ->
                         let tryTranscribeAudio samples =
                             Async.StartImmediate <|
                                 async {
@@ -206,17 +217,22 @@ let VoiceTranscriber<'PlayerId, 'Transcription>
                                         printfn "lock failed to acquire"
                                 }
                         match action with
-                            | SentenceStart payload ->
+                            | BatchedStart payload ->
                                 printfn $"SentenceStart (mirage.core): {payload.sentenceId}"
                                 printfn $"Sentences (before modify): {sentences.Count}"
                                 &sentences %=
                                     Map.add payload.sentenceId
-                                        {   playerId = payload.playerId
-                                            samples = new List<float32>()
+                                        {   fileId = payload.fileId
+                                            playerId = payload.playerId
+                                            vadFrame =
+                                                {   elapsedTime = 0
+                                                    probability = 0f
+                                                }
+                                            samples = zero
                                             finished = false
                                         }
                                 printfn $"Sentences (after modify): {sentences.Count}"
-                            | SentenceEnd payload ->
+                            | BatchedEnd payload ->
                                 printfn $"SentenceEnd (mirage.core): {payload.sentenceId}"
                                 match Map.tryFind payload.sentenceId sentences with
                                     | None -> ()
@@ -224,28 +240,29 @@ let VoiceTranscriber<'PlayerId, 'Transcription>
                                         sentence.finished <- true
                                         printfn "before transcribeAudio SentenceEnd"
                                         tryTranscribeAudio zero
-                            | SentenceFound payload ->
+                            | BatchedFound payload ->
                                 printfn $"SentenceFound (mirage.core): {payload.sentenceId}"
                                 match Map.tryFind payload.sentenceId sentences with
                                     | None -> ()
                                     | Some sentence ->
                                         if payload.samples.Length > 0 then
+                                            sentence.vadFrame <- payload.vadFrame
                                             sentence.samples.AddRange payload.samples
                                             printfn "before transcribeAudio SentenceFound"
                                             tryTranscribeAudio zero
-                    | TranscribeRecording action ->
+                    | TranscribeLocal action ->
                         match action with
                             | RecordStart _ ->
-                                Async.StartImmediate << onTranscribe <| TranscribeRecordingAction TranscribeRecordingStart
+                                Async.StartImmediate << onTranscribe <| TranscribeLocalAction TranscribeStart
                             | RecordEnd payload ->
                                 Async.StartImmediate << withLock' lock <| async {
                                     printfn "before transcribeAudio RecordEnd"
                                     let! transcription = transcribeAudio payload.fullAudio.resampled.samples
                                     printfn "after transcribeAudio RecordEnd"
-                                    Async.StartImmediate << onTranscribe << TranscribeRecordingAction << TranscribeRecordingEnd <|
-                                        {   mp3Writer = payload.mp3Writer
+                                    Async.StartImmediate << onTranscribe << TranscribeLocalAction << TranscribeEnd <|
+                                        {   fileId = getFileId payload.mp3Writer
+                                            vadFrame = payload.vadFrame
                                             vadTimings = payload.vadTimings
-                                            audioDurationMs = payload.audioDurationMs
                                             transcription = transcription.Value
                                         }
                                     }
@@ -258,11 +275,9 @@ let VoiceTranscriber<'PlayerId, 'Transcription>
                                                 printfn "before transcribeAudio RecordFound"
                                                 let! transcription = transcribeAudio payload.fullAudio.resampled.samples
                                                 printfn "after transcribeAudio RecordFound"
-                                                do! onTranscribe << TranscribeRecordingAction << TranscribeRecordingFound <|
-                                                    {   mp3Writer = payload.mp3Writer
+                                                do! onTranscribe << TranscribeLocalAction << TranscribeFound <|
+                                                    {   fileId = getFileId payload.mp3Writer
                                                         vadFrame = payload.vadFrame
-                                                        fullAudio = payload.fullAudio
-                                                        currentAudio = payload.currentAudio
                                                         transcription = transcription.Value
                                                     }
                                             }

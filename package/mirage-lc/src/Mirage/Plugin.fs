@@ -1,7 +1,6 @@
 namespace Mirage
 
 open BepInEx
-open FSharpPlus
 open System.IO
 open System.Diagnostics
 open Silero.API
@@ -74,18 +73,18 @@ type Plugin() =
                 initMaskedEnemy()
                 initPredictor predictorDirectory
 
-                let remoteAction playerId action =
+                let sendRequest playerId action =
                     async {
                         logInfo "remoteAction is running"
                         let! transcribers = readLVar RemoteTranscriber.Players
-                        transcribers[playerId].RemoteAction action
+                        transcribers[playerId].SendRequest action
                     }
 
-                let sentenceAction playerId action =
+                let sendResponse playerId action =
                     async {
                         logInfo "sentenceAction is running"
                         let! transcribers = readLVar RemoteTranscriber.Players
-                        transcribers[playerId].SentenceAction action
+                        transcribers[playerId].SendResponse action
                     }
 
                 readMicrophone
@@ -95,7 +94,7 @@ type Plugin() =
                         silero = silero
                         isReady = newLVar false
                         transcribeViaHost = newLVar false
-                        remoteAction = remoteAction
-                        sentenceAction = sentenceAction
+                        sendRequest = sendRequest
+                        sendResponse = sendResponse
                     }
             }

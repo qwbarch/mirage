@@ -14,7 +14,6 @@ open Mirage.Domain.Logger
 open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicPlayer
 open FSharpx.Control
-open Mirage.Core.Async.LVar
 open Predictor.MimicPool
 
 [<AllowNullLiteral>]

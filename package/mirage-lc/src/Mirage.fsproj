@@ -21,7 +21,7 @@
     <PackageReference Include="BepInEx.Core" Version="5.4.21" />
     <PackageReference Include="LethalCompany.GameLibs.Steam" Version="56.0.0-ngd.0" Publicize="true" />
     <PackageReference Include="FSharpPlus" Version="1.6.1" />
-    <PackageReference Include="Xilophor.StaticNetcodeLib" Version="1.1.0" />
+    <PackageReference Include="Xilophor.StaticNetcodeLib" Version="1.1.1" />
     <Reference Include="FSharpx.Async">
       <HintPath>../../../lib/FSharpx.Async/FSharpx.Async.dll</HintPath>
     </Reference>

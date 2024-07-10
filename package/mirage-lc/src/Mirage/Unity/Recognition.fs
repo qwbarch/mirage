@@ -3,27 +3,23 @@ module Mirage.Unity.Recognition
 #nowarn "40"
 
 open System
-open System.Collections.Generic
 open FSharpPlus
 open FSharpx.Control
 open Unity.Netcode
-open Mirage.Core.Audio.PCM
 open Mirage.Core.Async.LVar
 open GameNetcodeStuff
 open Mirage.Domain.Logger
 open Mirage.Domain.Audio.Microphone
 open Mirage.Hook.Microphone
 open Mirage.Core.Audio.Microphone.Recognition
+open Mirage.Core.Audio.PCM
 
-
+[<AllowNullLiteral>]
 type RemoteTranscriber() as self =
     inherit NetworkBehaviour()
 
-    let hostAgent = new BlockingQueueAgent<RemoteAction>(Int32.MaxValue)
-    let clientAgent = new BlockingQueueAgent<RemoteAction>(Int32.MaxValue)
-
-
-    let sentenceAgent = new BlockingQueueAgent<RemoteSentenceAction>(Int32.MaxValue)
+    let requestAgent = new BlockingQueueAgent<RequestAction>(Int32.MaxValue)
+    let responseAgent = new BlockingQueueAgent<ResponseAction>(Int32.MaxValue)
 
     /// Players with a <b>RemoteTranscriber</b> instance.
     static member val Players = newLVar <| Map.empty
@@ -33,72 +29,74 @@ type RemoteTranscriber() as self =
     member this.Awake() = this.Player <- this.GetComponent<PlayerControllerB>()
 
     member this.Start() =
-        let rec hostConsumer =
+        let rec consumer =
             async {
-                let! action = hostAgent.AsyncGet()
-                let processSentence = processTranscriber MicrophoneSubscriber.Instance.MicrophoneProcessor << TranscribeSentence
-                match action with
-                    | RemoteStart payload ->
-                        logInfo "sentenceAction: RemoteStart"
-                        do! processSentence << SentenceStart <|
-                            {   playerId = this.Player.playerClientId
-                                sentenceId = payload.sentenceId
-                            }
-                    | RemoteEnd payload ->
-                        logInfo "sentenceAction: RemoteEnd"
-                        do! processSentence <| SentenceEnd { sentenceId = payload.sentenceId }
-                    | RemoteFound payload ->
-                        logInfo "sentenceAction: RemoteFound"
-                        do! processSentence << SentenceFound <|
-                            {   playerId = payload.playerId
-                                sentenceId = payload.sentenceId
-                                samples = payload.samples
-                            }
-                do! hostConsumer
+                let! action = requestAgent.AsyncGet()
+                if this.IsHost then
+                    let processRemote = processTranscriber MicrophoneSubscriber.Instance.MicrophoneProcessor << TranscribeBatched
+                    match action with
+                        | RequestStart payload ->
+                            logInfo "batchedAction: BatchedStart"
+                            do! processRemote << BatchedStart <|
+                                {   fileId = payload.fileId
+                                    playerId = this.Player.playerClientId
+                                    sentenceId = payload.sentenceId
+                                }
+                        | RequestEnd payload ->
+                            logInfo "batchedAction: BatchedEnd"
+                            do! processRemote <| BatchedEnd { sentenceId = payload.sentenceId }
+                        | RequestFound payload ->
+                            logInfo "batchedAction: BatchedFound"
+                            do! processRemote << BatchedFound <|
+                                {   playerId = payload.playerId
+                                    sentenceId = payload.sentenceId
+                                    samples = payload.samples
+                                    vadFrame = payload.vadFrame
+                                }
+                else
+                    match action with
+                        | RequestStart payload ->
+                            self.StartSentenceServerRpc(payload.playerId.ToString(), payload.sentenceId.ToString())
+                        | RequestEnd payload ->
+                            self.EndSentenceServerRpc <| payload.sentenceId.ToString()
+                        | RequestFound payload ->
+                            if payload.samples.Length > 0 then
+                                self.TranscribeSentenceServerRpc(
+                                    payload.playerId,
+                                    payload.sentenceId.ToString(),
+                                    payload.samples,
+                                    payload.vadFrame.elapsedTime,
+                                    payload.vadFrame.probability
+                                )
+                do! consumer
             }
-        Async.Start(hostConsumer, this.destroyCancellationToken)
+        Async.StartImmediate(consumer, this.destroyCancellationToken)
 
-        let rec clientConsumer =
+        let rec producer =
             async {
-                let! action = clientAgent.AsyncGet()
+                let! action = responseAgent.AsyncGet()
+                let respond rpc (payload: ResponsePayload) = rpc(
+                        payload.fileId.ToString(),
+                        payload.sentenceId.ToString(),
+                        payload.transcription.text,
+                        payload.transcription.avgLogProb,
+                        payload.transcription.noSpeechProb,
+                        payload.transcription.startTime,
+                        payload.transcription.endTime,
+                        payload.vadFrame.elapsedTime,
+                        payload.vadFrame.probability
+                )
                 match action with
-                    | RemoteStart payload ->
-                        self.StartSentenceServerRpc <| payload.sentenceId.ToString()
-                    | RemoteEnd payload ->
-                        self.EndSentenceServerRpc <| payload.sentenceId.ToString()
-                    | RemoteFound payload ->
-                        if payload.samples.Length > 0 then
-                            self.TranscribeSentenceServerRpc(payload.playerId, payload.sentenceId.ToString(), payload.samples)
-                do! clientConsumer
+                    | ResponseFound payload -> respond self.SentenceFoundClientRpc payload
+                    | ResponseEnd payload-> respond self.SentenceEndClientRpc payload
+                do! producer
             }
-        Async.StartImmediate(clientConsumer, this.destroyCancellationToken)
-
-        let rec sentenceConsumer =
-            async {
-                let! action = sentenceAgent.AsyncGet()
-                match action with
-                    | RemoteSentenceFound payload ->
-                        self.SentenceFoundClientRpc(
-                            payload.sentenceId.ToString(),
-                            payload.text,
-                            payload.avgLogProb,
-                            payload.noSpeechProb
-                        )
-                    | RemoteSentenceEnd payload ->
-                        self.SentenceEndClientRpc(
-                            payload.sentenceId.ToString(),
-                            payload.text,
-                            payload.avgLogProb,
-                            payload.noSpeechProb
-                        )
-                do! sentenceConsumer
-            }
-        Async.StartImmediate(sentenceConsumer, this.destroyCancellationToken)
+        Async.StartImmediate(producer, this.destroyCancellationToken)
 
     override _.OnDestroy() =
         base.OnDestroy()
-        dispose hostAgent
-        dispose clientAgent
+        dispose requestAgent
+        dispose responseAgent
 
     override this.OnNetworkSpawn() =
         base.OnNetworkSpawn()
@@ -112,40 +110,74 @@ type RemoteTranscriber() as self =
             << modifyLVar RemoteTranscriber.Players
             <| Map.remove this.Player.playerClientId
 
-    member _.RemoteAction(action) = clientAgent.Add action
-    member _.SentenceAction(payload) = sentenceAgent.Add payload
+    member _.SendRequest(action) = requestAgent.Add action
+    member _.SendResponse(action) = responseAgent.Add action
 
     [<ServerRpc>]
-    member this.StartSentenceServerRpc(sentenceId: string) =
+    member this.StartSentenceServerRpc(fileId: string, sentenceId: string) =
         if this.IsHost then
             logInfo $"Sentence start: {sentenceId}"
-            hostAgent.Add <|
-                RemoteStart
-                    {   playerId = this.Player.playerClientId
-                        sentenceId = new Guid(sentenceId)
+            requestAgent.Add <|
+                RequestStart
+                    {   fileId = Guid fileId
+                        playerId = this.Player.playerClientId
+                        sentenceId = Guid sentenceId
                     }
 
     [<ServerRpc>]
     member this.EndSentenceServerRpc(sentenceId: string) =
         if this.IsHost then
             logInfo "Sentence end"
-            hostAgent.Add <| RemoteEnd { sentenceId = new Guid(sentenceId) }
+            requestAgent.Add <| RequestEnd { sentenceId = new Guid(sentenceId) }
 
     [<ServerRpc>]
-    member this.TranscribeSentenceServerRpc(playerId, sentenceId: string, samples) =
+    member this.TranscribeSentenceServerRpc(playerId, sentenceId: string, samples: Samples, elapsedTime, probability) =
         if this.IsHost && samples.Length > 0 then
-            hostAgent.Add << RemoteFound <|
-                {   playerId = playerId
+            requestAgent.Add << RequestFound <|
+                {   vadFrame =
+                        {   elapsedTime = elapsedTime
+                            probability = probability
+                        }
+                    playerId = playerId
                     sentenceId = new Guid(sentenceId)
                     samples = samples
                 }
 
     [<ClientRpc>]
-    member this.SentenceFoundClientRpc(sentenceId: string, text: string, avgLogProb: float32, noSpeechProb: float32) =
+    member this.SentenceFoundClientRpc(fileId: string, sentenceId: string, text, avgLogProb, noSpeechProb, startTime, endTime, elapsedTime, probability) =
         if not this.IsHost then
             logInfo $"SentenceFoundClientrpc. SentenceId: {sentenceId} Text: {text} avgLogProb: {avgLogProb} noSpeechProb: {noSpeechProb}"
+            onTranscribe (Guid sentenceId) << TranscribeFound <|
+                {   fileId = Guid fileId
+                    vadFrame =
+                        {   elapsedTime = elapsedTime
+                            probability = probability
+                        }
+                    transcription =
+                        {   text = text
+                            avgLogProb = avgLogProb
+                            noSpeechProb = noSpeechProb
+                            startTime = startTime
+                            endTime = endTime
+                        }
+                }
 
     [<ClientRpc>]
-    member this.SentenceEndClientRpc(sentenceId: string, text: string, avgLogProb: float32, noSpeechProb: float32) =
+    member this.SentenceEndClientRpc(fileId: string, sentenceId: string, text, avgLogProb, noSpeechProb, startTime, endTime, elapsedTime, probability) =
         if not this.IsHost then
             logInfo $"SentenceEndClientrpc. SentenceId: {sentenceId} Text: {text} avgLogProb: {avgLogProb} noSpeechProb: {noSpeechProb}"
+            onTranscribe (Guid sentenceId) << TranscribeEnd <|
+                {   fileId = Guid fileId
+                    vadFrame =
+                        {   elapsedTime = elapsedTime
+                            probability = probability
+                        }
+                    vadTimings = []
+                    transcription =
+                        {   text = text
+                            avgLogProb = avgLogProb
+                            noSpeechProb = noSpeechProb
+                            startTime = startTime
+                            endTime = endTime
+                        }
+                }
