@@ -20,7 +20,10 @@ let initBehaviourPredictor
     (logError: string -> unit)
     (userId: EntityId)
     (fileDir: string)
-    (sizeLimit: int64) : Async<unit> =
+    (existingRecordings: Guid list)
+    (storageLimit: int64)
+    (memoryLimit: int64)
+     : Async<unit> =
         async {
             logInfo "Initializing behaviour predictor."
             let baseDirectory =
@@ -36,6 +39,7 @@ let initBehaviourPredictor
             Model.userId <- userId
             let initEncoder = async {
                 let! _ = encodeText "init"
+                logInfo "Encoder init done."
                 ()
             }
 
@@ -44,8 +48,8 @@ let initBehaviourPredictor
                 let policyDir = Path.Combine(fileDir, fileSubDir)
                 createDirIfDoesNotExist fileDir fileSubDir
                 let! fileState = readStoredPolicy policyDir logWarning
-                do! loadModel fileState
-                let fileHandler = createFileHandler fileState policyDir sizeLimit
+                do! loadModel fileState existingRecordings
+                let fileHandler = createFileHandler fileState policyDir storageLimit
                 do! learnerThread fileHandler
             }
 
@@ -73,6 +77,8 @@ let clearMemory =
             ()
         ()
     }
+
+let deleteRecording () = ()
 
 let userRegisterText
     (gameInput: GameInput)
