@@ -9,6 +9,8 @@ open Predictor.Config
 open Mirage.Core.Async.AtomicFile
 open Newtonsoft.Json
 
+let mutable fileHandler: MailboxProcessor<PolicyFileMessage> = Operators.Unchecked.defaultof<_>
+
 let toCompressedObsFileFormat (obs: CompressedObservation) : CompressedObservationFileFormat =
     {   time = obs.time
         spokeEmbedding = obs.spokeEmbedding

@@ -18,7 +18,6 @@ let initBehaviourPredictor
     (logInfo: string -> unit)
     (logWarning: string -> unit)
     (logError: string -> unit)
-    (userId: EntityId)
     (fileDir: string)
     (existingRecordings: Guid list)
     (storageLimit: int64)
@@ -49,13 +48,15 @@ let initBehaviourPredictor
                 createDirIfDoesNotExist fileDir fileSubDir
                 let! fileState = readStoredPolicy policyDir logWarning
                 do! loadModel fileState existingRecordings
-                let fileHandler = createFileHandler fileState policyDir storageLimit
+                fileHandler <- createFileHandler fileState policyDir storageLimit
                 do! learnerThread fileHandler
             }
 
             let! _ = Async.Parallel [initEncoder; fileAsync]
             ()
         }
+
+let startBehaviourPredictor (userId: EntityId) = Async.RunSynchronously <| learnerThread fileHandler
 
 let clearAllStorage () = false // TODO
 
