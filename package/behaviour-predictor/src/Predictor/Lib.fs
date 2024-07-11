@@ -39,7 +39,6 @@ let initBehaviourPredictor
             let initEncoder = async {
                 let! _ = encodeText "init"
                 logInfo "Encoder init done."
-                ()
             }
 
             let fileAsync = async {

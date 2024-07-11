@@ -18,6 +18,9 @@ open Mirage.Hook.Dissonance
 open Mirage.Hook.MaskedPlayerEnemy
 open Mirage.Hook.Predictor
 open Mirage.Unity.Recognition
+open System
+open Mirage.Domain.Audio.Recording
+open FSharpPlus
 
 [<BepInPlugin(pluginId, pluginName, pluginVersion)>]
 [<BepInDependency(StaticNetcodeLib.MyPluginInfo.PLUGIN_GUID, BepInDependency.DependencyFlags.HardDependency)>]
@@ -56,6 +59,18 @@ type Plugin() =
                 logInfo "Initializing SileroVAD."
                 let silero = SileroVAD SamplesPerWindow
 
+                let toGuid (x: string) = new Guid(x)
+                let! recordings =
+                    getRecordings
+                        |> map (map (Path.GetFileNameWithoutExtension >> toGuid) >> List.ofArray)
+                do! initBehaviourPredictor
+                        logInfo
+                        logWarning
+                        logError
+                        predictorDirectory
+                        recordings
+                        Int32.MaxValue // Storage limit.
+                        Int32.MaxValue // Memory limit.
 
                 // TODO: Do this properly.
                 let rec keepActive =
@@ -71,7 +86,7 @@ type Plugin() =
                 disableAudioSpatializer()
                 fetchDissonance()
                 initMaskedEnemy()
-                initPredictor predictorDirectory
+                initPredictor()
 
                 let sendRequest action =
                     async {
