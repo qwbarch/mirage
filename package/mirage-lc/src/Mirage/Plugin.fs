@@ -73,11 +73,11 @@ type Plugin() =
                 initMaskedEnemy()
                 initPredictor predictorDirectory
 
-                let sendRequest playerId action =
+                let sendRequest action =
                     async {
                         logInfo "remoteAction is running"
                         let! transcribers = readLVar RemoteTranscriber.Players
-                        transcribers[playerId].SendRequest action
+                        transcribers[StartOfRound.Instance.localPlayerController.playerClientId].SendRequest action
                     }
 
                 let sendResponse playerId action =
@@ -93,7 +93,7 @@ type Plugin() =
                         whisper = whisper
                         silero = silero
                         isReady = newLVar false
-                        transcribeViaHost = newLVar false
+                        transcribeViaHost = newLVar true // TODO: SET THIS VIA A CONFIG
                         sendRequest = sendRequest
                         sendResponse = sendResponse
                     }

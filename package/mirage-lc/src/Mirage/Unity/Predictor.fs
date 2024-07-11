@@ -151,21 +151,24 @@ type Predictor() as self =
                     nospeechProb = noSpeechProb
                 }
 
-    [<ServerRpc>]
+    [<ServerRpc(RequireOwnership = false)>]
     member private this.SyncHeardAtomServerRpc(text, speakerClass, speakerClassType, speakerId, speakerIdType, sentenceId, elapsedTime, avgLogProb, noSpeechProb) =
+        logInfo $"SyncHeardAtomServerRpc. Text: {text}"
         if this.IsHost then
             this.SyncHeardAtomClientRpc(text, speakerClass, speakerClassType, speakerId, speakerIdType, sentenceId, elapsedTime, avgLogProb, noSpeechProb)
 
     [<ClientRpc>]
     member private _.SyncVoiceActivityAtomClientRpc(speakerId, speakerIdType, probability) =
+        logInfo "SyncVoiceActivityAtomClientRpc"
         if shouldRegister() then
             registerPredictor << VoiceActivityAtom <|
                 {   speakerId = toEntityId speakerId speakerIdType
                     prob = probability
                 }
 
-    [<ServerRpc>]
+    [<ServerRpc(RequireOwnership = false)>]
     member private this.SyncVoiceActivityAtomServerRpc(speakerId, speakerIdType, probability) =
+        logInfo "SyncVoiceActivityAtomServerRpc"
         if this.IsHost then
             this.SyncVoiceActivityAtomClientRpc(
                 speakerId,

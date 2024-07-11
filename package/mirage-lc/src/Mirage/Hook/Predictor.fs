@@ -11,14 +11,16 @@ open Mirage.Domain.Logger
 
 let initPredictor predictorDirectory =
     let initModel (steamId: EntityId) =
-        Async.Start <|
+        Async.RunSynchronously <| // CHANGE TO Async.Start
             initBehaviourPredictor
                 logInfo
                 logWarning
                 logError
                 steamId
                 predictorDirectory
-                Int32.MaxValue // Size limit
+                []
+                Int32.MaxValue // Storage limit.
+                Int32.MaxValue // Memory limit.
     On.Netcode.Transports.Facepunch.FacepunchTransport.add_Awake(fun _ self ->
         try
             try

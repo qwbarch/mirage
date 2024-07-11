@@ -31,7 +31,7 @@ module Microphone =
     [<ClientRpc>]
     let private transcribeViaHostClientRpc (_: ClientRpcParams) useHost =
         if not <| StartOfRound.Instance.IsHost then
-            Async.StartImmediate <| writeLVar_ transcribeViaHost.Value (useHost && not cudaAvailable)
+            Async.StartImmediate <| writeLVar_ transcribeViaHost.Value useHost //(useHost && not cudaAvailable)
 
     let readMicrophone param =
         cudaAvailable <- param.cudaAvailable

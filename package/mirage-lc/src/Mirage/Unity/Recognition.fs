@@ -13,10 +13,17 @@ open Mirage.Domain.Audio.Microphone
 open Mirage.Hook.Microphone
 open Mirage.Core.Audio.Microphone.Recognition
 open Mirage.Core.Audio.PCM
+open Mirage.Core.Audio.Microphone.Detection
 
 [<AllowNullLiteral>]
 type RemoteTranscriber() as self =
+
     inherit NetworkBehaviour()
+    let fromVADFrame vadFrame = (vadFrame.elapsedTime, vadFrame.probability)
+    let toVADFrame (elapsedTime, probability) =
+        {   elapsedTime = elapsedTime
+            probability = probability
+        }
 
     let requestAgent = new BlockingQueueAgent<RequestAction>(Int32.MaxValue)
     let responseAgent = new BlockingQueueAgent<ResponseAction>(Int32.MaxValue)
@@ -32,6 +39,7 @@ type RemoteTranscriber() as self =
         let rec consumer =
             async {
                 let! action = requestAgent.AsyncGet()
+                logInfo "RemoteTranscriber consumer AsyncGet"
                 if this.IsHost then
                     let processRemote = processTranscriber MicrophoneSubscriber.Instance.MicrophoneProcessor << TranscribeBatched
                     match action with
@@ -44,7 +52,10 @@ type RemoteTranscriber() as self =
                                 }
                         | RequestEnd payload ->
                             logInfo "batchedAction: BatchedEnd"
-                            do! processRemote <| BatchedEnd { sentenceId = payload.sentenceId }
+                            do! processRemote << BatchedEnd <|
+                                {   sentenceId = payload.sentenceId
+                                    vadTimings = payload.vadTimings
+                                }
                         | RequestFound payload ->
                             logInfo "batchedAction: BatchedFound"
                             do! processRemote << BatchedFound <|
@@ -56,10 +67,18 @@ type RemoteTranscriber() as self =
                 else
                     match action with
                         | RequestStart payload ->
-                            self.StartSentenceServerRpc(payload.playerId.ToString(), payload.sentenceId.ToString())
+                            logInfo "RemoteTranscribe consumer (non-host): RequestStart"
+                            self.StartSentenceServerRpc(payload.fileId.ToString(), payload.sentenceId.ToString())
                         | RequestEnd payload ->
-                            self.EndSentenceServerRpc <| payload.sentenceId.ToString()
+                            logInfo "RemoteTranscribe consumer (non-host): RequestEnd"
+                            let (elapsedTimes, probabilities) = unzip << map fromVADFrame <| Array.ofSeq payload.vadTimings
+                            self.EndSentenceServerRpc(
+                                payload.sentenceId.ToString(),
+                                elapsedTimes,
+                                probabilities
+                            )
                         | RequestFound payload ->
+                            logInfo "RemoteTranscribe consumer (non-host): RequestFound"
                             if payload.samples.Length > 0 then
                                 self.TranscribeSentenceServerRpc(
                                     payload.playerId,
@@ -68,27 +87,45 @@ type RemoteTranscriber() as self =
                                     payload.vadFrame.elapsedTime,
                                     payload.vadFrame.probability
                                 )
+                logInfo "RemoteTranscriber consumer finished"
                 do! consumer
             }
-        Async.StartImmediate(consumer, this.destroyCancellationToken)
+        if this.IsHost then
+            Async.Start(consumer, this.destroyCancellationToken)
+        else
+            Async.StartImmediate(consumer, this.destroyCancellationToken)
 
         let rec producer =
             async {
                 let! action = responseAgent.AsyncGet()
-                let respond rpc (payload: ResponsePayload) = rpc(
-                        payload.fileId.ToString(),
-                        payload.sentenceId.ToString(),
-                        payload.transcription.text,
-                        payload.transcription.avgLogProb,
-                        payload.transcription.noSpeechProb,
-                        payload.transcription.startTime,
-                        payload.transcription.endTime,
-                        payload.vadFrame.elapsedTime,
-                        payload.vadFrame.probability
-                )
+                logInfo "RemoteTranscriber producer AsyncGet"
                 match action with
-                    | ResponseFound payload -> respond self.SentenceFoundClientRpc payload
-                    | ResponseEnd payload-> respond self.SentenceEndClientRpc payload
+                    | ResponseFound payload ->
+                        self.SentenceFoundClientRpc(
+                            payload.fileId.ToString(),
+                            payload.sentenceId.ToString(),
+                            payload.transcription.text,
+                            payload.transcription.avgLogProb,
+                            payload.transcription.noSpeechProb,
+                            payload.transcription.startTime,
+                            payload.transcription.endTime,
+                            payload.vadFrame.elapsedTime,
+                            payload.vadFrame.probability
+                        )
+                    | ResponseEnd payload->
+                        let (elapsedTimes, probabilities) = unzip << map fromVADFrame <| Array.ofSeq payload.vadTimings
+                        self.SentenceEndClientRpc(
+                            payload.fileId.ToString(),
+                            payload.sentenceId.ToString(),
+                            payload.transcription.text,
+                            payload.transcription.avgLogProb,
+                            payload.transcription.noSpeechProb,
+                            payload.transcription.startTime,
+                            payload.transcription.endTime,
+                            elapsedTimes,
+                            probabilities
+                        )
+                logInfo "RemoteTranscriber producer finished"
                 do! producer
             }
         Async.StartImmediate(producer, this.destroyCancellationToken)
@@ -116,7 +153,8 @@ type RemoteTranscriber() as self =
     [<ServerRpc>]
     member this.StartSentenceServerRpc(fileId: string, sentenceId: string) =
         if this.IsHost then
-            logInfo $"Sentence start: {sentenceId}"
+            logInfo $"Sentence start. FileId: {fileId}"
+            logInfo $"Sentence start. SentenceId: {sentenceId}"
             requestAgent.Add <|
                 RequestStart
                     {   fileId = Guid fileId
@@ -125,10 +163,13 @@ type RemoteTranscriber() as self =
                     }
 
     [<ServerRpc>]
-    member this.EndSentenceServerRpc(sentenceId: string) =
+    member this.EndSentenceServerRpc(sentenceId: string, elapsedTimes, probabilities) =
         if this.IsHost then
             logInfo "Sentence end"
-            requestAgent.Add <| RequestEnd { sentenceId = new Guid(sentenceId) }
+            requestAgent.Add << RequestEnd <|
+                {   sentenceId = new Guid(sentenceId)
+                    vadTimings = List.ofArray << map toVADFrame <| zip elapsedTimes probabilities
+                }
 
     [<ServerRpc>]
     member this.TranscribeSentenceServerRpc(playerId, sentenceId: string, samples: Samples, elapsedTime, probability) =
@@ -163,16 +204,14 @@ type RemoteTranscriber() as self =
                 }
 
     [<ClientRpc>]
-    member this.SentenceEndClientRpc(fileId: string, sentenceId: string, text, avgLogProb, noSpeechProb, startTime, endTime, elapsedTime, probability) =
+    member this.SentenceEndClientRpc(fileId: string, sentenceId: string, text, avgLogProb, noSpeechProb, startTime, endTime, elapsedTimes, probabilities) =
         if not this.IsHost then
             logInfo $"SentenceEndClientrpc. SentenceId: {sentenceId} Text: {text} avgLogProb: {avgLogProb} noSpeechProb: {noSpeechProb}"
+            let vadTimings = toVADFrame <!> zip elapsedTimes probabilities
             onTranscribe (Guid sentenceId) << TranscribeEnd <|
                 {   fileId = Guid fileId
-                    vadFrame =
-                        {   elapsedTime = elapsedTime
-                            probability = probability
-                        }
-                    vadTimings = []
+                    vadFrame = Array.last vadTimings
+                    vadTimings = List.ofSeq vadTimings
                     transcription =
                         {   text = text
                             avgLogProb = avgLogProb

@@ -22,6 +22,8 @@ type private SentenceState<'PlayerId> =
         samples: List<float32>
         /// Vad timing for the latest frame.
         mutable vadFrame: VADFrame
+        /// Full VAD timings. Empty until the state is finished.
+        mutable vadTimings: list<VADFrame>
         /// Whether or not the transcription should be the final one for this sentence.
         mutable finished: bool
     }
@@ -42,7 +44,10 @@ type BatchedFound<'PlayerId> =
     }
 
 /// Action to run when a transcription is finished processing for another player.
-type BatchedEnd = { sentenceId: Guid }
+type BatchedEnd =
+    {   sentenceId: Guid
+        vadTimings: list<VADFrame>
+    }
 
 /// Audio samples that should be transcribed as a sentence.
 type TranscribeBatched<'PlayerId>
@@ -102,6 +107,7 @@ type TranscribeBatchedEnd<'PlayerId, 'Transcription> =
         playerId: 'PlayerId
         sentenceId: Guid
         vadFrame: VADFrame
+        vadTimings: list<VADFrame>
         transcription: 'Transcription
     }
 
@@ -165,29 +171,31 @@ let VoiceTranscriber<'PlayerId, 'Transcription>
                     if sentenceIds.Length > 0 then
                         printfn "inside sentenceIds if statement"
                         for i in 0 .. transcriptions.Length - 1 do
+                            let sentenceId = sentenceIds[i]
                             printfn "inside for loop"
-                            printfn $"index: {i}. sentenceId: {sentenceIds[i]}"
-                            if sentenceIds[i] = hostId then
+                            printfn $"index: {i}. sentenceId: {sentenceId}"
+                            if sentenceId = hostId then
                                 printfn "sentenceId is the host" // TODO DELETE THIS IF
-                            else if sentenceIds[i] <> hostId then
+                            else if sentenceId <> hostId then
                                 printfn "sentenceId is not the host"
-                                let sentence = sentences[sentenceIds[i]]
+                                let sentence = sentences[sentenceId]
                                 if sentence.finished then
                                     printfn "state finished. removing sentence"
-                                    &sentences %= Map.remove sentenceIds[i]
-                                    do! onTranscribe << TranscribeBatchedAction << TranscribeBatchedEnd <|
+                                    &sentences %= Map.remove sentenceId
+                                    Async.StartImmediate << onTranscribe << TranscribeBatchedAction << TranscribeBatchedEnd <|
                                         {   fileId = sentence.fileId
                                             playerId = sentence.playerId
-                                            sentenceId = sentenceIds[i]
+                                            sentenceId = sentenceId
                                             vadFrame = sentence.vadFrame
+                                            vadTimings = sentence.vadTimings
                                             transcription = transcriptions[i]
                                         }
                                 else
                                     printfn "state in progress."
-                                    do! onTranscribe << TranscribeBatchedAction << TranscribeBatchedFound <|
+                                    Async.StartImmediate << onTranscribe << TranscribeBatchedAction << TranscribeBatchedFound <|
                                         {   fileId = sentence.fileId
                                             playerId = sentence.playerId
-                                            sentenceId = sentenceIds[i]
+                                            sentenceId = sentenceId
                                             vadFrame = sentence.vadFrame
                                             transcription = transcriptions[i]
                                         }
@@ -224,6 +232,7 @@ let VoiceTranscriber<'PlayerId, 'Transcription>
                                     Map.add payload.sentenceId
                                         {   fileId = payload.fileId
                                             playerId = payload.playerId
+                                            vadTimings = []
                                             vadFrame =
                                                 {   elapsedTime = 0
                                                     probability = 0f
@@ -237,6 +246,7 @@ let VoiceTranscriber<'PlayerId, 'Transcription>
                                 match Map.tryFind payload.sentenceId sentences with
                                     | None -> ()
                                     | Some sentence ->
+                                        sentence.vadTimings <- payload.vadTimings
                                         sentence.finished <- true
                                         printfn "before transcribeAudio SentenceEnd"
                                         tryTranscribeAudio zero
@@ -275,11 +285,13 @@ let VoiceTranscriber<'PlayerId, 'Transcription>
                                                 printfn "before transcribeAudio RecordFound"
                                                 let! transcription = transcribeAudio payload.fullAudio.resampled.samples
                                                 printfn "after transcribeAudio RecordFound"
+                                                printfn "before onTranscribe"
                                                 do! onTranscribe << TranscribeLocalAction << TranscribeFound <|
                                                     {   fileId = getFileId payload.mp3Writer
                                                         vadFrame = payload.vadFrame
                                                         transcription = transcription.Value
                                                     }
+                                                printfn "after onTranscribe"
                                             }
                                         finally
                                             lockRelease lock

@@ -21,7 +21,10 @@ type RequestStart =
         sentenceId: Guid
     }
 
-type RequestEnd = { sentenceId: Guid }
+type RequestEnd =
+    {   sentenceId: Guid
+        vadTimings: list<VADFrame>
+    }
 
 type RequestFound =
     {   vadFrame: VADFrame
@@ -36,22 +39,30 @@ type RequestAction
     | RequestEnd of RequestEnd
     | RequestFound of RequestFound
 
-
-type ResponsePayload =
+type ResponseFound =
     {   fileId: Guid
         sentenceId: Guid
         vadFrame: VADFrame
         transcription: Transcription
     }
 
+type ResponseEnd =
+    {   fileId: Guid
+        sentenceId: Guid
+        transcription: Transcription
+        vadTimings: list<VADFrame>
+    }
+
 /// A response containing the transcribed text from the host (to a non-host).
 type ResponseAction
-    = ResponseFound of ResponsePayload
-    | ResponseEnd of ResponsePayload
+    = ResponseFound of ResponseFound
+    | ResponseEnd of ResponseEnd
 
 let onTranscribe sentenceId (action: TranscribeLocalAction<Transcription>) =
-    Async.Start <|
+    logInfo "onTranscribe: before async"
+    Async.StartImmediate <|
         async {
+            logInfo "onTranscribe: inside async"
             match action with
                 | TranscribeStart ->
                     logInfo "Transcription start"
@@ -69,6 +80,19 @@ let onTranscribe sentenceId (action: TranscribeLocalAction<Transcription>) =
                                 prob = float vadFrame.probability
                             }
                         (vadFrame.elapsedTime, atom)
+                    let! enemies = accessLVar Predictor.Enemies List.ofSeq
+                    let heardAtom =
+                        HeardAtom
+                            {   text = payload.transcription.text
+                                speakerClass = Predictor.LocalPlayer.SpeakerId
+                                speakerId = Predictor.LocalPlayer.SpeakerId
+                                sentenceId = sentenceId
+                                elapsedMillis = payload.vadFrame.elapsedTime
+                                transcriptionProb = float payload.transcription.avgLogProb
+                                nospeechProb = float payload.transcription.noSpeechProb
+                            }
+                    flip iter enemies <| fun enemy ->
+                        enemy.Register heardAtom
                     Predictor.LocalPlayer.Register <|
                         SpokeRecordingAtom
                             {   spokeAtom =
@@ -81,7 +105,7 @@ let onTranscribe sentenceId (action: TranscribeLocalAction<Transcription>) =
                                 whisperTimings = []
                                 vadTimings = toVADTiming <!> payload.vadTimings
                                 audioInfo =
-                                    {   fileId = new Guid ""
+                                    {   fileId = payload.fileId
                                         duration = payload.vadFrame.elapsedTime
                                     }
                             }
@@ -130,8 +154,8 @@ type InitMicrophoneProcessor =
         isReady: LVar<bool>
         /// Whether or not we should transcribe audio via the host instead of locally.
         transcribeViaHost: LVar<bool>
-        /// A function that sends a request to the target player.
-        sendRequest: uint64 -> RequestAction -> Async<unit>
+        /// A function that sends a request action to the host.
+        sendRequest: RequestAction -> Async<unit>
         /// A function that sends a response to the target player.
         sendResponse: uint64 -> ResponseAction -> Async<unit>
     }
@@ -145,12 +169,14 @@ type MicrophoneProcessor =
 let MicrophoneProcessor param =
     let transcribeAudio(request: TranscribeRequest) =
         async {
-            logInfo "transcribing audio"
-            return!
+            logInfo "MicrophoneProcessor transcribeAudio start"
+            let! x = 
                 transcribe param.whisper
                     {   samplesBatch = toPCMBytes <!> request.samplesBatch
                         language = request.language
                     }
+            logInfo $"MicrophoneProcessor transcribeAudio end. Length: {x.Length}. Text (first): {x[0].text}"
+            return x
         }
 
     let transcriber =
@@ -161,6 +187,7 @@ let MicrophoneProcessor param =
                     | TranscribeBatchedAction sentenceAction ->
                         match sentenceAction with
                             | TranscribeBatchedFound payload ->
+                                logInfo $"sendResponse: TranscribeBatchedFound. Text: {payload.transcription.text}"
                                 do! param.sendResponse payload.playerId << ResponseFound <|
                                     {   fileId = payload.fileId
                                         sentenceId = payload.sentenceId
@@ -168,11 +195,12 @@ let MicrophoneProcessor param =
                                         transcription = payload.transcription
                                     }
                             | TranscribeBatchedEnd payload ->
+                                logInfo $"sendResponse: TranscribeBatchedEnd. Text: {payload.transcription.text}"
                                 do! param.sendResponse payload.playerId << ResponseEnd <|
                                     {   fileId = payload.fileId
                                         sentenceId = payload.sentenceId
-                                        vadFrame = payload.vadFrame
                                         transcription = payload.transcription
+                                        vadTimings = payload.vadTimings
                                     }
                     | TranscribeLocalAction transcribeAction ->
                         if transcribeAction = TranscribeStart then
@@ -189,20 +217,23 @@ let MicrophoneProcessor param =
                     do! writeTranscriber transcriber <| TranscribeLocal action
                 else if transcribeViaHost then
                     logInfo "transcribing via host"
-                    let sendRequest = param.sendRequest StartOfRound.Instance.localPlayerController.playerClientId
                     let playerId = StartOfRound.Instance.localPlayerController.playerClientId
                     match action with
                         | RecordStart payload ->
+                            logInfo $"sendRequest. FileId: {getFileId payload.mp3Writer}"
                             sentenceId <- Guid.NewGuid()
-                            do! sendRequest << RequestStart <|
+                            do! param.sendRequest << RequestStart <|
                                 {   fileId = getFileId payload.mp3Writer
                                     playerId = playerId
                                     sentenceId = sentenceId
                                 }
-                        | RecordEnd _ ->
-                            do! sendRequest <| RequestEnd { sentenceId = sentenceId }
+                        | RecordEnd payload ->
+                            do! param.sendRequest << RequestEnd <|
+                                {   sentenceId = sentenceId
+                                    vadTimings = payload.vadTimings
+                                }
                         | RecordFound payload ->
-                            do! sendRequest << RequestFound <|
+                            do! param.sendRequest << RequestFound <|
                                 {   vadFrame = payload.vadFrame
                                     playerId = playerId
                                     sentenceId = sentenceId
