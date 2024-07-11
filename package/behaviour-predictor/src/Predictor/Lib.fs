@@ -48,15 +48,16 @@ let initBehaviourPredictor
                 createDirIfDoesNotExist fileDir fileSubDir
                 let! fileState = readStoredPolicy policyDir logWarning
                 do! loadModel fileState existingRecordings
-                fileHandler <- createFileHandler fileState policyDir storageLimit
-                do! learnerThread fileHandler
+                PolicyFileHandler.fileHandler <- createFileHandler fileState policyDir storageLimit
             }
 
             let! _ = Async.Parallel [initEncoder; fileAsync]
             ()
         }
 
-let startBehaviourPredictor (userId: EntityId) = Async.RunSynchronously <| learnerThread fileHandler
+let startBehaviourPredictor (userId: EntityId) = 
+    Model.userId <- userId
+    Async.RunSynchronously <| learnerThread PolicyFileHandler.fileHandler
 
 let clearAllStorage () = false // TODO
 
