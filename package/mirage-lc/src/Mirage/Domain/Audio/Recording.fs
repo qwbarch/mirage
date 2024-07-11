@@ -10,7 +10,7 @@ open System.Collections.Generic
 open Mirage.Core.Async.Fork
 
 /// The directory to save audio files in.
-let private RecordingDirectory = $"{Application.dataPath}/../Mirage"
+let private RecordingDirectory = $"{Application.dataPath}/../Mirage/Recording"
 
 type RecordingManager =
     private
@@ -45,7 +45,7 @@ let internal deleteRecordings () =
 
 /// Retrieve all the file names in the recordings directory.
 /// Note: This runs on a separate thread, but is not a true non-blocking function, and will cause the other thread to block.
-let private getRecordings =
+let internal getRecordings =
     forkReturn <| async {
         return
             try Directory.GetFiles RecordingDirectory

@@ -8,19 +8,29 @@ open Unity.Netcode
 open Predictor.Domain
 open Predictor.Lib
 open Mirage.Domain.Logger
+open Mirage.Domain.Audio.Recording
+open FSharpPlus
+open System.IO
 
 let initPredictor predictorDirectory =
     let initModel (steamId: EntityId) =
-        Async.RunSynchronously <| // CHANGE TO Async.Start
-            initBehaviourPredictor
-                logInfo
-                logWarning
-                logError
-                steamId
-                predictorDirectory
-                []
-                Int32.MaxValue // Storage limit.
-                Int32.MaxValue // Memory limit.
+        Async.RunSynchronously <| async {
+            logInfo "Loading recordings"
+            let toGuid (x: string) = new Guid(x)
+            let! recordings =
+                getRecordings
+                    |> map (map (Path.GetFileNameWithoutExtension >> toGuid) >> List.ofArray)
+            logInfo $"recordings: {recordings}"
+            do! initBehaviourPredictor
+                    logInfo
+                    logWarning
+                    logError
+                    steamId
+                    predictorDirectory
+                    recordings
+                    Int32.MaxValue // Storage limit.
+                    Int32.MaxValue // Memory limit.
+        }
     On.Netcode.Transports.Facepunch.FacepunchTransport.add_Awake(fun _ self ->
         try
             try
