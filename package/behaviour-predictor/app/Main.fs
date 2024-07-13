@@ -13,6 +13,7 @@ open Microsoft.FSharp.Control
 open Mirage.Core.Async.Print
 open MathNet.Numerics.Distributions
 open MathNet.Numerics.Random
+open Predictor.PolicyFileHandler
 
 let preconcat (text : string) =
     let tokens = text.Split([|' '|], StringSplitOptions.RemoveEmptyEntries) 
@@ -163,6 +164,8 @@ let spamPrintStdout (endTime: DateTime) =
 
 [<EntryPoint>]
 let main _ =
+    Async.RunSynchronously <| assureStorageSize "E:/temp/data/policy" 1051382
+
     // let sw = Stopwatch()
     // sw.Start()
     // let g = Gamma(2.0, 1.5)
@@ -191,11 +194,11 @@ let main _ =
     //     let! check = encodeText "hello"
     //     printfn "%A" check.Value
     // }
-    Async.RunSynchronously <| async {
-        let! res = encodeText "hello"
-        printfn "%A" res
-        // do! exponentialRepeat 200 20 rngSuccess
-    }
+    // Async.RunSynchronously <| async {
+    //     let! res = encodeText "hello"
+    //     printfn "%A" res
+    //     // do! exponentialRepeat 200 20 rngSuccess
+    // }
     // testBackwardsIterate()
     // Async.RunSynchronously <| atomicFileWrite "E:/temp/data/foo" "hello" true logInfo logError
     // Async.RunSynchronously <| removeTempFiles "E:/temp/data" logInfo logError

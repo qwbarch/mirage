@@ -120,10 +120,41 @@ let toCompressedObs (observation: Observation) (context: (CompressedObservationF
         lastHeard = observation.lastHeard
     }
 
+let assureStorageSize (dir: string) (storageLimitAsBytes: int64) : Async<unit> =
+    async {
+        try
+            let dirInfo = DirectoryInfo(dir)
+            let fileInfos = dirInfo.GetFiles() |> Array.sortBy (fun fileInfo -> fileInfo.CreationTimeUtc)
+            let totalStorage = fileInfos |> Array.sumBy (fun fileInfo -> fileInfo.Length)
+
+            let mutable currentStorage = totalStorage
+            for fileInfo in fileInfos do
+                if storageLimitAsBytes < currentStorage then
+                    currentStorage <- currentStorage - fileInfo.Length
+                    try
+                        fileInfo.Delete()
+                        logInfo <| sprintf $"Deleted {fileInfo}. Current storage is now {currentStorage} bytes"
+                    with
+                    | ex -> logWarning $"Could not delete the file. {ex.ToString()}"
+            ()
+        with
+        | ex -> logError $"Something went wrong in the storage limiter. {ex.ToString()}"
+    }
+
+let storageLimiter (dir: string) (storageLimitAsBytes: int64) =
+    let rec loop () = 
+        async {
+            do! assureStorageSize dir storageLimitAsBytes
+            do! Async.Sleep 60000
+            do! loop()
+        }
+    loop()
+
 let createFileHandler 
     (fileState: PolicyFileState)
     (dir: string)
-    (sizeLimit: int64) =
+    (storageLimitAsBytes: int64) =
+    Async.Start <| storageLimiter dir storageLimitAsBytes
     MailboxProcessor<PolicyFileMessage>.Start(fun inbox ->
         let rec loop () =
             async {

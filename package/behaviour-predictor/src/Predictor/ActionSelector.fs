@@ -19,11 +19,14 @@ let SPEECH_NOSPEECH = 0.0
 // We should keep TIME_SIGNAL high to encourage mimic responses
 // Given that the mimic responds, we should keep SIM_SCALE somewhat lower to encourage a nice balance of responses.
 let SIM_OFFSET = -0.2
-let SIM_SCALE = 10.0
+let SIM_SCALE = 5.0
 
 let TIME_AREA = 2.0
 let TIME_SIGNAL = 9.0
 let SCORE_SPEAK_FACTOR = 1.0
+
+// Bias the mimic towards replying to other players
+let REPLY_BIAS = 10.0
 
 let simTransform (x: float) = SIM_SCALE * (x + SIM_OFFSET)
 

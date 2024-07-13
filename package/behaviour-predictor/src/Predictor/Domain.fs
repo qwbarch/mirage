@@ -155,7 +155,10 @@ type FutureAction =
 
 type Policy = SortedDictionary<DateTime, CompressedObservation * FutureAction>
 
-type PolicyUpdateMessage = DateTime * CompressedObservation * FutureAction
+type PolicyUpdateMessage = 
+    | ObsActionPair of DateTime * CompressedObservation * FutureAction
+    | RemoveRecording of Guid
+
 type MimicPolicyUpdater = AutoCancelAgent<PolicyUpdateMessage>
 type FutureActionGenerator = DisposableAsync
 type MimicData =

@@ -106,7 +106,17 @@ let sendUpdateToMimics
         let! _ = accessLVar mimicsLVar <| fun mimics ->
             for kv in mimics do
                 let data = kv.Value
-                data.policyUpdater.Post((obsTime, obs, action))
+                data.policyUpdater.Post(ObsActionPair (obsTime, obs, action))
+                ()
+        ()
+    }
+
+let deleteRecordingFromMimics (fileId: Guid) =
+    async {
+        let! _ = accessLVar mimicsLVar <| fun mimics ->
+            for kv in mimics do
+                let data = kv.Value
+                data.policyUpdater.Post(RemoveRecording fileId)
                 ()
         ()
     }

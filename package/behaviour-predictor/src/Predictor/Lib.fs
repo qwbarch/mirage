@@ -20,11 +20,12 @@ let initBehaviourPredictor
     (logError: string -> unit)
     (fileDir: string)
     (existingRecordings: Guid list)
-    (storageLimit: int64)
-    (memoryLimit: int64)
+    (storageLimitAsBytes: int64)
+    (memoryLimitAsBytes: int64)
      : Async<unit> =
         async {
             logInfo "Initializing behaviour predictor."
+            logInfo <| sprintf $"Got storage limit: {storageLimitAsBytes} {memoryLimitAsBytes}"
             let baseDirectory =
                 Assembly.GetExecutingAssembly().CodeBase
                     |> UriBuilder
@@ -47,7 +48,7 @@ let initBehaviourPredictor
                 createDirIfDoesNotExist fileDir fileSubDir
                 let! fileState = readStoredPolicy policyDir logWarning
                 do! loadModel fileState existingRecordings
-                PolicyFileHandler.fileHandler <- createFileHandler fileState policyDir storageLimit
+                PolicyFileHandler.fileHandler <- createFileHandler fileState policyDir storageLimitAsBytes
             }
 
             let! _ = Async.Parallel [initEncoder; fileAsync]
@@ -55,6 +56,7 @@ let initBehaviourPredictor
         }
 
 let startBehaviourPredictor (userId: EntityId) = 
+    logInfo "Starting behaviour predictor."
     Model.userId <- userId
     Async.RunSynchronously <| learnerThread PolicyFileHandler.fileHandler
 
@@ -79,7 +81,14 @@ let clearMemory =
         ()
     }
 
-let deleteRecording () = ()
+// Called when an audio recording is deleted. Signals to the behaviour predictor that it is no longer in use.
+let deleteRecording (fileId: Guid) =
+    Async.Start <| async {
+        let! _ = accessLVar modelLVar <| fun model ->
+            ignore <| model.availableRecordings.Remove(fileId)
+        do! deleteRecordingFromMimics fileId
+        ()
+    }
 
 let userRegisterText
     (gameInput: GameInput)
