@@ -35,6 +35,33 @@ let createDirIfDoesNotExist (par: string) (dir: string) =
     with
     | ex -> logError $"Could not create directory {ex}"
 
+let readFileData (dir: string) (fileName: string) =
+    async {
+        try
+            let fullPath = Path.Combine(dir, fileName)
+            let fileReader = new StreamReader(fullPath)
+            let! contents = Async.AwaitTask <| fileReader.ReadToEndAsync()
+            fileReader.Close()
+            let asFileFormatOption =
+                try
+                    Some <| JsonConvert.DeserializeObject<PolicyFileFormat>(contents)
+                with
+                | ex -> 
+                    logWarning <| "Unable to parse '" + fileName.ToString() + "'. Deleting..."
+                    try 
+                        File.Delete fullPath
+                    with
+                    | deleteEx -> logWarning $"Could not delete '{fileName.ToString()}'. {deleteEx.Message}"
+
+                    None
+            
+            return asFileFormatOption
+        with
+        | ex -> 
+            logError <| sprintf $"Could not read file data. {ex.ToString()}"
+            return None
+    }
+
 let readStoredPolicy 
     (dir: string)
     (logWarning: string -> unit) = async {
@@ -61,22 +88,7 @@ let readStoredPolicy
         for file in files do
             let extension = Path.GetExtension(file)
             if extension = ".json" then
-                let fullPath = Path.Combine(dir, file)
-                use fileReader = new StreamReader(fullPath)
-                let! contents = Async.AwaitTask <| fileReader.ReadToEndAsync()
-                fileReader.Close()
-                let asFileFormatOption = 
-                    try
-                        Some <| JsonConvert.DeserializeObject<PolicyFileFormat>(contents)
-                    with
-                    | ex -> 
-                        logWarning <| "Unable to parse '" + file.ToString() + "'. Deleting..."
-                        try 
-                            File.Delete fullPath
-                        with
-                        | deleteEx -> logWarning $"Could not delete '{file.ToString()}'. {deleteEx.Message}"
-
-                        None
+                let! asFileFormatOption = readFileData dir file
                 match asFileFormatOption with
                 | None -> ()
                 | Some asFileFormat -> add file asFileFormat
@@ -166,6 +178,7 @@ let createFileHandler
                             // Update a file
                             let fileInfo = fileState.dateToFileInfo[obsTime]
                             let prevData = fileState.fileToData[fileInfo.name]
+                            // let prevData = readFileData fileInfo.name
                             let newData = Array.copy prevData
                             let obsIndex = Array.findIndex (fun (obs, _) -> obs.time = obsTime) prevData
                             let (existingObs, _) = prevData.[obsIndex]
