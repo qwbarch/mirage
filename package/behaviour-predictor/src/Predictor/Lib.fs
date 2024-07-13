@@ -93,7 +93,7 @@ let deleteRecording (fileId: Guid) =
 let userRegisterText
     (gameInput: GameInput)
     = Async.Start <| async {
-        logInfo "Got user register"
+        logInfo <| sprintf $"{DateTime.UtcNow} Got user register {gameInput}"
         let! _ = accessLVar learnerLVar <| fun learnerOption ->
             match learnerOption with
             | None -> ()

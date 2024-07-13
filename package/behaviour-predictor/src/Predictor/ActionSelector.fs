@@ -26,7 +26,7 @@ let TIME_SIGNAL = 9.0
 let SCORE_SPEAK_FACTOR = 1.0
 
 // Bias the mimic towards replying to other players
-let REPLY_BIAS = 10.0
+let REPLY_BIAS = 15.0
 
 let simTransform (x: float) = SIM_SCALE * (x + SIM_OFFSET)
 
@@ -53,25 +53,26 @@ let speakOrHearDiffToCost (policyDiff: int) (curDiff: int) (rngSource: RandomSou
             0.0
 
 let computeScores 
+    (heardSomethingList: List<bool>)
     (heardSims: List<float>)
     (spokeSims: List<float>)
     (policy: KeyValuePair<DateTime, CompressedObservation * FutureAction> seq)
     (observation: Observation)
     (rngSource: RandomSource) : List<float * FutureAction> =
     let flattened = 
-        let temp = List<float * float * DateTime * CompressedObservation * FutureAction>()
+        let temp = List<bool * float * float * DateTime * CompressedObservation * FutureAction>()
         let mutable i = 0
         // printfn "----------------------------------------------"
         // printfn "obs %A" observation
         for kv in policy do
             let policyObs, action = fst kv.Value, snd kv.Value
-            temp.Add((heardSims[i], spokeSims[i], kv.Key, policyObs, action))
+            temp.Add((heardSomethingList[i], heardSims[i], spokeSims[i], kv.Key, policyObs, action))
             i <- i + 1
         temp
 
     let mutable maxNoAction = -10.0
     let mutable timeNoActionCount = 0
-    let result = flip map flattened <| fun (heardSim, spokeSim, _, policyObs, action) ->
+    let result = flip map flattened <| fun (heardSomething, heardSim, spokeSim, _, policyObs, action) ->
         let talkBias =
             match action with
             | NoAction -> 0.0
@@ -80,18 +81,23 @@ let computeScores
         let speakTimeCost = SCORE_SPEAK_FACTOR * speakOrHearDiffToCost policyObs.lastSpoke observation.lastSpoke rngSource false
         let hearTimeCost = speakOrHearDiffToCost policyObs.lastHeard observation.lastHeard rngSource false
         let speakOrHearTimeCost = max speakTimeCost hearTimeCost
-        let totalCost = heardSim + spokeSim + talkBias + speakOrHearTimeCost
+        let replyBonus = 
+            match action with
+            | NoAction -> 0.0
+            | QueueAction _ -> if heardSomething then REPLY_BIAS else 0.0
+        let totalCost = replyBonus + heardSim + spokeSim + talkBias + speakOrHearTimeCost
+
         match action with
         | NoAction -> 
             if totalCost > maxNoAction then
-                logInfo <| sprintf "NoAction %f %f %f %f %f %O %O" totalCost spokeSim heardSim speakTimeCost hearTimeCost policyObs action
+                logInfo <| sprintf "NoAction %f %f %f %f %f %f %O %O" totalCost replyBonus spokeSim heardSim speakTimeCost hearTimeCost policyObs action
                 maxNoAction <- totalCost
                 timeNoActionCount <- 1
             if abs (totalCost - maxNoAction) < 1e-5 then
                 timeNoActionCount <- timeNoActionCount + 1
             ()
         | QueueAction _ -> 
-            logInfo <| sprintf "action %f %f %f %f %f %O %O" totalCost spokeSim heardSim speakTimeCost hearTimeCost policyObs action
+            logInfo <| sprintf "action %f %f %f %f %f %f %O %O" totalCost replyBonus spokeSim heardSim speakTimeCost hearTimeCost policyObs action
             // logInfo <| sprintf $"Diff {policyObs.lastHeard} {observation.lastHeard}"
             // if heardSim > 3.0 then
             //     logInfo <| sprintf "action %f %f %f %f %f %O %O" totalCost spokeSim heardSim speakTimeCost hearTimeCost policyObs action
@@ -129,6 +135,19 @@ let sampleAction (oppositeOrdPolicy: Policy) (observation: Observation) (rngSour
     else
         let policy = Seq.rev oppositeOrdPolicy
 
+        let getHasValue 
+            (policyObsEmbs: seq<ObsEmbedding>) =
+            let accum: List<bool> = List()
+            let mutable last: bool = false
+            for obsEmb in policyObsEmbs do
+                last <-
+                    match obsEmb with
+                    | Prev -> last
+                    | Value None -> false
+                    | Value (Some _) -> true
+                accum.Add(last)
+            accum
+
         let computeSims
             (policyObsEmbs: seq<ObsEmbedding>)
             (target: Option<string * TextEmbedding>) =
@@ -160,7 +179,12 @@ let sampleAction (oppositeOrdPolicy: Policy) (observation: Observation) (rngSour
 
         let heardSims = computeSims policyHeardEmbs observation.heardEmbedding
         let spokeSims = computeSims policySpokeEmbs observation.spokeEmbedding
-        let scores = computeScores heardSims spokeSims policy observation rngSource
+        let spokeSomethingList = getHasValue policySpokeEmbs
+        let heardSomethingList = getHasValue policyHeardEmbs
+        let spokeTot = Seq.sumBy (fun b -> if b then 1 else 0) spokeSomethingList
+        let heardTot = Seq.sumBy (fun b -> if b then 1 else 0) heardSomethingList
+        logInfo <| sprintf $"Heard count: {heardTot} Spoke count: {spokeTot}"
+        let scores = computeScores heardSomethingList heardSims spokeSims policy observation rngSource
         let sampled = sample scores rngSource
         logInfo <| sprintf "Sampled %A" sampled
         snd sampled
