@@ -46,13 +46,15 @@ type Predictor() as self =
 
     let agent = new BlockingQueueAgent<GameInput>(Int32.MaxValue)
     let registerPredictor gameInput =
-        if isNull mimic
+        if not <| isNull player
             then
                 logInfo "mimic is null: predictor will run userRegisterText"
                 userRegisterText gameInput
-            else
-                logInfo "mimic is not null: predictor will run mimicRegisterText"
-                mimicRegisterText mimic.MimicId gameInput
+        else if not <| isNull mimic then
+            logInfo "mimic is not null: predictor will run mimicRegisterText"
+            mimicRegisterText mimic.MimicId gameInput
+        else
+            logError "Failed to run registerPredictor. The required field(s) are null."
 
     /// Predictor instance for the local player.
     static member val LocalPlayer: Predictor = null with set, get

@@ -7,6 +7,7 @@ open UnityEngine
 open System
 open System.IO
 open System.Collections.Generic
+open BepInEx
 open Mirage.Core.Async.Fork
 
 /// The directory to save audio files in.
@@ -45,7 +46,20 @@ let internal deleteRecordings () =
 
 /// Retrieve all the file names in the recordings directory.
 /// Note: This runs on a separate thread, but is not a true non-blocking function, and will cause the other thread to block.
-let internal getRecordings =
+let internal getRecordings (info: PluginInfo) =
+    forkReturn <| async {
+        let directory =
+            Path.Join(
+                Path.GetDirectoryName(info.Location).AsSpan(),
+                "../../Mirage/Recording"
+            )
+        return
+            try Directory.GetFiles directory
+            with | _ -> zero
+    }
+
+/// TODO: REMVOE THIS
+let private getRecordings2 =
     forkReturn <| async {
         return
             try Directory.GetFiles RecordingDirectory
@@ -56,7 +70,7 @@ let internal getRecordings =
 let internal getRecording manager =
     async {
         if manager.recordings.Count = 0 then
-            let! recordings = getRecordings
+            let! recordings = getRecordings2
             manager.recordings.Clear()
             manager.recordings.AddRange recordings
         return

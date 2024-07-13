@@ -133,16 +133,6 @@ let onTranscribe sentenceId (action: TranscribeLocalAction<Transcription>) =
                             }
                     flip iter enemies <| fun enemy ->
                         enemy.Register heardAtom
-                    Predictor.LocalPlayer.Register <|
-                        HeardAtom
-                            {   text = payload.transcription.text
-                                speakerClass = Predictor.LocalPlayer.SpeakerId
-                                speakerId = Predictor.LocalPlayer.SpeakerId
-                                sentenceId = sentenceId
-                                elapsedMillis = payload.vadFrame.elapsedTime
-                                transcriptionProb = float payload.transcription.avgLogProb
-                                nospeechProb = float payload.transcription.noSpeechProb
-                            }
         }
 
 type InitMicrophoneProcessor =

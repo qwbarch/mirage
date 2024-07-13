@@ -1,12 +1,15 @@
 namespace Mirage
 
 open BepInEx
+open System
 open System.IO
 open System.Diagnostics
 open Silero.API
 open Predictor.Lib
 open NAudio.Lame
 open Whisper.API
+open UnityEngine
+open FSharpPlus
 open Mirage.PluginInfo
 open Mirage.Core.Async.LVar
 open Mirage.Domain.Netcode
@@ -18,9 +21,7 @@ open Mirage.Hook.Dissonance
 open Mirage.Hook.MaskedPlayerEnemy
 open Mirage.Hook.Predictor
 open Mirage.Unity.Recognition
-open System
 open Mirage.Domain.Audio.Recording
-open FSharpPlus
 
 [<BepInPlugin(pluginId, pluginName, pluginVersion)>]
 [<BepInDependency(StaticNetcodeLib.MyPluginInfo.PLUGIN_GUID, BepInDependency.DependencyFlags.HardDependency)>]
@@ -61,8 +62,9 @@ type Plugin() =
 
                 let toGuid (x: string) = new Guid(x)
                 let! recordings =
-                    getRecordings
+                    getRecordings this.Info
                         |> map (map (Path.GetFileNameWithoutExtension >> toGuid) >> List.ofArray)
+                logInfo $"Found {recordings.Length} recordings."
                 do! initBehaviourPredictor
                         logInfo
                         logWarning
