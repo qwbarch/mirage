@@ -210,7 +210,6 @@ type PolicyFileInfo =
     
 type PolicyFileState =
     {   dateToFileInfo: Dictionary<DateTime, PolicyFileInfo> // Any observation datetime to the file that stores that observation
-        fileToData: Dictionary<FilePath, (CompressedObservationFileFormat * FutureAction) array>
         files: SortedSet<PolicyFileInfo>
     }
 

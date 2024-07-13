@@ -68,7 +68,7 @@ let readStoredPolicy
     do! removeTempFiles dir logInfo logWarning
 
     let dateToFileInfo = Dictionary()
-    let fileToData = Dictionary()
+    let fileToData = List()
     let filesSet = SortedSet()
     let mutable counter = 0
     let add (fileName: string) (asFileFormat: PolicyFileFormat) =
@@ -79,7 +79,7 @@ let readStoredPolicy
         for (observation, _) in asFileFormat.data do
             dateToFileInfo.Add(observation.time, fileInfo)
             counter <- counter + 1
-        fileToData.Add(fileName, asFileFormat.data)
+        fileToData.Add(asFileFormat.data)
         let _ = filesSet.Add(fileInfo)
         ()
 
@@ -98,11 +98,11 @@ let readStoredPolicy
 
 
     logInfo <| "Read " + counter.ToString() + " data points"
-    return {
+    let format = {
         dateToFileInfo = dateToFileInfo
-        fileToData = fileToData
         files = filesSet
     }
+    return format, fileToData
 }
 
 let toCompressedObs (observation: Observation) (context: (CompressedObservationFileFormat * FutureAction) array) : CompressedObservation =
@@ -177,28 +177,40 @@ let createFileHandler
                         if fileState.dateToFileInfo.ContainsKey(obsTime) then
                             // Update a file
                             let fileInfo = fileState.dateToFileInfo[obsTime]
-                            let prevData = fileState.fileToData[fileInfo.name]
-                            // let prevData = readFileData fileInfo.name
-                            let newData = Array.copy prevData
-                            let obsIndex = Array.findIndex (fun (obs, _) -> obs.time = obsTime) prevData
-                            let (existingObs, _) = prevData.[obsIndex]
-                            newData.[obsIndex] <- (existingObs, newAction)
+                            let! prevDataFile = readFileData dir fileInfo.name
+                            match prevDataFile with
+                            | None -> ()
+                            | Some policyFileFormat ->
+                                let prevData = policyFileFormat.data
+                                let newData = Array.copy prevData
+                                let obsIndex = Array.findIndex (fun (obs, _) -> obs.time = obsTime) prevData
+                                let (existingObs, _) = prevData.[obsIndex]
+                                newData.[obsIndex] <- (existingObs, newAction)
 
-                            let newFileData = {
-                                creationDate = fileInfo.creationDate
-                                data = newData
-                            }
-                            let newFileString = JsonConvert.SerializeObject(newFileData, Formatting.Indented)
-                            let path = Path.Combine(dir, fileInfo.name)
+                                let newFileData = {
+                                    creationDate = fileInfo.creationDate
+                                    data = newData
+                                }
+                                let newFileString = JsonConvert.SerializeObject(newFileData, Formatting.Indented)
+                                let path = Path.Combine(dir, fileInfo.name)
 
-                            let! _ = atomicFileWrite path newFileString true logInfo logError
-
-                            let _ = fileState.fileToData.Remove(fileInfo.name)
-                            let _ = fileState.fileToData.TryAdd(fileInfo.name, newFileData.data)
-                            ()
+                                let! _ = atomicFileWrite path newFileString true logInfo logError
+                                ()
                         ()
                     | Add (observation, futureAction) ->
-                        if fileState.files.Count = 0 || fileState.fileToData[fileState.files.Max.name].Length >= config.FILE_SPLIT_SIZE then
+                        let! newFileCondition =
+                            async {
+                                if fileState.files.Count = 0 then
+                                    return true
+                                else
+                                    let fileInfo = fileState.files.Max
+                                    let! prevDataFile = readFileData dir fileInfo.name
+                                    match prevDataFile with
+                                    | None -> return false
+                                    | Some policyFileFormat -> return policyFileFormat.data.Length >= config.FILE_SPLIT_SIZE
+                            }
+
+                        if newFileCondition then
                             // Create a new file
                             let now = DateTime.UtcNow
                             let newFileName = now.ToString("yyyyMMddHHmmss") + "-" + Guid.NewGuid().ToString() + ".json"
@@ -216,27 +228,27 @@ let createFileHandler
                             let! _ = atomicFileWrite path newFileString true logInfo logError
 
                             let _ = fileState.files.Add(newFileInfo)
-                            let _ = fileState.fileToData.TryAdd(newFileName, newFileData.data)
                             let _ = fileState.dateToFileInfo.TryAdd(observation.time, newFileInfo)
                             ()
                         else
                             // Append to the latest file
                             let fileInfo = fileState.files.Max
-                            let prevData = fileState.fileToData[fileInfo.name]
-                            let newObs = toCompressedObsFileFormat <| toCompressedObs observation prevData
-                            let newFileData = {
-                                creationDate = fileInfo.creationDate
-                                data = Array.append prevData [|(newObs, futureAction)|]
-                            }
-                            let newFileString = JsonConvert.SerializeObject(newFileData, Formatting.Indented)
-                            let path = Path.Combine(dir, fileInfo.name)
-                            let! _ = atomicFileWrite path  newFileString true logInfo logError
+                            let! prevDataFile = readFileData dir fileInfo.name
+                            match prevDataFile with
+                            | None -> ()
+                            | Some policyFileFormat ->
+                                let prevData = policyFileFormat.data
+                                let newObs = toCompressedObsFileFormat <| toCompressedObs observation prevData
+                                let newFileData = {
+                                    creationDate = fileInfo.creationDate
+                                    data = Array.append prevData [|(newObs, futureAction)|]
+                                }
+                                let newFileString = JsonConvert.SerializeObject(newFileData, Formatting.Indented)
+                                let path = Path.Combine(dir, fileInfo.name)
+                                let! _ = atomicFileWrite path  newFileString true logInfo logError
 
-                            let _ = fileState.fileToData.Remove(fileInfo.name)
-                            let _ = fileState.fileToData.TryAdd(fileInfo.name, newFileData.data)
-
-                            let _ = fileState.dateToFileInfo.TryAdd(observation.time, fileInfo)
-                            ()
+                                let _ = fileState.dateToFileInfo.TryAdd(observation.time, fileInfo)
+                                ()
                 with
                 | ex -> logError $"Something went wrong in the file handler {ex.ToString()}"
                 do! loop()

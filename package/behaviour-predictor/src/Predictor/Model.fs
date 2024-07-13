@@ -47,15 +47,14 @@ let copyModelData : Async<Policy * HashSet<Guid>> =
         return policy, existingRecordings
     }
 
-let loadModel (fileState: PolicyFileState) (existingRecordingsList: Guid list) = async {
+let loadModel (fileDatas: ((CompressedObservationFileFormat * FutureAction) array) seq) (existingRecordingsList: Guid list) = async {
     logInfo "Called loadModel"
     let! _ = accessLVar modelLVar <| fun model ->
         for existingRecording in existingRecordingsList do
             ignore <| model.availableRecordings.Add(existingRecording)
 
         logInfo <| sprintf $"Got {model.availableRecordings.Count} recordings."
-        for kv in fileState.fileToData do
-            let data = kv.Value
+        for data in fileDatas do
             let mutable failCount = 0
             for (obsFileFormat, action) in data do
                 let obs = fromCompressedObsFileFormat obsFileFormat
