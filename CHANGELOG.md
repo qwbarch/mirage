@@ -2,7 +2,7 @@
 
 ### 1.8.1
 
-- Fixed a compatibility issue for linux users. Thanks to [Coppertiel](Capital-Asterisk) for reporting the bug!
+- Fixed a compatibility issue for linux users. Thanks to [Coppertiel](https://thunderstore.io/c/lethal-company/p/Coppertiel/) for reporting the bug!
 
 ### 1.8.0
 
