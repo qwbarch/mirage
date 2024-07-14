@@ -1,5 +1,9 @@
 ## Changelog
 
+### 1.8.1
+
+- Fixed a compatibility issue for linux users. Thanks to [Coppertiel](Capital-Asterisk) for reporting the bug!
+
 ### 1.8.0
 
 - Added support for the following v56 enemies:
