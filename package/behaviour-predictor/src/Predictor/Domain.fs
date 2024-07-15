@@ -159,6 +159,8 @@ type PolicyUpdateMessage =
     | ObsActionPair of DateTime * CompressedObservation * FutureAction
     | RemoveRecording of Guid
 
+type PolicyDeleteMessage = RemovePolicy of (DateTime * CompressedObservation * FutureAction) list
+
 type MimicPolicyUpdater = AutoCancelAgent<PolicyUpdateMessage>
 type FutureActionGenerator = DisposableAsync
 type MimicData =
@@ -194,6 +196,9 @@ type Model =
         // Store some helper data to do some operations faster
         mutable lastSpokeEncoding: Option<string * TextEmbedding> option
         mutable lastHeardEncoding: Option<string * TextEmbedding> option
+        mutable copies: int
+        mutable bytes: int64
+        mutable bytesLimit: int64
     }
 
 type FilePath = string

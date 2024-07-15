@@ -35,3 +35,20 @@ let createPolicyUpdater
             }
         loop()
     )
+
+let createPolicyDeleter
+    (internalPolicyLVar: LVar<Policy>) = AutoCancelAgent<PolicyDeleteMessage>.Start(fun inbox ->
+    let rec loop () =
+        async {
+            let! policyDeleteMessage = inbox.Receive()
+            match policyDeleteMessage with
+            | RemovePolicy rem ->
+                let! sizePostRemoval = accessLVar internalPolicyLVar <| fun internalPolicy ->
+                    for obsTime, _, _ in rem do
+                        ignore <| internalPolicy.Remove(obsTime)
+                    internalPolicy.Count
+                logInfo <| sprintf $"Mimic got policy removal {rem.Length}. Size after: {sizePostRemoval}"
+            do! loop()
+        }
+    loop()
+    )

@@ -58,7 +58,7 @@ let readFileData (dir: string) (fileName: string) =
             return asFileFormatOption
         with
         | ex -> 
-            logError <| sprintf $"Could not read file data. {ex.ToString()}"
+            logWarning <| sprintf $"Could not read file data. {ex.ToString()}"
             return None
     }
 
@@ -206,7 +206,7 @@ let createFileHandler
                                     let fileInfo = fileState.files.Max
                                     let! prevDataFile = readFileData dir fileInfo.name
                                     match prevDataFile with
-                                    | None -> return false
+                                    | None -> return true
                                     | Some policyFileFormat -> return policyFileFormat.data.Length >= config.FILE_SPLIT_SIZE
                             }
 

@@ -47,7 +47,7 @@ let initBehaviourPredictor
                 let policyDir = Path.Combine(fileDir, fileSubDir)
                 createDirIfDoesNotExist fileDir fileSubDir
                 let! fileState, fileData = readStoredPolicy policyDir logWarning
-                do! loadModel fileData existingRecordings
+                do! loadModel fileData existingRecordings 5000
                 PolicyFileHandler.fileHandler <- createFileHandler fileState policyDir storageLimitAsBytes
             }
 

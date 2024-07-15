@@ -14,6 +14,7 @@ open System.Collections.Generic
 open Embedding
 open Mirage.Core.Async.LVar
 open Mirage.Core.Async.MVar
+open DomainBytes
 
 let learnerLVar : LVar<LearnerAccess option> = newLVar(None)
 
@@ -43,6 +44,9 @@ let addEmptyObservation
 
                 Async.RunSynchronously <| sendUpdateToMimics compressedObservation.time compressedObservation NoAction
                 fileHandler.Post <| Add (observation, NoAction)
+
+                model.bytes <- model.bytes + 8L + getSizeCompressedObs compressedObservation + getSizeAction NoAction
+                Model.notifyMemoryChange()
         ()
     }
 
@@ -75,10 +79,14 @@ let addSpokeResponse
                             }
                         delay = timeDifferenceMillis
                     }
+                    let prevObs, prevAction = model.policy[relObs.time]
+
                     model.policy[relObs.time] <- (relObs, QueueAction queueAction)
                     ignore <| model.availableRecordings.Add(queueAction.action.fileId)
                     Async.RunSynchronously <| sendUpdateToMimics relObs.time relObs (QueueAction queueAction)
                     fileHandler.Post <| Update (relObs.time, QueueAction queueAction)
+                    model.bytes <- model.bytes - getSizeAction prevAction - getSizeCompressedObs prevObs + getSizeAction (QueueAction queueAction) + getSizeCompressedObs relObs
+                    Model.notifyMemoryChange()
                     logInfo $"Added a response."
                     ()
                 else

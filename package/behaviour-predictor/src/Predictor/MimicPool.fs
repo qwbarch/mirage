@@ -23,8 +23,18 @@ let mimicLifetime (id: Guid) (sendMimicText: Guid -> unit) =
         // Setup thread
         use killSignal = createEmptyMVar<int>()
 
+        // Potential bug here if a deletion happens after a copy but it probably shouldn't matter much
         let! (initialPolicy, initialExistingRecordings) = copyModelData
         use internalPolicy = newLVar(initialPolicy)
+        use policyDeleter = createPolicyDeleter internalPolicy
+        let! _ = accessLVar memorySubscribersLVar <| fun memorySubscribers ->
+            memorySubscribers.Add(policyDeleter)
+
+        // Increase the number of copies by one, subscribe
+        let! _ = accessLVar modelLVar <| fun model ->
+            model.copies <- model.copies + 1
+            Model.notifyMemoryChange()
+
         use internalRecordings = newLVar(initialExistingRecordings)
         use policyUpdater = createPolicyUpdater internalPolicy internalRecordings
 
@@ -67,6 +77,14 @@ let mimicLifetime (id: Guid) (sendMimicText: Guid -> unit) =
         // Teardown thread. From here on we assume that no other threads have access to mimicData.
         // Wait for the kill signal
         let! __ = readMVar killSignal
+
+        let! _ = accessLVar memorySubscribersLVar <| fun memorySubscribers ->
+            memorySubscribers.Remove(policyDeleter)
+
+        // Reduce the number of copies by one
+        let! _ = accessLVar modelLVar <| fun model ->
+            model.copies <- model.copies - 1
+
         // The policy updater can be safely killed now since this mimic does not exist in mimicData
         ()
     }

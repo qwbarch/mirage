@@ -27,6 +27,7 @@
     <Compile Include="Predictor/Config.fs" />
     <Compile Include="Predictor/DisposableAsync.fs" />
     <Compile Include="Predictor/Domain.fs" />
+    <Compile Include="Predictor/DomainBytes.fs" />
     <Compile Include="Predictor/Utilities.fs" />
     <Compile Include="Predictor/EmitAction.fs" />
     <Compile Include="Predictor/PolicyFileHandler.fs" />
