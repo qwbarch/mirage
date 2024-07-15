@@ -13,6 +13,7 @@ open Mirage.Core.Audio.File.Mp3Writer
 open Mirage.Core.Audio.Microphone.Resampler
 open Mirage.Core.Audio.Microphone.Recorder
 open Mirage.Core.Audio.Microphone.Detection
+open FSharpPlus.Data
 
 /// State of a transcription for a sentence.
 type private SentenceState<'PlayerId> =
@@ -209,21 +210,24 @@ let VoiceTranscriber<'PlayerId, 'Transcription>
         let rec consumer =
             async {
                 let! input = agent.AsyncGet()
+                let tryTranscribeAudio samples =
+                    async {
+                        let mutable value = None
+                        if tryAcquire lock then
+                            printfn "lock acquired"
+                            try
+                                let! transcription = transcribeAudio samples
+                                value <- transcription
+                            finally
+                                lockRelease lock
+                                printfn "lock released"
+                        else
+                            printfn "lock failed to acquire"
+                        return value
+                    }
                 match input with
                     | SetLanguage lang -> language <- lang
                     | TranscribeBatched action ->
-                        let tryTranscribeAudio samples =
-                            Async.StartImmediate <|
-                                async {
-                                    if tryAcquire lock then
-                                        printfn "lock acquired"
-                                        try do! ignore <!> transcribeAudio samples
-                                        finally
-                                            lockRelease lock
-                                            printfn "lock released"
-                                    else
-                                        printfn "lock failed to acquire"
-                                }
                         match action with
                             | BatchedStart payload ->
                                 printfn $"SentenceStart (mirage.core): {payload.sentenceId}"
@@ -248,8 +252,8 @@ let VoiceTranscriber<'PlayerId, 'Transcription>
                                     | Some sentence ->
                                         sentence.vadTimings <- payload.vadTimings
                                         sentence.finished <- true
-                                        printfn "before transcribeAudio SentenceEnd"
-                                        tryTranscribeAudio zero
+                                        printfn "tryTranscribeAudio (BatchedEnd)" // TODO: FIX BATCHEDEND
+                                        do! ignore <!> tryTranscribeAudio zero
                             | BatchedFound payload ->
                                 printfn $"SentenceFound (mirage.core): {payload.sentenceId}"
                                 match Map.tryFind payload.sentenceId sentences with
@@ -258,8 +262,8 @@ let VoiceTranscriber<'PlayerId, 'Transcription>
                                         if payload.samples.Length > 0 then
                                             sentence.vadFrame <- payload.vadFrame
                                             sentence.samples.AddRange payload.samples
-                                            printfn "before transcribeAudio SentenceFound"
-                                            tryTranscribeAudio zero
+                                            printfn "tryTranscribeAudio (BatchedFound)"
+                                            do! ignore <!> tryTranscribeAudio zero
                     | TranscribeLocal action ->
                         match action with
                             | RecordStart _ ->
@@ -277,24 +281,19 @@ let VoiceTranscriber<'PlayerId, 'Transcription>
                                         }
                                     }
                             | RecordFound payload ->
-                                let samples = payload.fullAudio.resampled.samples
-                                if samples.Length > 0 then
-                                    if tryAcquire lock then
-                                        try
-                                            Async.StartImmediate <| async {
-                                                printfn "before transcribeAudio RecordFound"
-                                                let! transcription = transcribeAudio payload.fullAudio.resampled.samples
-                                                printfn "after transcribeAudio RecordFound"
-                                                printfn "before onTranscribe"
-                                                do! onTranscribe << TranscribeLocalAction << TranscribeFound <|
-                                                    {   fileId = getFileId payload.mp3Writer
-                                                        vadFrame = payload.vadFrame
-                                                        transcription = transcription.Value
-                                                    }
-                                                printfn "after onTranscribe"
+                                Async.StartImmediate << map ignore << OptionT.run <| monad {
+                                    let samples = payload.fullAudio.resampled.samples
+                                    if samples.Length > 0 then
+                                        let! transcription = OptionT <| tryTranscribeAudio samples
+                                        printfn "after transcribeAudio RecordFound"
+                                        printfn "before onTranscribe"
+                                        do! OptionT.lift << onTranscribe << TranscribeLocalAction << TranscribeFound <|
+                                            {   fileId = getFileId payload.mp3Writer
+                                                vadFrame = payload.vadFrame
+                                                transcription = transcription
                                             }
-                                        finally
-                                            lockRelease lock
+                                        printfn "after onTranscribe"
+                                }
                 do! consumer
             }
         Async.Start consumer

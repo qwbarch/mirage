@@ -58,7 +58,7 @@ type ResponseAction
     = ResponseFound of ResponseFound
     | ResponseEnd of ResponseEnd
 
-let onTranscribe sentenceId (action: TranscribeLocalAction<Transcription>) =
+let onTranscribe whisperTimingsVar sentenceId (action: TranscribeLocalAction<Transcription>) =
     logInfo "onTranscribe: before async"
     Async.StartImmediate <|
         async {
@@ -93,6 +93,7 @@ let onTranscribe sentenceId (action: TranscribeLocalAction<Transcription>) =
                             }
                     flip iter enemies <| fun enemy ->
                         enemy.Register heardAtom
+                    let! whisperTimings = readLVar whisperTimingsVar
                     Predictor.LocalPlayer.Register <|
                         SpokeRecordingAtom
                             {   spokeAtom =
@@ -102,25 +103,26 @@ let onTranscribe sentenceId (action: TranscribeLocalAction<Transcription>) =
                                         transcriptionProb = float payload.transcription.avgLogProb
                                         nospeechProb = float payload.transcription.noSpeechProb
                                     }
-                                whisperTimings = []
+                                whisperTimings = List.rev whisperTimings
                                 vadTimings = toVADTiming <!> payload.vadTimings
                                 audioInfo =
                                     {   fileId = payload.fileId
                                         duration = payload.vadFrame.elapsedTime
                                     }
                             }
+                    do! modifyLVar whisperTimingsVar <| konst []
                 | TranscribeFound payload ->
                     logInfo $"Transcription found. text: {payload.transcription.text}"
                     let! enemies = accessLVar Predictor.Enemies List.ofSeq
                     let spokeAtom =
-                        SpokeAtom
-                            {   text = payload.transcription.text
-                                sentenceId = sentenceId
-                                transcriptionProb = float payload.transcription.avgLogProb
-                                nospeechProb = float payload.transcription.noSpeechProb
-                                elapsedMillis = payload.vadFrame.elapsedTime
-                            }
-                    Predictor.LocalPlayer.Register spokeAtom
+                        {   text = payload.transcription.text
+                            sentenceId = sentenceId
+                            transcriptionProb = float payload.transcription.avgLogProb
+                            nospeechProb = float payload.transcription.noSpeechProb
+                            elapsedMillis = payload.vadFrame.elapsedTime
+                        }
+                    do! modifyLVar whisperTimingsVar <| List.cons (payload.vadFrame.elapsedTime, spokeAtom)
+                    Predictor.LocalPlayer.Register <| SpokeAtom spokeAtom
                     let heardAtom =
                         HeardAtom
                             {   text = payload.transcription.text
@@ -171,6 +173,7 @@ let MicrophoneProcessor param =
 
     let transcriber =
         let mutable sentenceId = Guid.NewGuid()
+        let whisperTimings = newLVar []
         VoiceTranscriber<uint64, Transcription> transcribeAudio <| fun action ->
             async {
                 match action with
@@ -195,7 +198,7 @@ let MicrophoneProcessor param =
                     | TranscribeLocalAction transcribeAction ->
                         if transcribeAction = TranscribeStart then
                             sentenceId <- Guid.NewGuid()
-                        onTranscribe sentenceId transcribeAction
+                        onTranscribe whisperTimings sentenceId transcribeAction
             }
 
     let recorder =
@@ -212,17 +215,20 @@ let MicrophoneProcessor param =
                         | RecordStart payload ->
                             logInfo $"sendRequest. FileId: {getFileId payload.mp3Writer}"
                             sentenceId <- Guid.NewGuid()
+                            logInfo $"RecordStart. SentenceId: {sentenceId}"
                             do! param.sendRequest << RequestStart <|
                                 {   fileId = getFileId payload.mp3Writer
                                     playerId = playerId
                                     sentenceId = sentenceId
                                 }
                         | RecordEnd payload ->
+                            logInfo $"RecordEnd. SentenceId: {sentenceId}"
                             do! param.sendRequest << RequestEnd <|
                                 {   sentenceId = sentenceId
                                     vadTimings = payload.vadTimings
                                 }
                         | RecordFound payload ->
+                            logInfo $"RecordFound. SentenceId: {sentenceId}"
                             do! param.sendRequest << RequestFound <|
                                 {   vadFrame = payload.vadFrame
                                     playerId = playerId

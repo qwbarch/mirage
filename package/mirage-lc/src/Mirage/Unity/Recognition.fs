@@ -188,7 +188,7 @@ type RemoteTranscriber() as self =
     member this.SentenceFoundClientRpc(fileId: string, sentenceId: string, text, avgLogProb, noSpeechProb, startTime, endTime, elapsedTime, probability) =
         if not this.IsHost then
             logInfo $"SentenceFoundClientrpc. SentenceId: {sentenceId} Text: {text} avgLogProb: {avgLogProb} noSpeechProb: {noSpeechProb}"
-            onTranscribe (Guid sentenceId) << TranscribeFound <|
+            onTranscribe (newLVar []) (Guid sentenceId) << TranscribeFound <| // TODO: FIX THIS
                 {   fileId = Guid fileId
                     vadFrame =
                         {   elapsedTime = elapsedTime
@@ -208,7 +208,7 @@ type RemoteTranscriber() as self =
         if not this.IsHost then
             logInfo $"SentenceEndClientrpc. SentenceId: {sentenceId} Text: {text} avgLogProb: {avgLogProb} noSpeechProb: {noSpeechProb}"
             let vadTimings = toVADFrame <!> zip elapsedTimes probabilities
-            onTranscribe (Guid sentenceId) << TranscribeEnd <|
+            onTranscribe (newLVar[] ) (Guid sentenceId) << TranscribeEnd <| // TODO: FIX THIS
                 {   fileId = Guid fileId
                     vadFrame = Array.last vadTimings
                     vadTimings = List.ofSeq vadTimings

@@ -46,10 +46,9 @@ type Predictor() as self =
 
     let agent = new BlockingQueueAgent<GameInput>(Int32.MaxValue)
     let registerPredictor gameInput =
-        if not <| isNull player
-            then
-                logInfo "mimic is null: predictor will run userRegisterText"
-                userRegisterText gameInput
+        if not <| isNull player then
+            logInfo "mimic is null: predictor will run userRegisterText"
+            userRegisterText gameInput
         else if not <| isNull mimic then
             logInfo "mimic is not null: predictor will run mimicRegisterText"
             mimicRegisterText mimic.MimicId gameInput
@@ -125,9 +124,10 @@ type Predictor() as self =
 
     override this.OnNetworkSpawn() =
         base.OnNetworkSpawn()
-        Async.StartImmediate <<
-            accessLVar Predictor.Enemies <| fun enemies ->
-                enemies.Add this
+        if not << isNull <| this.GetComponent<EnemyAI>() then
+            Async.StartImmediate <<
+                accessLVar Predictor.Enemies <| fun enemies ->
+                    enemies.Add this
 
     override this.OnNetworkDespawn() =
         base.OnNetworkDespawn()
