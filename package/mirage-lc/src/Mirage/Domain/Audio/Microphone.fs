@@ -240,6 +240,7 @@ let MicrophoneProcessor param =
         async {
             let! isReady = readLVar param.isReady
             if isReady then
+                do! writeTranscriber transcriber TryTranscribeAudio
                 do! writeRecorder recorder action
         }
     {   resampler = Resampler <| writeDetector detector

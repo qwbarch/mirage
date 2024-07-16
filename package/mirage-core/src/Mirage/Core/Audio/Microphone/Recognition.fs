@@ -15,8 +15,8 @@ open Mirage.Core.Audio.Microphone.Recorder
 open Mirage.Core.Audio.Microphone.Detection
 open FSharpPlus.Data
 
-/// State of a transcription for a sentence.
-type private SentenceState<'PlayerId> =
+/// State of a transcription for a batched transcription job.
+type private BatchedState<'PlayerId> =
     {   fileId: Guid
         playerId: 'PlayerId
         /// Current samples to be transcribed.
@@ -61,6 +61,9 @@ type TranscriberInput<'PlayerId> =
     | TranscribeLocal of RecordAction
     /// Transcribe audio from another player.
     | TranscribeBatched of TranscribeBatched<'PlayerId>
+    /// Attempts to transcribe batched audio previously set by <b>TranscribeBatched</b>.
+    /// If the lock is acquired, this will simply do nothing.
+    | TryTranscribeAudio
     /// Language that should be used during inference for all transcriptions.
     /// While WhisperS2T does support setting per-transcription languages, this is simplified
     /// to be set for all transcriptions, since everyone in a single lobby should be using the same language anyways.
@@ -124,7 +127,9 @@ type TranscribeAction<'PlayerId, 'Transcription>
 
 // Transcribe voice audio into text.
 type VoiceTranscriber<'PlayerId> =
-    private { agent: BlockingQueueAgent<TranscriberInput<'PlayerId>> }
+    private
+        {   agent: BlockingQueueAgent<TranscriberInput<'PlayerId>>
+        }
     interface IDisposable with
         member this.Dispose() = dispose this.agent
 
@@ -134,7 +139,7 @@ let VoiceTranscriber<'PlayerId, 'Transcription>
         let agent = new BlockingQueueAgent<TranscriberInput<'PlayerId>>(Int32.MaxValue)
         let lock = createLock()
         let mutable language = "en"
-        let mutable sentences: Map<Guid, SentenceState<'PlayerId>> = Map.empty
+        let mutable batchedStates: Map<Guid, BatchedState<'PlayerId>> = Map.empty
 
         /// Attempts to batch transcription jobs if the sentences map contains samples.
         /// If a batch job is done, this will also run the appropriate TranscribeSentenceAction for it as well.
@@ -146,7 +151,7 @@ let VoiceTranscriber<'PlayerId, 'Transcription>
                 printfn "transcribeAudio start"
                 let hostId = Guid.NewGuid()
                 let samplesMap =
-                    flip Map.mapValues sentences _.samples
+                    flip Map.mapValues batchedStates _.samples
                         |> Map.add hostId (List samples)
                         |> Map.filter (fun _ value -> value.Count > 0)
                 printfn $"# of sentences: {samplesMap.Count}"
@@ -179,10 +184,10 @@ let VoiceTranscriber<'PlayerId, 'Transcription>
                                 printfn "sentenceId is the host" // TODO DELETE THIS IF
                             else if sentenceId <> hostId then
                                 printfn "sentenceId is not the host"
-                                let sentence = sentences[sentenceId]
+                                let sentence = batchedStates[sentenceId]
                                 if sentence.finished then
                                     printfn "state finished. removing sentence"
-                                    &sentences %= Map.remove sentenceId
+                                    &batchedStates %= Map.remove sentenceId
                                     Async.StartImmediate << onTranscribe << TranscribeBatchedAction << TranscribeBatchedEnd <|
                                         {   fileId = sentence.fileId
                                             playerId = sentence.playerId
@@ -207,32 +212,33 @@ let VoiceTranscriber<'PlayerId, 'Transcription>
                 else
                     return None
             }
+        let tryTranscribeAudio samples =
+            async {
+                let mutable value = None
+                if tryAcquire lock then
+                    printfn "lock acquired"
+                    try
+                        let! transcription = transcribeAudio samples
+                        value <- transcription
+                    finally
+                        lockRelease lock
+                        printfn "lock released"
+                else
+                    printfn "lock failed to acquire"
+                return value
+            }
         let rec consumer =
             async {
                 let! input = agent.AsyncGet()
-                let tryTranscribeAudio samples =
-                    async {
-                        let mutable value = None
-                        if tryAcquire lock then
-                            printfn "lock acquired"
-                            try
-                                let! transcription = transcribeAudio samples
-                                value <- transcription
-                            finally
-                                lockRelease lock
-                                printfn "lock released"
-                        else
-                            printfn "lock failed to acquire"
-                        return value
-                    }
                 match input with
                     | SetLanguage lang -> language <- lang
+                    | TryTranscribeAudio -> Async.StartImmediate << map ignore <| tryTranscribeAudio zero
                     | TranscribeBatched action ->
                         match action with
                             | BatchedStart payload ->
                                 printfn $"SentenceStart (mirage.core): {payload.sentenceId}"
-                                printfn $"Sentences (before modify): {sentences.Count}"
-                                &sentences %=
+                                printfn $"Sentences (before modify): {batchedStates.Count}"
+                                &batchedStates %=
                                     Map.add payload.sentenceId
                                         {   fileId = payload.fileId
                                             playerId = payload.playerId
@@ -244,10 +250,10 @@ let VoiceTranscriber<'PlayerId, 'Transcription>
                                             samples = zero
                                             finished = false
                                         }
-                                printfn $"Sentences (after modify): {sentences.Count}"
+                                printfn $"Sentences (after modify): {batchedStates.Count}"
                             | BatchedEnd payload ->
                                 printfn $"SentenceEnd (mirage.core): {payload.sentenceId}"
-                                match Map.tryFind payload.sentenceId sentences with
+                                match Map.tryFind payload.sentenceId batchedStates with
                                     | None -> ()
                                     | Some sentence ->
                                         sentence.vadTimings <- payload.vadTimings
@@ -256,7 +262,7 @@ let VoiceTranscriber<'PlayerId, 'Transcription>
                                         do! ignore <!> tryTranscribeAudio zero
                             | BatchedFound payload ->
                                 printfn $"SentenceFound (mirage.core): {payload.sentenceId}"
-                                match Map.tryFind payload.sentenceId sentences with
+                                match Map.tryFind payload.sentenceId batchedStates with
                                     | None -> ()
                                     | Some sentence ->
                                         if payload.samples.Length > 0 then
