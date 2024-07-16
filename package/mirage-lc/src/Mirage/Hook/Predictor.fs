@@ -27,3 +27,11 @@ let initPredictor () =
             startBehaviourPredictor <| Int self.userSteamId
         } :?> IEnumerator
     )
+
+    // AFK detection.
+    On.IngamePlayerSettings.add_OnEnable(fun orig self ->
+        orig.Invoke self
+        self.playerInput.currentActionMap.add_actionTriggered(fun _ ->
+            userIsActivePing()
+        )
+    )

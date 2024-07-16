@@ -74,15 +74,6 @@ type Plugin() =
                         Int32.MaxValue // Storage limit.
                         Int32.MaxValue // Memory limit.
 
-                // TODO: Do this properly.
-                let rec keepActive =
-                    async {
-                        userIsActivePing()
-                        do! Async.Sleep 5000
-                        do! keepActive
-                    }
-                Async.Start keepActive
-
                 // Hooks.
                 registerPrefab()
                 disableAudioSpatializer()

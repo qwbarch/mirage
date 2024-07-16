@@ -70,6 +70,7 @@ let onTranscribe whisperTimingsVar sentenceId (action: TranscribeLocalAction<Tra
                         VoiceActivityAtom
                             {   speakerId = Int StartOfRound.Instance.localPlayerController.playerSteamId
                                 prob = 1.0
+                                distanceToSpeaker = 0f // TODO
                             }
                     logInfo "Transcription start finished"
                 | TranscribeEnd payload ->
@@ -78,6 +79,7 @@ let onTranscribe whisperTimingsVar sentenceId (action: TranscribeLocalAction<Tra
                         let atom =
                             {   speakerId = Predictor.LocalPlayer.SpeakerId
                                 prob = float vadFrame.probability
+                                distanceToSpeaker = 0f // TODO
                             }
                         (vadFrame.elapsedTime, atom)
                     let! enemies = accessLVar Predictor.Enemies List.ofSeq
@@ -90,6 +92,7 @@ let onTranscribe whisperTimingsVar sentenceId (action: TranscribeLocalAction<Tra
                                 elapsedMillis = payload.vadFrame.elapsedTime
                                 transcriptionProb = float payload.transcription.avgLogProb
                                 nospeechProb = float payload.transcription.noSpeechProb
+                                distanceToSpeaker = 0f // TODO
                             }
                     flip iter enemies <| fun enemy ->
                         enemy.Register heardAtom
@@ -132,6 +135,7 @@ let onTranscribe whisperTimingsVar sentenceId (action: TranscribeLocalAction<Tra
                                 elapsedMillis = payload.vadFrame.elapsedTime
                                 transcriptionProb = float payload.transcription.avgLogProb
                                 nospeechProb = float payload.transcription.noSpeechProb
+                                distanceToSpeaker = 0f // TODO
                             }
                     flip iter enemies <| fun enemy ->
                         enemy.Register heardAtom

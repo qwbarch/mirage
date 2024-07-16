@@ -151,6 +151,7 @@ type Predictor() as self =
                     elapsedMillis = elapsedTime
                     transcriptionProb = avgLogProb
                     nospeechProb = noSpeechProb
+                    distanceToSpeaker = 0f // TODO
                 }
 
     [<ServerRpc(RequireOwnership = false)>]
@@ -166,6 +167,7 @@ type Predictor() as self =
             registerPredictor << VoiceActivityAtom <|
                 {   speakerId = toEntityId speakerId speakerIdType
                     prob = probability
+                    distanceToSpeaker = 0f // TODO
                 }
 
     [<ServerRpc(RequireOwnership = false)>]
