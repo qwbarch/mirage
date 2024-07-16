@@ -37,6 +37,7 @@ type AudioInfo =
 type VoiceActivityAtom =
     {   speakerId: EntityId
         prob: double
+        distanceToSpeaker: float32 // In the case that an entity A spoke and the VoiceActivityAtom is sent back to A, distanceToSpeaker would be 0.
     }
 
 type SpokeRecordingAtom =
@@ -54,6 +55,7 @@ type HeardAtom =
         elapsedMillis: int
         transcriptionProb: double
         nospeechProb: double
+        distanceToSpeaker: float32
         // TODO
         // languageId: int32
     }
@@ -161,12 +163,18 @@ type PolicyUpdateMessage =
 
 type PolicyDeleteMessage = RemovePolicy of (DateTime * CompressedObservation * FutureAction) list
 
+type MimicMessage =
+    {   recordingId: Guid
+        whisperTimings: (int * SpokeAtom) list
+        vadTimings: (int * VoiceActivityAtom) list
+    }
+
 type MimicPolicyUpdater = AutoCancelAgent<PolicyUpdateMessage>
 type FutureActionGenerator = DisposableAsync
 type MimicData =
     {   mimicClass: Guid // Equal to the id of the person that this mimic is mimicking
         killSignal: MVar<int>
-        sendMimicText: Guid -> unit
+        sendMimicText: MimicMessage -> unit
         internalPolicy: LVar<Policy>
 
         policyUpdater: MimicPolicyUpdater

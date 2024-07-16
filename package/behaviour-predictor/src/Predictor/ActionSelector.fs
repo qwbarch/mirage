@@ -26,7 +26,7 @@ let TIME_SIGNAL = 9.0
 let SCORE_SPEAK_FACTOR = 1.0
 
 // Bias the mimic towards replying to other players
-let REPLY_BIAS = 15.0
+let REPLY_BIAS = 1.0
 
 let simTransform (x: float) = SIM_SCALE * (x + SIM_OFFSET)
 
@@ -70,6 +70,7 @@ let computeScores
             i <- i + 1
         temp
 
+    let heardInObs = observation.heardEmbedding.IsSome
     let mutable maxNoAction = -10.0
     let mutable timeNoActionCount = 0
     let result = flip map flattened <| fun (heardSomething, heardSim, spokeSim, _, policyObs, action) ->
@@ -84,7 +85,8 @@ let computeScores
         let replyBonus = 
             match action with
             | NoAction -> 0.0
-            | QueueAction _ -> if heardSomething then REPLY_BIAS else 0.0
+            // | QueueAction _ -> if heardSomething then REPLY_BIAS else 0.0
+            | QueueAction _ -> if heardInObs then REPLY_BIAS else 0.0
         let totalCost = replyBonus + heardSim + spokeSim + talkBias + speakOrHearTimeCost
 
         match action with

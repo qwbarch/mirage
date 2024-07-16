@@ -28,7 +28,7 @@ let getSizeAction (action: FutureAction): int64 =
             let whisperTimingsSize: int64 = 
                 let innerSize (inner: int * SpokeAtom): int64 =
                     let _, spokeAtom = inner
-                    4L + 4L + 8L + 8L + 8L + 4L*int64(spokeAtom.text)
+                    4L + 4L + 8L + 8L + 8L + 4L*int64(spokeAtom.text.Length)
                 audioResponse.whisperTimings
                 |> map innerSize
                 |> sum

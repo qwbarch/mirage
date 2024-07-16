@@ -17,7 +17,7 @@ open Mirage.Core.Async.MVar
 let mutable USER_CLASS : Guid = Guid.Empty
 let mimicsLVar: LVar<Dictionary<Guid, MimicData>> = newLVar <| Dictionary()
 
-let mimicLifetime (id: Guid) (sendMimicText: Guid -> unit) =
+let mimicLifetime (id: Guid) (sendMimicText: MimicMessage -> unit) =
     async {
         // Block until the threads have been created.
         // Setup thread
@@ -57,8 +57,8 @@ let mimicLifetime (id: Guid) (sendMimicText: Guid -> unit) =
         let mimicData: MimicData = {
             mimicClass = USER_CLASS
             killSignal = killSignal
-            sendMimicText = sendMimicText
             internalPolicy = internalPolicy
+            sendMimicText = sendMimicText
             policyUpdater = policyUpdater
             currentStatistics = currentStatistics
             notifyUpdateStatistics = notifyUpdateStatistics
@@ -89,7 +89,7 @@ let mimicLifetime (id: Guid) (sendMimicText: Guid -> unit) =
         ()
     }
 
-let mimicInit (id: Guid) (sendMimicText: Guid -> unit) : unit =
+let mimicInit (id: Guid) (sendMimicText: MimicMessage -> unit) : unit =
     Async.Start <| mimicLifetime id sendMimicText
 
 
