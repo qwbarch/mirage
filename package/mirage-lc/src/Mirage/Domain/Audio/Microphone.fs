@@ -5,6 +5,7 @@ open Silero.API
 open FSharpPlus
 open Whisper.API
 open Predictor.Domain
+open UnityEngine
 open Mirage.Domain.Logger
 open Mirage.Unity.Predictor
 open Mirage.Core.Audio.Microphone.Resampler
@@ -70,32 +71,35 @@ let onTranscribe whisperTimingsVar sentenceId (action: TranscribeLocalAction<Tra
                         VoiceActivityAtom
                             {   speakerId = Int StartOfRound.Instance.localPlayerController.playerSteamId
                                 prob = 1.0
-                                distanceToSpeaker = 0f // TODO
+                                distanceToSpeaker = 0f
                             }
                     logInfo "Transcription start finished"
                 | TranscribeEnd payload ->
                     logInfo $"Transcription end. text: {payload.transcription.text}"
                     let toVADTiming vadFrame =
-                        let atom =
+                        let voiceActivityAtom =
                             {   speakerId = Predictor.LocalPlayer.SpeakerId
                                 prob = float vadFrame.probability
-                                distanceToSpeaker = 0f // TODO
+                                distanceToSpeaker = 0f
                             }
-                        (vadFrame.elapsedTime, atom)
+                        (vadFrame.elapsedTime, voiceActivityAtom)
                     let! enemies = accessLVar Predictor.Enemies List.ofSeq
                     let heardAtom =
-                        HeardAtom
-                            {   text = payload.transcription.text
-                                speakerClass = Predictor.LocalPlayer.SpeakerId
-                                speakerId = Predictor.LocalPlayer.SpeakerId
-                                sentenceId = sentenceId
-                                elapsedMillis = payload.vadFrame.elapsedTime
-                                transcriptionProb = float payload.transcription.avgLogProb
-                                nospeechProb = float payload.transcription.noSpeechProb
-                                distanceToSpeaker = 0f // TODO
-                            }
+                        {   text = payload.transcription.text
+                            speakerClass = Predictor.LocalPlayer.SpeakerId
+                            speakerId = Predictor.LocalPlayer.SpeakerId
+                            sentenceId = sentenceId
+                            elapsedMillis = payload.vadFrame.elapsedTime
+                            transcriptionProb = float payload.transcription.avgLogProb
+                            nospeechProb = float payload.transcription.noSpeechProb
+                            distanceToSpeaker = 0f
+                        }
+                    let localPosition = StartOfRound.Instance.localPlayerController.transform.position
                     flip iter enemies <| fun enemy ->
-                        enemy.Register heardAtom
+                        enemy.Register << HeardAtom <|
+                            {   heardAtom with
+                                    distanceToSpeaker = Vector3.Distance(localPosition, enemy.transform.position)
+                            }
                     let! whisperTimings = readLVar whisperTimingsVar
                     Predictor.LocalPlayer.Register <|
                         SpokeRecordingAtom
@@ -126,19 +130,22 @@ let onTranscribe whisperTimingsVar sentenceId (action: TranscribeLocalAction<Tra
                         }
                     do! modifyLVar whisperTimingsVar <| List.cons (payload.vadFrame.elapsedTime, spokeAtom)
                     Predictor.LocalPlayer.Register <| SpokeAtom spokeAtom
+                    let localPosition = StartOfRound.Instance.localPlayerController.transform.position
                     let heardAtom =
-                        HeardAtom
-                            {   text = payload.transcription.text
-                                speakerClass = Predictor.LocalPlayer.SpeakerId
-                                speakerId = Predictor.LocalPlayer.SpeakerId
-                                sentenceId = sentenceId
-                                elapsedMillis = payload.vadFrame.elapsedTime
-                                transcriptionProb = float payload.transcription.avgLogProb
-                                nospeechProb = float payload.transcription.noSpeechProb
-                                distanceToSpeaker = 0f // TODO
-                            }
+                        {   text = payload.transcription.text
+                            speakerClass = Predictor.LocalPlayer.SpeakerId
+                            speakerId = Predictor.LocalPlayer.SpeakerId
+                            sentenceId = sentenceId
+                            elapsedMillis = payload.vadFrame.elapsedTime
+                            transcriptionProb = float payload.transcription.avgLogProb
+                            nospeechProb = float payload.transcription.noSpeechProb
+                            distanceToSpeaker = 0f
+                        }
                     flip iter enemies <| fun enemy ->
-                        enemy.Register heardAtom
+                        enemy.Register << HeardAtom <|
+                            {   heardAtom with
+                                    distanceToSpeaker = Vector3.Distance(localPosition, enemy.transform.position)
+                            }
         }
 
 type InitMicrophoneProcessor =

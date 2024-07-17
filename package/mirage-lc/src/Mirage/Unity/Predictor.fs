@@ -116,7 +116,8 @@ type Predictor() as self =
                             payload.sentenceId.ToString(),
                             payload.elapsedMillis,
                             payload.transcriptionProb,
-                            payload.nospeechProb
+                            payload.nospeechProb,
+                            payload.distanceToSpeaker
                         )
                 do! consumer
             }
@@ -141,7 +142,7 @@ type Predictor() as self =
         agent.Add gameInput
 
     [<ClientRpc>]
-    member private _.SyncHeardAtomClientRpc(text, speakerClass, speakerClassType, speakerId, speakerIdType, sentenceId, elapsedTime, avgLogProb, noSpeechProb) =
+    member private _.SyncHeardAtomClientRpc(text, speakerClass, speakerClassType, speakerId, speakerIdType, sentenceId, elapsedTime, avgLogProb, noSpeechProb, distanceToSpeaker) =
         if shouldRegister() then
             registerPredictor << HeardAtom <|
                 {   text = text
@@ -151,14 +152,14 @@ type Predictor() as self =
                     elapsedMillis = elapsedTime
                     transcriptionProb = avgLogProb
                     nospeechProb = noSpeechProb
-                    distanceToSpeaker = 0f // TODO
+                    distanceToSpeaker = distanceToSpeaker
                 }
 
     [<ServerRpc(RequireOwnership = false)>]
-    member private this.SyncHeardAtomServerRpc(text, speakerClass, speakerClassType, speakerId, speakerIdType, sentenceId, elapsedTime, avgLogProb, noSpeechProb) =
+    member private this.SyncHeardAtomServerRpc(text, speakerClass, speakerClassType, speakerId, speakerIdType, sentenceId, elapsedTime, avgLogProb, noSpeechProb, distanceToSpeaker) =
         logInfo $"SyncHeardAtomServerRpc. Text: {text}"
         if this.IsHost then
-            this.SyncHeardAtomClientRpc(text, speakerClass, speakerClassType, speakerId, speakerIdType, sentenceId, elapsedTime, avgLogProb, noSpeechProb)
+            this.SyncHeardAtomClientRpc(text, speakerClass, speakerClassType, speakerId, speakerIdType, sentenceId, elapsedTime, avgLogProb, noSpeechProb, distanceToSpeaker)
 
     [<ClientRpc>]
     member private _.SyncVoiceActivityAtomClientRpc(speakerId, speakerIdType, probability) =

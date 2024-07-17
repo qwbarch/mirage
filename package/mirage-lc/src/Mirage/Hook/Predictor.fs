@@ -28,7 +28,7 @@ let initPredictor () =
         } :?> IEnumerator
     )
 
-    // AFK detection.
+    // AFK detection. userIsActivePing is run whenever any input is detected, such as a key-press or the muose being moved.
     On.IngamePlayerSettings.add_OnEnable(fun orig self ->
         orig.Invoke self
         self.playerInput.currentActionMap.add_actionTriggered(fun _ ->
