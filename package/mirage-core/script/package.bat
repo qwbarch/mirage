@@ -4,14 +4,6 @@ pushd ..\..\silero-vad\script
 call build-lib.bat || exit /b
 popd
 
-pushd ..\..\openai-whisper\script
-call build-lib.bat || exit /b
-popd
-
-pushd ..\..\behaviour-predictor\script
-call build-lib.bat || exit /b
-popd
-
 call build.bat
 
 rem Remove the previously packaged files.
@@ -52,14 +44,20 @@ copy %src%\silero_vad.onnx .
 
 popd
 
-rem Create the Mirage.Core package.
+rem Move to the bin folder.
 popd
+pushd bin
+
+rem Create the Mirage.Core package.
 powershell Compress-Archive^
     -Force^
-    -Path "..\bin\Mirage.Core",^
-          "..\..\mirage-core\manifest.json",^
-          "..\..\mirage-core\icon.png",^
-          "..\..\..\README.md",^
-          "..\..\..\LICENSE"^
-    -DestinationPath "../bin/Mirage.Core.zip"
+    -Path "Mirage.Core",^
+          "../manifest.json",^
+          "../icon.png",^
+          "../../../README.md",^
+          "../../../CHANGELOG.md",^
+          "../../../LICENSE"^
+    -DestinationPath "../bin/mirage.zip"
 
+
+popd

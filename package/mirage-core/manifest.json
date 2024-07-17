@@ -1,0 +1,13 @@
+{
+    "name": "MirageCoreExperimental",
+    "version_number": "1.0.0",
+    "website_url": "https://github.com/qwbarch/mirage",
+    "description": "This is not meant to be used yet.",
+    "dependencies": [
+        "BepInEx-BepInExPack-5.4.2100",
+        "Bobbie-NAudio-2.2.2",
+		"qwbarch-NAudioLame-2.1.1",
+		"xilophor-StaticNetcodeLib-1.1.1",
+		"Hamunii-AutoHookGenPatcher-1.0.4"
+    ]
+}
