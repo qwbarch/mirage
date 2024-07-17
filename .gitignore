@@ -409,3 +409,5 @@ bin
 *.bak
 
 model/whisper-base/model.bin
+
+target/
