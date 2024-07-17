@@ -53,6 +53,7 @@ let mimicRegisterTextDefault
                 elapsedMillis = 0
                 transcriptionProb = 0.0
                 nospeechProb = 0.0
+                distanceToSpeaker = float32(0)
             }
 
     mimicRegisterText mimicId gameInput
@@ -90,6 +91,7 @@ let userRegisterTextDefault
                 elapsedMillis = 0
                 transcriptionProb = 0.0
                 nospeechProb = 0.0
+                distanceToSpeaker = float32(0.0)
             }
 
     userRegisterText gameInput

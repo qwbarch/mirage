@@ -131,7 +131,7 @@ let sample (unnormScores: List<float * FutureAction>) (rngSource: RandomSource) 
     unnormScores[choice]
 
 
-let sampleAction (oppositeOrdPolicy: Policy) (observation: Observation) (rngSource: RandomSource) : FutureAction = 
+let sampleActionRandom (oppositeOrdPolicy: Policy) (observation: Observation) (rngSource: RandomSource) : FutureAction = 
     if oppositeOrdPolicy.Count = 0 then
         NoAction
     else
@@ -190,13 +190,59 @@ let sampleAction (oppositeOrdPolicy: Policy) (observation: Observation) (rngSour
         let sampled = sample scores rngSource
         logInfo <| sprintf "Sampled %A" sampled
         snd sampled
-let observationToFutureAction (internalPolicy: LVar<Policy>) (observation : Observation) (rngSource: RandomSource) : Async<Option<FutureAction>> =
-    async {
-        let! res = accessLVar internalPolicy <| fun policy ->
-            if policy.Count = 0 then
+
+let getClosestAction (policy: Policy) (internalRecordings: HashSet<Guid>) (action: FutureAction): FutureAction option =
+    match action with
+    | NoAction -> 
+        invalidOp "Wrong argument."
+    | QueueAction queueAction ->
+        match queueAction.action.embedding with
+        | None -> None
+        | Some (_, embedding) ->
+            let accum: List<float * FutureAction> = List();
+            for kv in policy do
+                let _, possibleAction = kv.Value
+                match possibleAction with
+                | NoAction -> ()
+                | QueueAction possibleQueueAction ->
+                    match possibleQueueAction.action.embedding with
+                    | None -> ()
+                    | Some (_, possibleEmbedding) ->
+                        if internalRecordings.Contains(possibleQueueAction.action.fileId) then
+                            accum.Add((embeddingSim embedding possibleEmbedding, possibleAction))
+            if accum.Count = 0 then
                 None
             else
-                Some <| sampleAction policy observation rngSource
+                let res = Seq.maxBy fst accum
+                logInfo <| sprintf $"Found the best match with similarity: {fst res}. {snd res}"
+                Some <| snd res
+
+
+let sampleAction (oppositeOrdPolicy: Policy) (internalRecordings: HashSet<Guid>) (observation: Observation) (rngSource: RandomSource) : FutureAction = 
+    let sampled = sampleActionRandom oppositeOrdPolicy observation rngSource
+    match sampled with
+    | NoAction -> sampled
+    | QueueAction queueAction ->
+        if internalRecordings.Contains(queueAction.action.fileId) then
+            sampled
+        else
+            logInfo <| sprintf $"Recording does not exist: {queueAction.action.fileId}. Finding the closest match..."
+            let closest = getClosestAction oppositeOrdPolicy internalRecordings sampled
+            match closest with
+            | None -> NoAction
+            | Some action -> action
+
+let observationToFutureAction (internalPolicy: LVar<Policy>) (internalRecordingsLVar: LVar<HashSet<Guid>>) (observation : Observation) (rngSource: RandomSource) : Async<Option<FutureAction>> =
+    async {
+        let! res = accessLVar internalPolicy <| fun policy ->
+            Async.RunSynchronously <| async {
+                let! innerRes = accessLVar internalRecordingsLVar <| fun internalRecordings ->
+                    if policy.Count = 0 then
+                        None
+                    else
+                        Some <| sampleAction policy internalRecordings observation rngSource
+                return innerRes
+            }
         return res
     }
 
@@ -210,7 +256,7 @@ let createFutureActionGeneratorAsync
         let timeStart = DateTime.UtcNow
         let! observationProducer = readLVar observationChannel
         let observation = observationProducer timeStart
-        let! futureActionOption = observationToFutureAction internalPolicy observation rngSource
+        let! futureActionOption = observationToFutureAction internalPolicy internalRecordings observation rngSource
         if futureActionOption.IsSome then
             sendToActionEmitter futureActionOption.Value
         ()
