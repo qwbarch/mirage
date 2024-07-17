@@ -62,10 +62,13 @@ let createStatisticsUpdater
                             let spokeAtom = spokeRecordingAtom.spokeAtom
                             stats.lastSpoke <- Some (arrivalTime, spokeAtom)
                         | HeardAtom heardAtom ->
-                            if not <| stats.lastHeard.ContainsKey heardAtom.speakerId then
-                                stats.lastHeard.Add(heardAtom.speakerId, (arrivalTime, heardAtom))
+                            if heardAtom.distanceToSpeaker <= float32 45 then
+                                if not <| stats.lastHeard.ContainsKey heardAtom.speakerId then
+                                    stats.lastHeard.Add(heardAtom.speakerId, (arrivalTime, heardAtom))
+                                else
+                                    replaceDict stats.lastHeard heardAtom.speakerId (arrivalTime, heardAtom)
                             else
-                                replaceDict stats.lastHeard heardAtom.speakerId (arrivalTime, heardAtom)
+                                logInfo "Too far. Rejected."
                         | VoiceActivityAtom vaAtom -> 
                             if not <| stats.voiceActivityQueue.ContainsKey vaAtom.speakerId then
                                 stats.voiceActivityQueue.Add(vaAtom.speakerId, arrivalTime)

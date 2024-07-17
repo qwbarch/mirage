@@ -51,6 +51,7 @@ type HeardAtom =
     {   text: string
         speakerClass: EntityClass
         speakerId: EntityId
+        isMimic: bool
         sentenceId: Guid
         elapsedMillis: int
         transcriptionProb: double

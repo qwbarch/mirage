@@ -218,19 +218,43 @@ let getClosestAction (policy: Policy) (internalRecordings: HashSet<Guid>) (actio
                 Some <| snd res
 
 
+// TODO this way of deleting does not respect the compression trick. Fix?
+let reducePolicy (policy: Policy) =
+    if policy.Count < 10000 then
+        // Enforce a baseline count
+        ()
+    else
+        let prevSize = policy.Count
+        let removeCount = min policy.Count <| int(float(policy.Count) * 0.3)
+        let toRemove = take removeCount policy
+        for kv in toRemove do
+            ignore <| policy.Remove(kv.Key)
+        
+        logInfo <| sprintf $"Culling the policy. Previous size: {prevSize}, After size: {policy.Count}"
+        ()
+
 let sampleAction (oppositeOrdPolicy: Policy) (internalRecordings: HashSet<Guid>) (observation: Observation) (rngSource: RandomSource) : FutureAction = 
-    let sampled = sampleActionRandom oppositeOrdPolicy observation rngSource
-    match sampled with
-    | NoAction -> sampled
-    | QueueAction queueAction ->
-        if internalRecordings.Contains(queueAction.action.fileId) then
-            sampled
-        else
-            logInfo <| sprintf $"Recording does not exist: {queueAction.action.fileId}. Finding the closest match..."
-            let closest = getClosestAction oppositeOrdPolicy internalRecordings sampled
-            match closest with
-            | None -> NoAction
-            | Some action -> action
+    let timeStart = DateTime.UtcNow
+    let sampled = 
+        let sampled = sampleActionRandom oppositeOrdPolicy observation rngSource
+        match sampled with
+        | NoAction -> sampled
+        | QueueAction queueAction ->
+            if internalRecordings.Contains(queueAction.action.fileId) then
+                sampled
+            else
+                logInfo <| sprintf $"Recording does not exist: {queueAction.action.fileId}. Finding the closest match..."
+                let closest = getClosestAction oppositeOrdPolicy internalRecordings sampled
+                match closest with
+                | None -> NoAction
+                | Some action -> action
+    let timeEnd = DateTime.UtcNow
+    logInfo <| sprintf $"Took time to get sample: {timeSpanToMillis <| timeEnd - timeStart}"
+
+    // Delete some of the policy if it took too long to get the action
+    if timeSpanToMillis (timeEnd - timeStart) > 200 then
+        reducePolicy oppositeOrdPolicy
+    sampled
 
 let observationToFutureAction (internalPolicy: LVar<Policy>) (internalRecordingsLVar: LVar<HashSet<Guid>>) (observation : Observation) (rngSource: RandomSource) : Async<Option<FutureAction>> =
     async {
