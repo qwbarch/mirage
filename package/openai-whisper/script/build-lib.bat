@@ -1,7 +1,18 @@
 @echo off
 
-cd ../lib
-call conda activate whisper
-pyinstaller main.spec --noconfirm
-powershell -Command "conda run -n whisper COPY \"%CONDA_PREFIX%\bin\nvrtc-builtins64_121.dll\" .\dist\main\_internal\nvrtc-builtins64_121.dll"
-cd ../script
+set CONDA_ENV="whisper"
+
+rem Create the conda environment if it doesn't exist yet.
+pushd ..\lib
+
+conda env list | findstr /r "^%CONDA_ENV%" > nul
+if %errorlevel% neq 0 (
+    conda env create -f environment.yml -y
+)
+
+rem Create the python exe if it doesn't exist yet.
+if not exist "dist\main\main.exe" (
+    conda run -n "%CONDA_ENV%" --no-capture-output pyinstaller main.spec --noconfirm
+)
+
+popd
