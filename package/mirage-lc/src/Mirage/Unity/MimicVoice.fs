@@ -89,7 +89,7 @@ type MimicVoice() as self =
                     logInfo $"Player #{mimicPlayer.MimickingPlayer.playerClientId} sendMimicText is requesting the file: {payload.recordingId}.mp3"
                     channel.Add $"{Application.dataPath}/../Mirage/Recording/{payload.recordingId}.mp3"
                     Async.StartImmediate <| async {
-                        let voiceActivityAtom = snd << List.last <| payload.vadTimings
+                        let voiceActivityAtom = snd << List.head <| payload.vadTimings
                         let spokeAtom = snd << List.last <| payload.whisperTimings
                         let heardAtom =
                             {   text = spokeAtom.text
