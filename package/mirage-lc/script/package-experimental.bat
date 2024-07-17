@@ -100,7 +100,12 @@ pushd ..\bin\Mirage.AI\BepInEx\core\Mirage.AI\OpenAI.Whisper
 set src=..\..\..\..\..\..\..\openai-whisper
 copy %src%\bin\OpenAI.Whisper.dll .
 robocopy %src%\lib\dist\main . /e /copy:DAT /xf /xd
-robocopy %src%\..\..\model\whisper-base model /e /copy:DAT /xf /xd
+robocopy %src%\..\..\model\whisper model /e /copy:DAT /xf /xd
+
+rem Join the model.bin chunk files.
+pushd model
+copy /b model.chunk0.bin + model.chunk1.bin + model.chunk2.bin model.bin
+popd
 
 popd
 

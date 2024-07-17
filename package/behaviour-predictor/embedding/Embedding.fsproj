@@ -13,10 +13,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>bertlib.dll</TargetPath>
     </ContentWithTargetPath>
-    <ContentWithTargetPath Include="../main.exe">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <TargetPath>main.exe</TargetPath>
-    </ContentWithTargetPath>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Embedding.fs" />
