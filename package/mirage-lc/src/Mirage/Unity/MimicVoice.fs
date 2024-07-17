@@ -103,10 +103,20 @@ type MimicVoice() as self =
                                 distanceToSpeaker = 0f
                             }
                         predictor.Register <| SpokeAtom spokeAtom
+                        let! playerPredictors = readLVar Predictor.Players
+                        flip iter playerPredictors <| fun playerPredictor ->
+                            playerPredictor.Register << HeardAtom <|
+                                {   heardAtom with
+                                        distanceToSpeaker =
+                                            Vector3.Distance(
+                                                playerPredictor.transform.position,
+                                                this.transform.position
+                                            )
+                                }
                         let! enemyPredictors = readLVar Predictor.Enemies
-                        flip iter enemyPredictors <| fun enemy ->
-                            if predictor <> enemy then
-                                enemy.Register << HeardAtom <|
+                        flip iter enemyPredictors <| fun enemyPredictor ->
+                            if predictor <> enemyPredictor then
+                                enemyPredictor.Register << HeardAtom <|
                                     {   heardAtom with
                                             distanceToSpeaker = 
                                                 Vector3.Distance(
