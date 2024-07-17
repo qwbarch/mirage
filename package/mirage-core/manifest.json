@@ -1,6 +1,6 @@
 {
     "name": "MirageCoreExperimental",
-    "version_number": "1.0.0",
+    "version_number": "1.0.1",
     "website_url": "https://github.com/qwbarch/mirage",
     "description": "This is not meant to be used yet.",
     "dependencies": [

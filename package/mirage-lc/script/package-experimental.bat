@@ -56,14 +56,18 @@ popd
 
 rem Create the Mirage.Core package.
 popd
+pushd ..\bin\Mirage.Core
 powershell Compress-Archive^
     -Force^
-    -Path "..\bin\Mirage.Core",^
-          "..\..\mirage-core\manifest.json",^
-          "..\..\mirage-core\icon.png",^
-          "..\..\..\README.md",^
-          "..\..\..\LICENSE"^
-    -DestinationPath "..\bin\Mirage.Core.zip"
+    -Verbose^
+    -Path "BepInEx",^
+          "..\..\..\mirage-core\manifest.json",^
+          "..\..\..\mirage-core\icon.png",^
+          "..\..\..\..\README.md",^
+          "..\..\..\..\LICENSE"^
+    -DestinationPath "..\Mirage.Core.zip"
+popd
+rmdir /s /q ..\bin\Mirage.Core
 
 rem Prepare the Mirage package.
 mkdir ..\bin\Mirage\BepInEx\plugins\Mirage
@@ -76,11 +80,53 @@ copy %src%\Mirage.dll .
 popd
 
 rem Create the Mirage package.
+pushd ..\bin\Mirage
 powershell Compress-Archive^
     -Force^
-    -Path "..\bin\Mirage",^
-          "..\manifest.json",^
-          "..\icon.png",^
-          "..\..\..\README.md",^
-          "..\..\..\LICENSE"^
-    -DestinationPath "..\bin\Mirage.zip"
+    -Verbose^
+    -Path "BepInEx",^
+          "..\..\manifest.json",^
+          "..\..\icon.png",^
+          "..\..\..\..\README.md",^
+          "..\..\..\..\LICENSE"^
+    -DestinationPath "..\Mirage.zip"
+popd
+rmdir /s /q ..\bin\Mirage
+
+rem Prepare the Mirage.AI package.
+mkdir ..\bin\Mirage.AI\BepInEx\core\Mirage.AI\OpenAI.Whisper
+pushd ..\bin\Mirage.AI\BepInEx\core\Mirage.AI\OpenAI.Whisper
+
+set src=..\..\..\..\..\..\..\openai-whisper
+copy %src%\bin\OpenAI.Whisper.dll .
+robocopy %src%\lib\dist\main . /e /copy:DAT /xf /xd
+robocopy %src%\..\..\model\whisper-base model /e /copy:DAT /xf /xd
+
+popd
+
+mkdir ..\bin\Mirage.AI\BepInEx\core\Mirage.AI\Behaviour.Predictor
+pushd ..\bin\Mirage.AI\BepInEx\core\Mirage.AI\Behaviour.Predictor
+
+set src=..\..\..\..\..\..\..\behaviour-predictor
+copy %src%\bin\behaviour-predictor.dll .
+copy %src%\bin\Embedding.dll .
+
+robocopy %src%\lib\python\dist\main . /e /copy:DAT /xf /xd
+copy %src%\lib\rust\target\debug\bertlib.dll .
+copy %src%\lib\rust\target\debug\bertlib.pdb .
+
+popd
+
+rem Create the Mirage.AI package.
+pushd ..\bin\Mirage.AI
+powershell Compress-Archive^
+    -Verbose^
+    -Force^
+    -Path "BepInEx",^
+          "..\..\..\mirage-ai\manifest.json",^
+          "..\..\..\mirage-ai\icon.png",^
+          "..\..\..\..\README.md",^
+          "..\..\..\..\LICENSE"^
+    -DestinationPath "..\Mirage.AI.zip"
+popd
+rmdir /s /q ..\bin\Mirage.AI
