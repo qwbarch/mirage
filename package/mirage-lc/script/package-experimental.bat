@@ -12,12 +12,14 @@ pushd ..\..\behaviour-predictor\script
 call build-lib.bat || exit /b
 popd
 
-call build.bat
+pushd ..\src
+dotnet build
+popd
 
 rem Remove the previously packaged files.
 rmdir /s /q ..\bin
 
-rem Prepare Mirage.Core package.
+rem Prepare the Mirage.Core package.
 mkdir ..\bin\Mirage.Core\BepInEx\core\Mirage.Core
 pushd ..\bin\Mirage.Core\BepInEx\core\Mirage.Core
 
@@ -61,5 +63,24 @@ powershell Compress-Archive^
           "..\..\mirage-core\icon.png",^
           "..\..\..\README.md",^
           "..\..\..\LICENSE"^
-    -DestinationPath "../bin/Mirage.Core.zip"
+    -DestinationPath "..\bin\Mirage.Core.zip"
 
+rem Prepare the Mirage package.
+mkdir ..\bin\Mirage\BepInEx\plugins\Mirage
+pushd ..\bin\Mirage\BepInEx\plugins\Mirage
+
+set src=..\..\..\..\..\src\bin\Debug\netstandard2.1
+copy %src%\Mirage.Core.dll .
+copy %src%\Mirage.dll .
+
+popd
+
+rem Create the Mirage package.
+powershell Compress-Archive^
+    -Force^
+    -Path "..\bin\Mirage",^
+          "..\manifest.json",^
+          "..\icon.png",^
+          "..\..\..\README.md",^
+          "..\..\..\LICENSE"^
+    -DestinationPath "..\bin\Mirage.zip"
