@@ -5,6 +5,7 @@ module Mirage.Unity.Predictor
 open System
 open System.Collections.Generic
 open GameNetcodeStuff
+open FSharpPlus
 open FSharpx.Control
 open Unity.Netcode
 open Predictor.Domain
@@ -58,17 +59,18 @@ type Predictor() as self =
     /// Predictor instance for the local player.
     static member val LocalPlayer: Predictor = null with set, get
 
+    /// Players with a predictor component.
+    static member val Players: LVar<Map<uint64, Predictor>> = newLVar zero
+
     /// Enemies with a predictor component.
     static member val Enemies = newLVar <| List<Predictor>()
 
     /// EntityId of the speaker. If this predictor belongs to a non-local player, this will throw an error.
     member _.SpeakerId
         with get() =
-            if isNull player then Guid <| mimic.MimicId
-            else if player = StartOfRound.Instance.localPlayerController then
-                Int player.playerSteamId
-            else
-                invalidOp "Cannot retrieve the SpeakerId of the non-local player."
+            if not <| isNull mimic then Guid <| mimic.MimicId
+            else if not <| isNull player then Int player.playerSteamId
+            else invalidOp "Failed to retrieve this entity's speaker id."
 
     member this.Awake() =
         mimic <- this.GetComponent<MimicPlayer>()
@@ -117,7 +119,8 @@ type Predictor() as self =
                             payload.elapsedMillis,
                             payload.transcriptionProb,
                             payload.nospeechProb,
-                            payload.distanceToSpeaker
+                            payload.distanceToSpeaker,
+                            payload.isMimic
                         )
                 do! consumer
             }
@@ -125,16 +128,21 @@ type Predictor() as self =
 
     override this.OnNetworkSpawn() =
         base.OnNetworkSpawn()
-        if not << isNull <| this.GetComponent<EnemyAI>() then
-            Async.StartImmediate <<
-                accessLVar Predictor.Enemies <| fun enemies ->
+        Async.StartImmediate <| async {
+            if isNull player then
+                do! accessLVar Predictor.Enemies <| fun enemies ->
                     enemies.Add this
+            else
+                do! modifyLVar Predictor.Players <| Map.add player.playerClientId this
+        }
 
     override this.OnNetworkDespawn() =
         base.OnNetworkDespawn()
-        Async.StartImmediate <<
-            accessLVar Predictor.Enemies <| fun enemies ->
+        Async.StartImmediate <| async {
+            do! accessLVar Predictor.Enemies <| fun enemies ->
                 ignore <| enemies.Remove this
+            do! modifyLVar Predictor.Players <| Map.remove player.playerClientId
+        }
 
     /// Register an action with the predictor. This function is thread-safe.
     member _.Register(gameInput) =
@@ -142,7 +150,7 @@ type Predictor() as self =
         agent.Add gameInput
 
     [<ClientRpc>]
-    member private _.SyncHeardAtomClientRpc(text, speakerClass, speakerClassType, speakerId, speakerIdType, sentenceId, elapsedTime, avgLogProb, noSpeechProb, distanceToSpeaker) =
+    member private _.SyncHeardAtomClientRpc(text, speakerClass, speakerClassType, speakerId, speakerIdType, sentenceId, elapsedTime, avgLogProb, noSpeechProb, distanceToSpeaker, isMimic) =
         if shouldRegister() then
             registerPredictor << HeardAtom <|
                 {   text = text
@@ -153,13 +161,14 @@ type Predictor() as self =
                     transcriptionProb = avgLogProb
                     nospeechProb = noSpeechProb
                     distanceToSpeaker = distanceToSpeaker
+                    isMimic = isMimic
                 }
 
     [<ServerRpc(RequireOwnership = false)>]
-    member private this.SyncHeardAtomServerRpc(text, speakerClass, speakerClassType, speakerId, speakerIdType, sentenceId, elapsedTime, avgLogProb, noSpeechProb, distanceToSpeaker) =
+    member private this.SyncHeardAtomServerRpc(text, speakerClass, speakerClassType, speakerId, speakerIdType, sentenceId, elapsedTime, avgLogProb, noSpeechProb, distanceToSpeaker, isMimic) =
         logInfo $"SyncHeardAtomServerRpc. Text: {text}"
         if this.IsHost then
-            this.SyncHeardAtomClientRpc(text, speakerClass, speakerClassType, speakerId, speakerIdType, sentenceId, elapsedTime, avgLogProb, noSpeechProb, distanceToSpeaker)
+            this.SyncHeardAtomClientRpc(text, speakerClass, speakerClassType, speakerId, speakerIdType, sentenceId, elapsedTime, avgLogProb, noSpeechProb, distanceToSpeaker, isMimic)
 
     [<ClientRpc>]
     member private _.SyncVoiceActivityAtomClientRpc(speakerId, speakerIdType, probability) =

@@ -17,8 +17,10 @@ open Mirage.Core.Audio.Microphone.Detection
 
 [<AllowNullLiteral>]
 type RemoteTranscriber() as self =
-
     inherit NetworkBehaviour()
+
+    let mutable player = null
+
     let fromVADFrame vadFrame = (vadFrame.elapsedTime, vadFrame.probability)
     let toVADFrame (elapsedTime, probability) =
         {   elapsedTime = elapsedTime
@@ -29,11 +31,9 @@ type RemoteTranscriber() as self =
     let responseAgent = new BlockingQueueAgent<ResponseAction>(Int32.MaxValue)
 
     /// Players with a <b>RemoteTranscriber</b> instance.
-    static member val Players = newLVar <| Map.empty
+    static member val Players = newLVar zero
 
-    member val Player = null with set, get
-
-    member this.Awake() = this.Player <- this.GetComponent<PlayerControllerB>()
+    member this.Awake() = player <- this.GetComponent<PlayerControllerB>()
 
     member this.Start() =
         let rec consumer =
@@ -47,7 +47,7 @@ type RemoteTranscriber() as self =
                             logInfo "batchedAction: BatchedStart"
                             do! processRemote << BatchedStart <|
                                 {   fileId = payload.fileId
-                                    playerId = this.Player.playerClientId
+                                    playerId = player.playerClientId
                                     sentenceId = payload.sentenceId
                                 }
                         | RequestEnd payload ->
@@ -139,13 +139,13 @@ type RemoteTranscriber() as self =
         base.OnNetworkSpawn()
         Async.StartImmediate
             << modifyLVar RemoteTranscriber.Players
-            <| Map.add this.Player.playerClientId this
+            <| Map.add player.playerClientId this
     
-    override this.OnNetworkDespawn() =
+    override _.OnNetworkDespawn() =
         base.OnNetworkDespawn()
         Async.StartImmediate
             << modifyLVar RemoteTranscriber.Players
-            <| Map.remove this.Player.playerClientId
+            <| Map.remove player.playerClientId
 
     member _.SendRequest(action) = requestAgent.Add action
     member _.SendResponse(action) = responseAgent.Add action
@@ -158,7 +158,7 @@ type RemoteTranscriber() as self =
             requestAgent.Add <|
                 RequestStart
                     {   fileId = Guid fileId
-                        playerId = this.Player.playerClientId
+                        playerId = player.playerClientId
                         sentenceId = Guid sentenceId
                     }
 

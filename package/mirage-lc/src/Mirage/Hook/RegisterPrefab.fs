@@ -19,8 +19,8 @@ let registerPrefab () =
                 iter (ignore << enemyAI.gameObject.AddComponent)
                     [   typeof<AudioStream>
                         typeof<MimicPlayer>
-                        typeof<MimicVoice>
                         typeof<Predictor>
+                        typeof<MimicVoice>
                     ]
     )
 

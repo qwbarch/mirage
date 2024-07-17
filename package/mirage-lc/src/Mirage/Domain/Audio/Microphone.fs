@@ -93,6 +93,7 @@ let onTranscribe whisperTimingsVar sentenceId (action: TranscribeLocalAction<Tra
                             transcriptionProb = float payload.transcription.avgLogProb
                             nospeechProb = float payload.transcription.noSpeechProb
                             distanceToSpeaker = 0f
+                            isMimic = false
                         }
                     let localPosition = StartOfRound.Instance.localPlayerController.transform.position
                     flip iter enemies <| fun enemy ->
@@ -140,6 +141,7 @@ let onTranscribe whisperTimingsVar sentenceId (action: TranscribeLocalAction<Tra
                             transcriptionProb = float payload.transcription.avgLogProb
                             nospeechProb = float payload.transcription.noSpeechProb
                             distanceToSpeaker = 0f
+                            isMimic = false
                         }
                     flip iter enemies <| fun enemy ->
                         enemy.Register << HeardAtom <|

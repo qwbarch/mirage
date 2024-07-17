@@ -5,16 +5,19 @@ module Mirage.Unity.MimicVoice
 open System
 open FSharpPlus
 open FSharpPlus.Data
+open FSharpx.Control
 open UnityEngine
 open Unity.Netcode
 open Dissonance.Audio.Playback
+open Predictor.MimicPool
+open Predictor.Domain
+open Mirage.Core.Async.LVar
 open Mirage.Hook.Dissonance
 open Mirage.Domain.Audio.Recording
 open Mirage.Domain.Logger
 open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicPlayer
-open FSharpx.Control
-open Predictor.MimicPool
+open Mirage.Unity.Predictor
 
 [<AllowNullLiteral>]
 type MimicVoice() as self =
@@ -22,6 +25,7 @@ type MimicVoice() as self =
 
     let recordingManager = RecordingManager()
     let mutable mimicPlayer: MimicPlayer = null
+    let mutable predictor: Predictor = null
     let mutable audioStream: AudioStream = null
     let mutable voicePlayback: GameObject = null
 
@@ -44,6 +48,7 @@ type MimicVoice() as self =
 
     member this.Awake() =
         mimicPlayer <- this.GetComponent<MimicPlayer>()
+        predictor <- this.GetComponent<Predictor>()
         audioStream <- this.GetComponent<AudioStream>()
 
         voicePlayback <- Object.Instantiate<GameObject> dissonance._playbackPrefab2
@@ -80,9 +85,36 @@ type MimicVoice() as self =
         mimicPlayer.OnSetMimicId.Add <| fun mimicId ->
             if mimicPlayer.MimickingPlayer = StartOfRound.Instance.localPlayerController then
                 logInfo $"OnNetworkSpawn mimicId: {mimicPlayer.MimicId}"
-                mimicInit mimicId <| fun fileId ->
-                    logInfo $"Player #{mimicPlayer.MimickingPlayer.playerClientId} sendMimicText is requesting the file: {fileId}.mp3"
-                    channel.Add $"{Application.dataPath}/../Mirage/Recording/{fileId}.mp3"
+                mimicInit mimicId <| fun payload ->
+                    logInfo $"Player #{mimicPlayer.MimickingPlayer.playerClientId} sendMimicText is requesting the file: {payload.recordingId}.mp3"
+                    channel.Add $"{Application.dataPath}/../Mirage/Recording/{payload.recordingId}.mp3"
+                    Async.StartImmediate <| async {
+                        let voiceActivityAtom = snd << List.last <| payload.vadTimings
+                        let spokeAtom = snd << List.last <| payload.whisperTimings
+                        let heardAtom =
+                            {   text = spokeAtom.text
+                                speakerId = predictor.SpeakerId
+                                speakerClass = voiceActivityAtom.speakerId
+                                isMimic = true
+                                sentenceId = spokeAtom.sentenceId
+                                elapsedMillis = spokeAtom.elapsedMillis
+                                transcriptionProb = spokeAtom.transcriptionProb
+                                nospeechProb = spokeAtom.nospeechProb
+                                distanceToSpeaker = 0f
+                            }
+                        predictor.Register <| SpokeAtom spokeAtom
+                        let! enemyPredictors = readLVar Predictor.Enemies
+                        flip iter enemyPredictors <| fun enemy ->
+                            if predictor <> enemy then
+                                enemy.Register << HeardAtom <|
+                                    {   heardAtom with
+                                            distanceToSpeaker = 
+                                                Vector3.Distance(
+                                                    mimicPlayer.MimickingPlayer.transform.position,
+                                                    this.transform.position
+                                                )
+                                    }
+                    }
     
     override _.OnNetworkDespawn() =
         base.OnDestroy()
