@@ -408,4 +408,5 @@ bin
 *.o
 *.bak
 
+model/whisper/model.bin
 target/

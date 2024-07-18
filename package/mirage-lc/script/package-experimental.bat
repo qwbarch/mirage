@@ -1,5 +1,14 @@
 @echo off
 
+rem Download faster-whisper-large-v2 if it doesn't exist locally.
+pushd ..\..\..\model
+if not exist "whisper\model.bin" (
+    echo Downloading faster-whisper-large-v2
+    set ProgressPreference=SilentlyContinue
+    powershell -Command "$ProgressPreference = 'SilentlyContinue'; Invoke-WebRequest -Uri 'https://huggingface.co/guillaumekln/faster-whisper-large-v2/resolve/main/model.bin' -OutFile 'whisper\model.bin'"
+)
+popd
+
 pushd ..\..\silero-vad\script
 call build-lib.bat || exit /b
 popd
@@ -100,12 +109,7 @@ pushd ..\bin\Mirage.AI\BepInEx\core\Mirage.AI\OpenAI.Whisper
 set src=..\..\..\..\..\..\..\openai-whisper
 copy %src%\bin\OpenAI.Whisper.dll .
 robocopy %src%\lib\dist\main . /e /copy:DAT /xf /xd
-robocopy %src%\..\..\model\whisper model /e /copy:DAT /xf /xd
-
-rem Join the model.bin chunk files.
-pushd model
-copy /b model.chunk0.bin + model.chunk1.bin + model.chunk2.bin model.bin
-popd
+robocopy %src%\..\..\lib\whisper model /e /copy:DAT /xf /xd
 
 popd
 
