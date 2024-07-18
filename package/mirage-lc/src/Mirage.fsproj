@@ -22,6 +22,7 @@
     <PackageReference Include="LethalCompany.GameLibs.Steam" Version="56.0.0-ngd.0" Publicize="true" />
     <PackageReference Include="FSharpPlus" Version="1.6.1" />
     <PackageReference Include="Xilophor.StaticNetcodeLib" Version="1.1.1" />
+    <PackageReference Include="NAudio.Lame" Version="2.1.0" />
     <Reference Include="FSharpx.Async">
       <HintPath>../../../lib/FSharpx.Async/FSharpx.Async.dll</HintPath>
     </Reference>
@@ -45,9 +46,6 @@
     </Reference>
     <Reference Include="NAudio.WinMM" Publicize="true">
       <HintPath>../../../lib/NAudio/NAudio.WinMM.dll</HintPath>
-    </Reference>
-    <Reference Include="NAudio.Lame" Publicize="true">
-      <HintPath>../../../lib/NAudio.Lame/NAudio.Lame.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
