@@ -1,5 +1,7 @@
 @echo off
 
+set originalDirectory=%cd%
+
 rem Download faster-whisper-large-v2 if it doesn't exist locally.
 pushd ..\..\..\model
 if not exist "whisper\model.bin" (
@@ -20,6 +22,9 @@ popd
 pushd ..\..\behaviour-predictor\script
 call build-lib.bat || exit /b
 popd
+
+rem Working directory is not always guaranteed to be in the original directory. This forces it.
+cd %originalDirectory%
 
 pushd ..\src
 dotnet build
