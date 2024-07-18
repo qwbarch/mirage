@@ -9,12 +9,6 @@
     <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=.</PathMap>
   </PropertyGroup>
   <ItemGroup>
-    <ContentWithTargetPath Include="../bertlib.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <TargetPath>bertlib.dll</TargetPath>
-    </ContentWithTargetPath>
-  </ItemGroup>
-  <ItemGroup>
     <Compile Include="Embedding.fs" />
     <ProjectReference Include="../../mirage-core/src/Mirage.fsproj" />
     <PackageReference Include="FSharpPlus" Version="1.6.1" />
