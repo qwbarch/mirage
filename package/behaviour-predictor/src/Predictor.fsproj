@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <RootNamespace>Predictor</RootNamespace>
-    <AssemblyName>behaviour-predictor</AssemblyName>
+    <AssemblyName>Behaviour.Predictor</AssemblyName>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <Optimize>true</Optimize>

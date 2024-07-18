@@ -71,15 +71,7 @@ popd
 rem Create the Mirage.Core package.
 popd
 pushd ..\bin\Mirage.Core
-powershell Compress-Archive^
-    -Force^
-    -Verbose^
-    -Path "BepInEx",^
-          "..\..\..\mirage-core\manifest.json",^
-          "..\..\..\mirage-core\icon.png",^
-          "..\..\..\..\README.md",^
-          "..\..\..\..\LICENSE"^
-    -DestinationPath "..\Mirage.Core.zip"
+7z a ..\Mirage.Core.zip "BepInEx" "..\..\..\mirage-core\manifest.json" "..\..\..\mirage-core\icon.png" "..\..\..\..\README.md" "..\..\..\..\LICENSE"
 popd
 rmdir /s /q ..\bin\Mirage.Core
 
@@ -95,15 +87,7 @@ popd
 
 rem Create the Mirage package.
 pushd ..\bin\Mirage
-powershell Compress-Archive^
-    -Force^
-    -Verbose^
-    -Path "BepInEx",^
-          "..\..\manifest.json",^
-          "..\..\icon.png",^
-          "..\..\..\..\README.md",^
-          "..\..\..\..\LICENSE"^
-    -DestinationPath "..\Mirage.zip"
+7z a ..\Mirage.zip "BepInEx" "..\..\manifest.json" "..\..\icon.png" "..\..\..\..\README.md" "..\..\..\..\LICENSE"
 popd
 rmdir /s /q ..\bin\Mirage
 
@@ -114,17 +98,18 @@ pushd ..\bin\Mirage.AI\BepInEx\core\Mirage.AI\OpenAI.Whisper
 set src=..\..\..\..\..\..\..\openai-whisper
 copy %src%\bin\OpenAI.Whisper.dll .
 robocopy %src%\lib\dist\main . /e /copy:DAT /xf /xd
-robocopy %src%\..\..\lib\whisper model /e /copy:DAT /xf /xd
+robocopy %src%\..\..\model\whisper model /e /copy:DAT /xf /xd
 
 popd
 
 mkdir ..\bin\Mirage.AI\BepInEx\core\Mirage.AI\Behaviour.Predictor
 pushd ..\bin\Mirage.AI\BepInEx\core\Mirage.AI\Behaviour.Predictor
 
-set src=..\..\..\..\..\..\..\behaviour-predictor
-copy %src%\bin\behaviour-predictor.dll .
-copy %src%\bin\Embedding.dll .
+set src=..\..\..\..\..\..\src\bin\Debug\netstandard2.1
+copy %src%\Behaviour.Predictor.dll .
+copy %src%\Embedding.dll .
 
+set src=..\..\..\..\..\..\..\behaviour-predictor
 robocopy %src%\lib\python\dist\main . /e /copy:DAT /xf /xd
 copy %src%\lib\rust\target\debug\bertlib.dll .
 copy %src%\lib\rust\target\debug\bertlib.pdb .
@@ -133,14 +118,6 @@ popd
 
 rem Create the Mirage.AI package.
 pushd ..\bin\Mirage.AI
-powershell Compress-Archive^
-    -Verbose^
-    -Force^
-    -Path "BepInEx",^
-          "..\..\..\mirage-ai\manifest.json",^
-          "..\..\..\mirage-ai\icon.png",^
-          "..\..\..\..\README.md",^
-          "..\..\..\..\LICENSE"^
-    -DestinationPath "..\Mirage.AI.zip"
+7z a ..\Mirage.AI.zip "BepInEx" "..\..\..\mirage-ai\manifest.json" "..\..\..\mirage-ai\icon.png" "..\..\..\..\README.md" "..\..\..\..\LICENSE"
 popd
 rmdir /s /q ..\bin\Mirage.AI
