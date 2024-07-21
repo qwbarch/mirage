@@ -83,45 +83,47 @@ type Predictor() as self =
             async {
                 let! gameInput = agent.AsyncGet()
                 logInfo "Predictor component received game input"
-                match gameInput with
-                    | SpokeAtom payload ->
-                        logInfo "Predictor received SpokeAtom payload"
-                        registerPredictor <| SpokeAtom payload
-                    | SpokeRecordingAtom payload ->
-                        logInfo "Predictor received SpokeRecordingAtom payload"
-                        registerPredictor <| SpokeRecordingAtom payload
-                    | VoiceActivityAtom payload ->
-                        logInfo "before voice activity atom"
-                        let rpc =
-                            if self.IsHost
-                                then self.SyncVoiceActivityAtomClientRpc
-                                else self.SyncVoiceActivityAtomServerRpc
-                        logInfo "middle voice activity atom"
-                        rpc(
-                            toIdString payload.speakerId,
-                            toIdType payload.speakerId,
-                            payload.prob
-                        )
-                        logInfo "end voice activity atom"
-                    | HeardAtom payload ->
-                        logInfo "Predictor received HeardAtom payload"
-                        let rpc =
-                            if self.IsHost
-                                then self.SyncHeardAtomClientRpc
-                                else self.SyncHeardAtomServerRpc
-                        rpc(
-                            payload.text,
-                            toIdString payload.speakerClass,
-                            toIdType payload.speakerClass,
-                            toIdString payload.speakerId,
-                            toIdType payload.speakerId,
-                            payload.sentenceId.ToString(),
-                            payload.elapsedMillis,
-                            payload.transcriptionProb,
-                            payload.nospeechProb,
-                            payload.distanceToSpeaker,
-                            payload.isMimic
-                        )
+                // If this predictor belongs to a player, it should only run if the player is connected.
+                if isNull player || player.isPlayerControlled then
+                    match gameInput with
+                        | SpokeAtom payload ->
+                            logInfo "Predictor received SpokeAtom payload"
+                            registerPredictor <| SpokeAtom payload
+                        | SpokeRecordingAtom payload ->
+                            logInfo "Predictor received SpokeRecordingAtom payload"
+                            registerPredictor <| SpokeRecordingAtom payload
+                        | VoiceActivityAtom payload ->
+                            logInfo "before voice activity atom"
+                            let rpc =
+                                if self.IsHost
+                                    then self.SyncVoiceActivityAtomClientRpc
+                                    else self.SyncVoiceActivityAtomServerRpc
+                            logInfo "middle voice activity atom"
+                            rpc(
+                                toIdString payload.speakerId,
+                                toIdType payload.speakerId,
+                                payload.prob
+                            )
+                            logInfo "end voice activity atom"
+                        | HeardAtom payload ->
+                            logInfo "Predictor received HeardAtom payload"
+                            let rpc =
+                                if self.IsHost
+                                    then self.SyncHeardAtomClientRpc
+                                    else self.SyncHeardAtomServerRpc
+                            rpc(
+                                payload.text,
+                                toIdString payload.speakerClass,
+                                toIdType payload.speakerClass,
+                                toIdString payload.speakerId,
+                                toIdType payload.speakerId,
+                                payload.sentenceId.ToString(),
+                                payload.elapsedMillis,
+                                payload.transcriptionProb,
+                                payload.nospeechProb,
+                                payload.distanceToSpeaker,
+                                payload.isMimic
+                            )
                 do! consumer
             }
         Async.StartImmediate(consumer, this.destroyCancellationToken)

@@ -101,7 +101,7 @@ type Plugin() =
                         whisper = whisper
                         silero = silero
                         isReady = newLVar false
-                        transcribeViaHost = newLVar true // TODO: SET THIS VIA A CONFIG
+                        transcribeViaHost = newLVar false // true // TODO: SET THIS VIA A CONFIG
                         sendRequest = sendRequest
                         sendResponse = sendResponse
                     }

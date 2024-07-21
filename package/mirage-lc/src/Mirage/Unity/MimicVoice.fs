@@ -86,45 +86,61 @@ type MimicVoice() as self =
             if mimicPlayer.MimickingPlayer = StartOfRound.Instance.localPlayerController then
                 logInfo $"OnNetworkSpawn mimicId: {mimicPlayer.MimicId}"
                 mimicInit mimicId <| fun payload ->
-                    logInfo $"Player #{mimicPlayer.MimickingPlayer.playerClientId} sendMimicText is requesting the file: {payload.recordingId}.mp3"
-                    channel.Add $"{Application.dataPath}/../Mirage/Recording/{payload.recordingId}.mp3"
-                    Async.StartImmediate <| async {
-                        let voiceActivityAtom = snd << List.head <| payload.vadTimings
-                        let spokeAtom = snd << List.last <| payload.whisperTimings
-                        let heardAtom =
-                            {   text = spokeAtom.text
-                                speakerId = predictor.SpeakerId
-                                speakerClass = voiceActivityAtom.speakerId
-                                isMimic = true
-                                sentenceId = spokeAtom.sentenceId
-                                elapsedMillis = spokeAtom.elapsedMillis
-                                transcriptionProb = spokeAtom.transcriptionProb
-                                nospeechProb = spokeAtom.nospeechProb
-                                distanceToSpeaker = 0f
-                            }
-                        predictor.Register <| SpokeAtom spokeAtom
-                        let! playerPredictors = readLVar Predictor.Players
-                        flip iter playerPredictors <| fun playerPredictor ->
-                            playerPredictor.Register << HeardAtom <|
-                                {   heardAtom with
-                                        distanceToSpeaker =
-                                            Vector3.Distance(
-                                                playerPredictor.transform.position,
-                                                this.transform.position
-                                            )
+                    if List.isEmpty payload.vadTimings || List.isEmpty payload.whisperTimings then
+                        logError "sendMimicText failed due to vadTimings or whisperTimings being empty."
+                    else
+                        logInfo $"Player #{mimicPlayer.MimickingPlayer.playerClientId} sendMimicText is requesting the file: {payload.recordingId}.mp3"
+                        channel.Add $"{Application.dataPath}/../Mirage/Recording/{payload.recordingId}.mp3"
+                        logInfo "sendMimicText: added to channel"
+                        Async.StartImmediate <| async {
+                            logInfo "sendMimicText: inside async block"
+                            let voiceActivityAtom = snd << List.head <| payload.vadTimings
+                            logInfo "sendMimicText: voiceActivityAtom"
+                            let spokeAtom = snd << List.last <| payload.whisperTimings
+                            logInfo "sendMimicText: spokeAtom"
+                            let heardAtom =
+                                {   text = spokeAtom.text
+                                    speakerId = predictor.SpeakerId
+                                    speakerClass = voiceActivityAtom.speakerId
+                                    isMimic = true
+                                    sentenceId = spokeAtom.sentenceId
+                                    elapsedMillis = spokeAtom.elapsedMillis
+                                    transcriptionProb = spokeAtom.transcriptionProb
+                                    nospeechProb = spokeAtom.nospeechProb
+                                    distanceToSpeaker = 0f
                                 }
-                        let! enemyPredictors = readLVar Predictor.Enemies
-                        flip iter enemyPredictors <| fun enemyPredictor ->
-                            if predictor <> enemyPredictor then
-                                enemyPredictor.Register << HeardAtom <|
+                            logInfo "sendMimicText: heardAtom"
+                            logInfo "sendMimicText: Registering SpokeAtom"
+                            predictor.Register <| SpokeAtom spokeAtom
+                            logInfo "sendMimicText: Retrieving player predictors"
+                            let! playerPredictors = readLVar Predictor.Players
+                            flip iter playerPredictors <| fun playerPredictor ->
+                                logInfo "sendMimicText: playerPredictor.Register HeardAtom"
+                                playerPredictor.Register << HeardAtom <|
                                     {   heardAtom with
-                                            distanceToSpeaker = 
+                                            distanceToSpeaker =
                                                 Vector3.Distance(
-                                                    mimicPlayer.MimickingPlayer.transform.position,
+                                                    playerPredictor.transform.position,
                                                     this.transform.position
                                                 )
                                     }
-                    }
+                            logInfo "sendMimicText: Retrieving enemy predictors"
+                            let! enemyPredictors = readLVar Predictor.Enemies
+                            flip iter enemyPredictors <| fun enemyPredictor ->
+                                logInfo "sendMimicText: enemyPredictor"
+                                if predictor <> enemyPredictor then
+                                    logInfo "sendMimicText: enemyPredictor is not the current enemy. registering HeardAtom"
+                                    enemyPredictor.Register << HeardAtom <|
+                                        {   heardAtom with
+                                                distanceToSpeaker = 
+                                                    Vector3.Distance(
+                                                        mimicPlayer.MimickingPlayer.transform.position,
+                                                        this.transform.position
+                                                    )
+                                        }
+                                logInfo "sendMimicText finished current enemy"
+                            logInfo "sendMimicText fully finished"
+                        }
     
     override _.OnNetworkDespawn() =
         base.OnDestroy()

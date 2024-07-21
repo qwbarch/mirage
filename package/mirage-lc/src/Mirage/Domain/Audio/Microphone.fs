@@ -102,16 +102,17 @@ let onTranscribe whisperTimingsVar sentenceId (action: TranscribeLocalAction<Tra
                                     distanceToSpeaker = Vector3.Distance(localPosition, enemy.transform.position)
                             }
                     let! whisperTimings = readLVar whisperTimingsVar
+                    let spokeAtom =
+                        {   text = payload.transcription.text
+                            sentenceId = sentenceId
+                            elapsedMillis = payload.vadFrame.elapsedTime
+                            transcriptionProb = float payload.transcription.avgLogProb
+                            nospeechProb = float payload.transcription.noSpeechProb
+                        }
                     Predictor.LocalPlayer.Register <|
                         SpokeRecordingAtom
-                            {   spokeAtom =
-                                    {   text = payload.transcription.text
-                                        sentenceId = sentenceId
-                                        elapsedMillis = payload.vadFrame.elapsedTime
-                                        transcriptionProb = float payload.transcription.avgLogProb
-                                        nospeechProb = float payload.transcription.noSpeechProb
-                                    }
-                                whisperTimings = List.rev whisperTimings
+                            {   spokeAtom = spokeAtom
+                                whisperTimings = List.rev <| List.cons (payload.vadFrame.elapsedTime, spokeAtom) whisperTimings
                                 vadTimings = toVADTiming <!> payload.vadTimings
                                 audioInfo =
                                     {   fileId = payload.fileId
