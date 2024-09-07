@@ -54,12 +54,10 @@ let startWhisper =
                     |> _.Path
                     |> Uri.UnescapeDataString
                     |> Path.GetDirectoryName
-            let workingDirectory = Path.Join(baseDirectory, "model/whisper-s2t")
             let process' = new Process()
             process'.StartInfo <-
                 new ProcessStartInfo(
-                    WorkingDirectory = workingDirectory,
-                    FileName = Path.Join(workingDirectory, "main.exe"),
+                    FileName = Path.Join(baseDirectory, "OpenAI.Whisper.exe"),
                     UseShellExecute = false,
                     RedirectStandardInput = true,
                     RedirectStandardOutput = true,
@@ -77,7 +75,7 @@ let startWhisper =
 
             // Start the child process.
             ignore <| process'.Start()
-            let modelDirectory = Path.Join(baseDirectory, "model/whisper-base")
+            let modelDirectory = Path.Join(baseDirectory, "whisper")
             log "sending model"
             do! process'.StandardInput.WriteLineAsync modelDirectory
             do! process'.StandardInput.FlushAsync()

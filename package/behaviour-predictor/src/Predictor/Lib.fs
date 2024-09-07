@@ -32,7 +32,7 @@ let initBehaviourPredictor
                     |> _.Path
                     |> Uri.UnescapeDataString
                     |> Path.GetDirectoryName
-            init_bert $"{baseDirectory}/main.exe"
+            init_bert $"{baseDirectory}/Behaviour.Predictor.exe"
             Utilities.logInfo <- logInfo
             Utilities.logWarning <- logWarning
             Utilities.logError <- logError
