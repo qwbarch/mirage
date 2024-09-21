@@ -50,6 +50,10 @@
   <ItemGroup>
     <Compile Include="Mirage/PluginInfo.fs" />
     <Compile Include="Mirage/Domain/Netcode.fs" />
+    <Compile Include="Mirage/Domain/Audio/Frame.fs" />
+    <Compile Include="Mirage/Domain/Audio/Receiver.fs" />
+    <Compile Include="Mirage/Domain/Audio/Stream.fs" />
+    <Compile Include="Mirage/Domain/Audio/Sender.fs" />
     <Compile Include="Properties/AssemblyInfo.fs" />
   </ItemGroup>
 </Project>
