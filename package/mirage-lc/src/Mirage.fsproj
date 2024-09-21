@@ -15,13 +15,10 @@
   <ItemGroup>
     <ProjectReference Include="../../mirage-core/src/Mirage.fsproj" />
     <ProjectReference Include="../../silero-vad/src/Silero.fsproj" />
-    <ProjectReference Include="../../openai-whisper/src/Whisper.fsproj" />
-    <ProjectReference Include="../../behaviour-predictor/src/Predictor.fsproj" />
     <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1" PrivateAssets="all" />
     <PackageReference Include="BepInEx.Core" Version="5.4.21" />
     <PackageReference Include="LethalCompany.GameLibs.Steam" Version="56.0.0-ngd.0" Publicize="true" />
     <PackageReference Include="FSharpPlus" Version="1.6.1" />
-    <PackageReference Include="Xilophor.StaticNetcodeLib" Version="1.1.1" />
     <Reference Include="FSharpx.Async">
       <HintPath>../../../lib/FSharpx.Async/FSharpx.Async.dll</HintPath>
     </Reference>
@@ -53,25 +50,6 @@
   <ItemGroup>
     <Compile Include="Mirage/PluginInfo.fs" />
     <Compile Include="Mirage/Domain/Netcode.fs" />
-    <Compile Include="Mirage/Domain/Logger.fs" />
-    <Compile Include="Mirage/Domain/Audio/Frame.fs" />
-    <Compile Include="Mirage/Domain/Audio/Stream.fs" />
-    <Compile Include="Mirage/Domain/Audio/Sender.fs" />
-    <Compile Include="Mirage/Domain/Audio/Receiver.fs" />
-    <Compile Include="Mirage/Domain/Audio/Recording.fs" />
-    <Compile Include="Mirage/Hook/Dissonance.fs" />
-    <Compile Include="Mirage/Unity/AudioStream.fs" />
-    <Compile Include="Mirage/Unity/MimicPlayer.fs" />
-    <Compile Include="Mirage/Unity/Predictor.fs" />
-    <Compile Include="Mirage/Unity/MimicVoice.fs" />
-    <Compile Include="Mirage/Domain/Audio/Microphone.fs" />
-    <Compile Include="Mirage/Hook/Microphone.fs" />
-    <Compile Include="Mirage/Unity/Recognition.fs" />
-    <Compile Include="Mirage/Hook/Predictor.fs" />
-    <Compile Include="Mirage/Hook/AudioSpatializer.fs" />
-    <Compile Include="Mirage/Hook/RegisterPrefab.fs" />
-    <Compile Include="Mirage/Hook/MaskedPlayerEnemy.fs" />
-    <Compile Include="Mirage/Plugin.fs" />
     <Compile Include="Properties/AssemblyInfo.fs" />
   </ItemGroup>
 </Project>
