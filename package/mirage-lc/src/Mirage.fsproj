@@ -51,7 +51,9 @@
     <Compile Include="Mirage/Domain/Audio/Receiver.fs" />
     <Compile Include="Mirage/Domain/Audio/Stream.fs" />
     <Compile Include="Mirage/Domain/Audio/Sender.fs" />
+    <Compile Include="Mirage/Domain/Logger.fs" />
     <Compile Include="Mirage/Hook/AudioSpatializer.fs" />
+    <Compile Include="Mirage/Unity/AudioStream.fs" />
     <Compile Include="Properties/AssemblyInfo.fs" />
     <Compile Include="Mirage/Plugin.fs" />
   </ItemGroup>
