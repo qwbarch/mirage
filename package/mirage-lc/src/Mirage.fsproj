@@ -17,7 +17,7 @@
     <ProjectReference Include="../../silero-vad/src/Silero.fsproj" />
     <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1" PrivateAssets="all" />
     <PackageReference Include="BepInEx.Core" Version="5.4.21" />
-    <PackageReference Include="LethalCompany.GameLibs.Steam" Version="56.0.0-ngd.0" Publicize="true" />
+    <PackageReference Include="LethalCompany.GameLibs.Steam" Version="62.0.1-ngd.0" />
     <PackageReference Include="FSharpPlus" Version="1.6.1" />
     <Reference Include="FSharpx.Async">
       <HintPath>../../../lib/FSharpx.Async/FSharpx.Async.dll</HintPath>
@@ -27,12 +27,6 @@
     </Reference>
     <Reference Include="MMHOOK_DissonanceVoip">
       <HintPath>../../../lib/MMHOOK/MMHOOK_DissonanceVoip.dll</HintPath>
-    </Reference>
-    <Reference Include="MMHOOK_Unity.Netcode.Runtime">
-      <HintPath>../../../lib/MMHOOK/MMHOOK_Unity.Netcode.Runtime.dll</HintPath>
-    </Reference>
-    <Reference Include="MMHOOK_Facepunch Transport for Netcode for GameObjects.dll">
-      <HintPath>../../../lib/MMHOOK/MMHOOK_Facepunch Transport for Netcode for GameObjects.dll</HintPath>
     </Reference>
     <Reference Include="NAudio" Publicize="true">
       <HintPath>../../../lib/NAudio/NAudio.dll</HintPath>
@@ -55,5 +49,6 @@
     <Compile Include="Mirage/Domain/Audio/Stream.fs" />
     <Compile Include="Mirage/Domain/Audio/Sender.fs" />
     <Compile Include="Properties/AssemblyInfo.fs" />
+    <Compile Include="Mirage/Plugin.fs" />
   </ItemGroup>
 </Project>
