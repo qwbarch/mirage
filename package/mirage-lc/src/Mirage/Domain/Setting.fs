@@ -11,14 +11,13 @@ open System.IO
 open Newtonsoft.Json
 open Mirage.PluginInfo
 
-[<Struct>]
 type Settings =
     {   /// Volume used for voice play-back on monsters mimicking the local player. Must be a value between 0.0f-1.0f
         localPlayerVolume: float32
         /// Whether monsters mimicking the local player should be muted while the player is alive.
         hearLocalVoiceWhileAlive: bool
         /// Whether the microphone should continue recording while the local player is dead.
-        recordWhileAlive: bool
+        recordWhileDead: bool
         /// If set to false, recordings are deleted when closing the game by default.
         neverDeleteRecordings: bool
     }
@@ -26,7 +25,7 @@ type Settings =
 let defaultSettings =
     {   localPlayerVolume = 1.0f
         hearLocalVoiceWhileAlive = true
-        recordWhileAlive = true
+        recordWhileDead = true
         neverDeleteRecordings = false
     }
 
@@ -49,42 +48,41 @@ let initSettings filePath =
     let saveSettings updatedSettings =
         settings <- updatedSettings
         channel.Add updatedSettings
-    do
-        Async.StartImmediate <| async {
-            let! previousSettings =
-                Async.AwaitTask <|
-                    if File.Exists filePath then
-                        JsonConvert.DeserializeObject<Settings> <!> File.ReadAllTextAsync filePath
-                    else
-                        result defaultSettings
-            settings <- previousSettings
-            ModMenu.RegisterMod(ModMenu.ModSettingsConfig(
-                Name = pluginName,
-                Id = pluginId,
-                Version = pluginVersion,
-                MenuComponents =
-                    [|  SliderComponent(
-                            Value = settings.localPlayerVolume * 100.0f,
-                            MinValue = 0.0f,
-                            MaxValue = 100.0f,
-                            Text = "Volume when a monster is mimicking your own voice:",
-                            OnValueChanged = fun _ value -> saveSettings { settings with localPlayerVolume = value / 100.0f }
-                        )
-                        ToggleComponent(
-                            Text = "Only hear a monster mimicking your own voice while in spectate:",
-                            Value = not settings.hearLocalVoiceWhileAlive,
-                            OnValueChanged = fun _ value -> saveSettings { settings with hearLocalVoiceWhileAlive = not value }
-                        )
-                        ToggleComponent(
-                            Text = "Only record your voice while alive:",
-                            Value = settings.recordWhileAlive,
-                            OnValueChanged = fun _ value -> saveSettings { settings with recordWhileAlive = value }
-                        )
-                        ToggleComponent(
-                            Text = "Never delete recordings",
-                            Value = settings.neverDeleteRecordings,
-                            OnValueChanged = fun _ value -> saveSettings { settings with neverDeleteRecordings = value }
-                        )
-                    |]
-            ))
-        }
+    Async.StartImmediate <| async {
+        let! previousSettings =
+            Async.AwaitTask <|
+                if File.Exists filePath then
+                    JsonConvert.DeserializeObject<Settings> <!> File.ReadAllTextAsync filePath
+                else
+                    result defaultSettings
+        settings <- previousSettings
+        ModMenu.RegisterMod(ModMenu.ModSettingsConfig(
+            Name = pluginName,
+            Id = pluginId,
+            Version = pluginVersion,
+            MenuComponents =
+                [|  SliderComponent(
+                        Value = settings.localPlayerVolume * 100.0f,
+                        MinValue = 0.0f,
+                        MaxValue = 100.0f,
+                        Text = "Volume when a monster is mimicking your own voice:",
+                        OnValueChanged = fun _ value -> saveSettings { settings with localPlayerVolume = value / 100.0f }
+                    )
+                    ToggleComponent(
+                        Text = "Only hear a monster mimicking your own voice while in spectate:",
+                        Value = not settings.hearLocalVoiceWhileAlive,
+                        OnValueChanged = fun _ value -> saveSettings { settings with hearLocalVoiceWhileAlive = not value }
+                    )
+                    ToggleComponent(
+                        Text = "Only record your voice while alive:",
+                        Value = settings.recordWhileDead,
+                        OnValueChanged = fun _ value -> saveSettings { settings with recordWhileDead = value }
+                    )
+                    ToggleComponent(
+                        Text = "Never delete recordings",
+                        Value = settings.neverDeleteRecordings,
+                        OnValueChanged = fun _ value -> saveSettings { settings with neverDeleteRecordings = value }
+                    )
+                |]
+        ))
+    }
