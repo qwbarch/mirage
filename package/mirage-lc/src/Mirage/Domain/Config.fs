@@ -14,13 +14,7 @@ open Mirage.Prelude
 open Mirage.PluginInfo
 open Mirage.Domain.Logger
 
-let private loadConfig configName =
-    let config = ConfigFile(Path.Combine(Paths.ConfigPath, $"Mirage.{configName}.cfg"), true)
-    let property = config.GetType().GetProperty("OrphanedEntries", BindingFlags.NonPublic ||| BindingFlags.Instance)
-    let orphanedEntries = property.GetValue(config, null) :?> Dictionary<ConfigDefinition, string>
-    orphanedEntries.Clear()
-    config.Save()
-    config
+let private loadConfig configName = ConfigFile(Path.Combine(Paths.ConfigPath, $"Mirage.{configName}.cfg"), true)
 
 type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
     let bind section key value (description: string) =

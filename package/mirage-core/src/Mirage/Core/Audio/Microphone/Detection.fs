@@ -92,7 +92,6 @@ let VoiceDetector<'State> (stopDetection: 'State -> bool) (detectSpeech: DetectV
                     result 0f
                 else
                     detectSpeech currentAudio.resampled.samples
-            printf $"prob: {probability}"
             let fullAudio =
                 {   original =
                         {   format = currentAudio.original.format

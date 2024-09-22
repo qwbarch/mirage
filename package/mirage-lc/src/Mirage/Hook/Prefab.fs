@@ -2,8 +2,9 @@ module Mirage.Hook.Prefab
 
 open FSharpPlus
 open Unity.Netcode
-open Mirage.Unity.AudioStream
 open Mirage.Domain.Config
+open Mirage.Unity.AudioStream
+open Mirage.Unity.MimicPlayer
 
 let mutable initialized = false
 
@@ -17,6 +18,7 @@ let registerPrefab () =
                 if not <| isNull enemyAI then
                     iter (ignore << enemyAI.gameObject.AddComponent)
                         [   typeof<AudioStream>
+                            typeof<MimicPlayer>
                         ]
                     localConfig.RegisterEnemy enemyAI
     )
