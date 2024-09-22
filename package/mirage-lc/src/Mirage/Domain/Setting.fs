@@ -60,6 +60,7 @@ let initSettings filePath =
             Name = pluginName,
             Id = pluginId,
             Version = pluginVersion,
+            Description = "The preferences below only affect yourself. Each player can choose what they prefer.",
             MenuComponents =
                 [|  SliderComponent(
                         Value = settings.localPlayerVolume * 100.0f,
@@ -69,12 +70,12 @@ let initSettings filePath =
                         OnValueChanged = fun _ value -> saveSettings { settings with localPlayerVolume = value / 100.0f }
                     )
                     ToggleComponent(
-                        Text = "Only hear a monster mimicking your own voice while in spectate:",
+                        Text = "Only hear a monster mimicking your own voice while spectating",
                         Value = not settings.hearLocalVoiceWhileAlive,
                         OnValueChanged = fun _ value -> saveSettings { settings with hearLocalVoiceWhileAlive = not value }
                     )
                     ToggleComponent(
-                        Text = "Only record your voice while alive:",
+                        Text = "Only record your voice while alive",
                         Value = not settings.recordWhileDead,
                         OnValueChanged = fun _ value -> saveSettings { settings with recordWhileDead = not value }
                     )

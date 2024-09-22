@@ -14,6 +14,7 @@ open Mirage.Domain.Logger
 open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicPlayer
 open Mirage.Domain.Config
+open Mirage.Domain.Setting
 
 let private random = Random()
 
@@ -69,3 +70,40 @@ type MimicVoice() as self =
 
     /// Update voice playback object to always be at the same location as the parent.
     member this.LateUpdate() = voicePlayback.transform.position <- this.transform.position
+
+    member _.Update() =
+        if isNull mimicPlayer.MimickingPlayer then
+            audioStream.AudioSource.mute <- true
+        else
+            let localPlayer = StartOfRound.Instance.localPlayerController
+            let spectatingPlayer = if isNull localPlayer.spectatedPlayerScript then localPlayer else localPlayer.spectatedPlayerScript
+            let isMimicLocalPlayerMuted () =
+                let alwaysMute = getSettings().localPlayerVolume = 0f
+                let muteWhileNotDead =
+                    (not <| getSettings().hearLocalVoiceWhileAlive)
+                        && not mimicPlayer.MimickingPlayer.isPlayerDead
+                mimicPlayer.MimickingPlayer = localPlayer && (muteWhileNotDead || alwaysMute)
+            let isNotHauntedOrDisappearedDressGirl () =
+                enemyAI :? DressGirlAI && (
+                    let dressGirlAI = enemyAI :?> DressGirlAI
+                    let isVisible = dressGirlAI.staringInHaunt || dressGirlAI.moveTowardsDestination && dressGirlAI.movingTowardsTargetPlayer
+                    not dressGirlAI.hauntingLocalPlayer || not isVisible
+                )
+            let maskedEnemyIsHiding () =
+                enemyAI :? MaskedPlayerEnemy
+                    && Vector3.Distance(enemyAI.transform.position, (enemyAI :?> MaskedPlayerEnemy).shipHidingSpot) < 0.4f
+                    && enemyAI.agent.speed = 0f
+                    && (enemyAI :?> MaskedPlayerEnemy).crouching
+            audioStream.AudioSource.volume <-
+                if mimicPlayer.MimickingPlayer = localPlayer then
+                    getSettings().localPlayerVolume
+                else
+                    mimicPlayer.MimickingPlayer.currentVoiceChatAudioSource.volume
+            audioStream.AudioSource.outputAudioMixerGroup <-
+                SoundManager.Instance.playerVoiceMixers[int mimicPlayer.MimickingPlayer.playerClientId]
+            audioStream.AudioSource.mute <-
+                enemyAI.isEnemyDead
+                    || (not (getConfig().mimicVoiceWhileHiding) && maskedEnemyIsHiding())
+                    || isMimicLocalPlayerMuted()
+                    || isNotHauntedOrDisappearedDressGirl()
+                    || spectatingPlayer.isInsideFactory = enemyAI.isOutside

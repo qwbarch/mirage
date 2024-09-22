@@ -7,7 +7,8 @@ open Mirage.Domain.Config
 
 let hookMaskedEnemy () =
     On.MaskedPlayerEnemy.add_Start(fun orig self ->
-        self.GetComponent<MimicPlayer>().StartMimicking()
+        if Set.contains self.enemyType.enemyName <| getConfig().enemies then
+            self.GetComponent<MimicPlayer>().StartMimicking()
         orig.Invoke self
         if not <| getConfig().enableMaskTexture then
             self.GetComponentsInChildren<Transform>()

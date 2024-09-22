@@ -71,6 +71,12 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
             false
             "Whether the masked enemy's mask texture should be shown."
 
+    member val MimicVoiceWhileHiding =
+        bindMaskedEnemy
+            "Mimic voice while hiding"
+            false
+            "Whether or not masked enemies should mimic voices while hiding on the ship"
+
 let localConfig = LocalConfig(loadConfig "General", loadConfig "Enemies")
 
 /// <summary>
@@ -89,6 +95,7 @@ type SyncedConfig =
 
         enableArmsOut: bool
         enableMaskTexture: bool
+        mimicVoiceWhileHiding: bool
     }
 
 let mutable private syncedConfig: Option<SyncedConfig> = None
@@ -108,6 +115,7 @@ let private toSyncedConfig () =
 
         enableArmsOut = localConfig.EnableArmsOut.Value
         enableMaskTexture = localConfig.EnableMaskTexture.Value
+        mimicVoiceWhileHiding = localConfig.MimicVoiceWhileHiding.Value
     }
 
 /// Get the currently synchronized config. This should only be used while in-game (not inside the menu).
