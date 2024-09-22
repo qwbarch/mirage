@@ -53,8 +53,7 @@ let readMicrophone recordingDirectory =
     let rec consumer =
         async {
             let! state = channel.AsyncGet()
-            let recordWhileDead = getSettings().recordWhileDead || not state.isPlayerDead
-            if state.isReady && recordWhileDead then
+            if state.isReady && (getSettings().recordWhileDead || not state.isPlayerDead) then
                 let frame =
                     {   samples = state.samples
                         format = state.format

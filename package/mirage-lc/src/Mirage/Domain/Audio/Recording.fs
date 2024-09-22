@@ -5,6 +5,7 @@ open System
 open System.IO
 open System.Collections.Generic
 open Mirage.Core.Async.Fork
+open Mirage.Domain.Setting
 
 type RecordingManager =
     private
@@ -29,9 +30,11 @@ let initRecordingManager recordingDirectory =
 /// Delete the recordings of the local player. Any exception found is ignored.
 /// Note: This runs on a separate thread, but is not a true non-blocking function, and will cause the other thread to block.
 let internal deleteRecordings =
-    //if not <| getLocalConfig().IgnoreRecordingsDeletion.Value then
-    try Directory.Delete(recordingManager.recordingDirectory, true)
-    with | _ -> ()
+    forkReturn <| async {
+        if not <| getSettings().neverDeleteRecordings then
+            try Directory.Delete(recordingManager.recordingDirectory, true)
+            with | _ -> ()
+    }
 
 /// Retrieve all the file names in the recordings directory.
 /// Note: This runs on a separate thread, but is not a true non-blocking function, and will cause the other thread to block.

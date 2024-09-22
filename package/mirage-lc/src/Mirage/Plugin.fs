@@ -15,6 +15,8 @@ open Mirage.Hook.Config
 open Mirage.Hook.Microphone
 open Mirage.Hook.Dissonance
 open Mirage.Hook.MaskedPlayerEnemy
+open UnityEngine
+open FSharpPlus
 
 [<BepInPlugin(pluginId, pluginName, pluginVersion)>]
 type Plugin() =
@@ -32,9 +34,14 @@ type Plugin() =
                 "Failed to load NAudio.Lame. This means no monsters will be able to play your voice.\n"
                     + "Please report this to qwbarch at https://github.com/qwbarch/mirage/issues\n"
                     + $"Path failed: {lameDllPath}"
+
         initRecordingManager recordingDirectory
         initSettings <| Path.Join(mirageDirectory, "settings.json")
         initNetcodePatcher()
+        Async.StartImmediate deleteRecordings
+        Application.add_quitting(fun _ -> Async.StartImmediate deleteRecordings)
+
+        // Hooks.
         cacheDissonance()
         disableAudioSpatializer()
         registerPrefab()
