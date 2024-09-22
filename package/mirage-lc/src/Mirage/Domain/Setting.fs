@@ -85,5 +85,8 @@ let initSettings filePath =
                         OnValueChanged = fun _ value -> saveSettings { settings with neverDeleteRecordings = value }
                     )
                 |]
-        ))
+        ),
+        true, // allowedInMainMenu
+        true  // allowedInGame
+        )
     }
