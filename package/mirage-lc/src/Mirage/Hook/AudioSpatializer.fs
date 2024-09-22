@@ -10,6 +10,6 @@ let disableAudioSpatializer () =
         orig.Invoke(self, eventId)
         let pluginName = AudioSettings.GetSpatializerPluginName()
         if isNull pluginName || pluginName = zero then
-            let disableSpatialize (audioSource: AudioSource) = audioSource.spatialize <- false
-            iter disableSpatialize <| Resources.FindObjectsOfTypeAll<AudioSource>()
+            for audioSource: AudioSource in Resources.FindObjectsOfTypeAll<AudioSource>() do
+                audioSource.spatialize <- false
     )
