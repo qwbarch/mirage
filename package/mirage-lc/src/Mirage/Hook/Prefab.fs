@@ -5,6 +5,7 @@ open Unity.Netcode
 open Mirage.Domain.Config
 open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicPlayer
+open Mirage.Unity.MirageVoice
 
 let mutable initialized = false
 
@@ -19,6 +20,7 @@ let registerPrefab () =
                     iter (ignore << enemyAI.gameObject.AddComponent)
                         [   typeof<AudioStream>
                             typeof<MimicPlayer>
+                            typeof<MimicVoice>
                         ]
                     localConfig.RegisterEnemy enemyAI
     )

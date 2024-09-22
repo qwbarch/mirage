@@ -3,10 +3,8 @@ module Mirage.Domain.Config
 open BepInEx
 open FSharpPlus
 open System
-open System.Collections.Generic
 open System.IO
 open System.Runtime.Serialization
-open System.Reflection
 open BepInEx.Configuration
 open Unity.Netcode
 open Unity.Collections

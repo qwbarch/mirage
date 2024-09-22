@@ -29,7 +29,6 @@ type RecordState =
 
 let private channel = new BlockingQueueAgent<RecordState>(Int32.MaxValue)
 let mutable private isReady = false
-let mutable private dissonance: DissonanceComms = null
 
 type MicrophoneSubscriber() =
     interface IMicrophoneSubscriber with
@@ -42,7 +41,7 @@ type MicrophoneSubscriber() =
                             isReady = isReady
                             isPlayerDead = StartOfRound.Instance.localPlayerController.isPlayerDead
                             pushToTalkEnabled = IngamePlayerSettings.Instance.settings.pushToTalk
-                            isMuted = dissonance.IsMuted
+                            isMuted = getDissonance().IsMuted
                         }
         member _.Reset() = ()
 
@@ -67,7 +66,6 @@ let readMicrophone recordingDirectory =
 
     On.Dissonance.DissonanceComms.add_Start(fun orig self ->
         orig.Invoke self
-        dissonance <- self
         self.SubscribeToRecordedAudio <| MicrophoneSubscriber()
     )
 
