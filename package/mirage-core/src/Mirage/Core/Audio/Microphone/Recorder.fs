@@ -64,6 +64,7 @@ let Recorder directory (onRecording: RecordAction -> Async<Unit>) =
                             resampledFormat = payload.resampledFormat
                         }
                 | DetectEnd payload ->
+                    do! writeMp3File mp3Writer.Value payload.fullAudio.original.samples
                     do! onRecording << RecordEnd <|
                         {   mp3Writer = mp3Writer.Value
                             vadFrame = payload.vadFrame
@@ -74,7 +75,6 @@ let Recorder directory (onRecording: RecordAction -> Async<Unit>) =
                         }
                     do! closeMp3Writer mp3Writer.Value
                 | DetectFound payload ->
-                    do! writeMp3File mp3Writer.Value payload.currentAudio.original.samples
                     do! onRecording << RecordFound <|
                         {   mp3Writer = mp3Writer.Value
                             vadFrame = payload.vadFrame
