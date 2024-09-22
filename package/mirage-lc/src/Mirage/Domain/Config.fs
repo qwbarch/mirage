@@ -14,18 +14,51 @@ open Mirage.Domain.Logger
 
 let private mkConfigFile configName = ConfigFile(Path.Combine(Paths.ConfigPath, $"Mirage.{configName}.cfg"), true)
 
-type LocalConfig() =
-    member val General = mkConfigFile "General"
-    member val Enemies = mkConfigFile "Enemies"
+type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
+    let bind section key value (description: string) =
+        general.Bind(
+            section,
+            key,
+            value,
+            description
+        )
+    let bindImitateVoice = bind "Imitate voice"
 
-    member this.RegisterEnemy(enemyAI: EnemyAI) =
-        ignore <| this.Enemies.Bind<bool>(
+    member val internal General = general
+    member val internal Enemies = enemies
+
+    member _.RegisterEnemy(enemyAI: EnemyAI) =
+        ignore <| enemies.Bind(
             "Imitate voice",
             enemyAI.enemyType.enemyName,
             enemyAI :? MaskedPlayerEnemy
         )
 
-let localConfig = LocalConfig()
+    member val MinimumDelayMasked =
+        bindImitateVoice
+            "Minimum delay (masked enemy)"
+            7000
+            "The minimum amount of time in between voice playbacks for masked enemies (in milliseconds)."
+
+    member val MaximumDelayMasked =
+        bindImitateVoice
+            "Maximum delay (masked enemy)"
+            12000
+            "The maximum amount of time in between voice playbacks for masked enemies (in milliseconds)."
+
+    member val MinimumDelayNonMasked =
+        bindImitateVoice
+            "Minimum delay (non-masked enemies)"
+            7000
+            "The minimum amount of time in between voice playbacks for non-masked enemies (in milliseconds)."
+
+    member val MaximumDelayNonMasked =
+        bindImitateVoice
+            "Maximum delay (non-masked enemies)"
+            12000
+            "The maximum amount of time in between voice playbacks for non-masked enemies (in milliseconds)."
+    
+let localConfig = LocalConfig(mkConfigFile "General", mkConfigFile "Enemies")
 
 /// <summary>
 /// Network synchronized configuration values. This is taken from the wiki:
@@ -35,6 +68,11 @@ let localConfig = LocalConfig()
 type SyncedConfig =
     {   /// Enemies that have voice mimicking enabled.
         enemies: Set<string>
+
+        minimumDelayMasked: int
+        maximumDelayMasked: int
+        minimumDelayNonMasked: int
+        maximumDelayNonMasked: int
     }
 
 let mutable private syncedConfig: Option<SyncedConfig> = None
@@ -46,11 +84,12 @@ let private toSyncedConfig () =
         let mutable entry = null
         if localConfig.Enemies.TryGetEntry(key, &entry) && entry.Value then
             &enemies %= Set.add key.Key
-    let x =
-        {   enemies = enemies
-        }
-    logInfo $"{x}"
-    x
+    {   enemies = enemies
+        minimumDelayMasked = localConfig.MinimumDelayMasked.Value
+        maximumDelayMasked = localConfig.MaximumDelayMasked.Value
+        minimumDelayNonMasked = localConfig.MinimumDelayMasked.Value
+        maximumDelayNonMasked = localConfig.MaximumDelayMasked.Value
+    }
 
 /// Get the currently synchronized config. This should only be used while in-game (not inside the menu).
 let getConfig () = syncedConfig.Value
