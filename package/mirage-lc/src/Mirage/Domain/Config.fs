@@ -3,8 +3,10 @@ module Mirage.Domain.Config
 open BepInEx
 open FSharpPlus
 open System
+open System.Collections.Generic
 open System.IO
 open System.Runtime.Serialization
+open System.Reflection
 open BepInEx.Configuration
 open Unity.Netcode
 open Unity.Collections
@@ -12,7 +14,13 @@ open Mirage.Prelude
 open Mirage.PluginInfo
 open Mirage.Domain.Logger
 
-let private mkConfigFile configName = ConfigFile(Path.Combine(Paths.ConfigPath, $"Mirage.{configName}.cfg"), true)
+let private loadConfig configName =
+    let config = ConfigFile(Path.Combine(Paths.ConfigPath, $"Mirage.{configName}.cfg"), true)
+    let property = config.GetType().GetProperty("OrphanedEntries", BindingFlags.NonPublic ||| BindingFlags.Instance)
+    let orphanedEntries = property.GetValue(config, null) :?> Dictionary<ConfigDefinition, string>
+    orphanedEntries.Clear()
+    config.Save()
+    config
 
 type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
     let bind section key value (description: string) =
@@ -58,7 +66,7 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
             12000
             "The maximum amount of time in between voice playbacks for non-masked enemies (in milliseconds)."
     
-let localConfig = LocalConfig(mkConfigFile "General", mkConfigFile "Enemies")
+let localConfig = LocalConfig(loadConfig "General", loadConfig "Enemies")
 
 /// <summary>
 /// Network synchronized configuration values. This is taken from the wiki:
