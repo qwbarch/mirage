@@ -10,7 +10,6 @@ open System
 open System.IO
 open Newtonsoft.Json
 open Mirage.PluginInfo
-open Logger
 
 [<Struct>]
 type Settings =
@@ -42,8 +41,6 @@ let initSettings filePath =
             async {
                 let! settings = agent.AsyncGet()
                 let text = JsonConvert.SerializeObject settings
-                logInfo $"saving text: {text}"
-                logInfo $"file path: {filePath}"
                 do! Async.AwaitTask(File.WriteAllTextAsync(filePath, text))
                 do! consumer
             }
