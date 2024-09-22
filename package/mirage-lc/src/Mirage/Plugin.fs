@@ -5,8 +5,10 @@ open System.IO
 open NAudio.Lame
 open Mirage.PluginInfo
 open Mirage.Domain.Netcode
-open Mirage.Hook.AudioSpatializer
 open Mirage.Domain.Logger
+open Mirage.Hook.AudioSpatializer
+open Mirage.Hook.Prefab
+open Mirage.Hook.Config
 
 [<BepInPlugin(pluginId, pluginName, pluginVersion)>]
 type Plugin() =
@@ -22,3 +24,5 @@ type Plugin() =
                     + $"Path failed: {lameDllPath}"
         initNetcodePatcher()
         disableAudioSpatializer()
+        registerPrefab()
+        syncConfig()
