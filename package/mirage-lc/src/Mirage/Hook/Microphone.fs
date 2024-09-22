@@ -9,12 +9,11 @@ open FSharpx.Control
 open NAudio.Wave
 open Dissonance
 open Silero.API
+open Mirage.Domain.Setting
 open Mirage.Core.Audio.PCM
 open Mirage.Core.Audio.Microphone.Resampler
 open Mirage.Core.Audio.Microphone.Detection
 open Mirage.Core.Audio.Microphone.Recorder
-open Mirage.Domain.Setting
-open Mirage.Domain.Logger
 
 let [<Literal>] SamplesPerWindow = 1024
 
@@ -34,7 +33,7 @@ let mutable private dissonance: DissonanceComms = null
 
 type MicrophoneSubscriber() =
     interface IMicrophoneSubscriber with
-        member this.ReceiveMicrophoneData(buffer, format) =
+        member _.ReceiveMicrophoneData(buffer, format) =
             if not <| isNull StartOfRound.Instance then
                 Async.StartImmediate <<
                     channel.AsyncAdd <|
@@ -43,27 +42,25 @@ type MicrophoneSubscriber() =
                             isReady = isReady
                             isPlayerDead = StartOfRound.Instance.localPlayerController.isPlayerDead
                             pushToTalkEnabled = IngamePlayerSettings.Instance.settings.pushToTalk
-                            isMuted = not dissonance.IsMuted
+                            isMuted = dissonance.IsMuted
                         }
         member _.Reset() = ()
 
 let readMicrophone recordingDirectory =
-    let subscriber = MicrophoneSubscriber()
     let silero = SileroVAD SamplesPerWindow
     let recorder = Recorder recordingDirectory << konst <| result ()
-    let voiceDetector = VoiceDetector (result << detectSpeech silero) (writeRecorder recorder)
+    let voiceDetector = VoiceDetector id (result << detectSpeech silero) (writeRecorder recorder)
     let resampler = Resampler (writeDetector voiceDetector)
     let rec consumer =
         async {
             let! state = channel.AsyncGet()
-            let recordWhileDead = true //getSettings().recordWhileDead || state.isPlayerDead
-            let pushToTalkPressed = state.pushToTalkEnabled && not state.isMuted
+            let recordWhileDead = getSettings().recordWhileDead || not state.isPlayerDead
             if state.isReady && recordWhileDead then
-                Async.StartImmediate <|
-                    writeResampler resampler
-                        {   samples = state.samples
-                            format = state.format
-                        }
+                let frame =
+                    {   samples = state.samples
+                        format = state.format
+                    }
+                Async.StartImmediate <| writeResampler resampler (state.isMuted, frame)
             do! consumer
         }
     Async.Start consumer
