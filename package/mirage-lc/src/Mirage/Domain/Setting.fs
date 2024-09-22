@@ -75,8 +75,8 @@ let initSettings filePath =
                     )
                     ToggleComponent(
                         Text = "Only record your voice while alive:",
-                        Value = settings.recordWhileDead,
-                        OnValueChanged = fun _ value -> saveSettings { settings with recordWhileDead = value }
+                        Value = not settings.recordWhileDead,
+                        OnValueChanged = fun _ value -> saveSettings { settings with recordWhileDead = not value }
                     )
                     ToggleComponent(
                         Text = "Never delete recordings",

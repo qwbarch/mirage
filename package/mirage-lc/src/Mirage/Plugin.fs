@@ -14,6 +14,7 @@ open Mirage.Hook.Prefab
 open Mirage.Hook.Config
 open Mirage.Hook.Microphone
 open Mirage.Hook.Dissonance
+open Mirage.Hook.MaskedPlayerEnemy
 
 [<BepInPlugin(pluginId, pluginName, pluginVersion)>]
 type Plugin() =
@@ -39,3 +40,4 @@ type Plugin() =
         registerPrefab()
         syncConfig()
         readMicrophone recordingDirectory
+        hookMaskedEnemy()

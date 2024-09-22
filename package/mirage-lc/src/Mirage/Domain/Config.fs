@@ -23,6 +23,7 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
             description
         )
     let bindImitateVoice = bind "Imitate voice"
+    let bindMaskedEnemy = bind "Masked enemy"
 
     member val internal General = general
     member val internal Enemies = enemies
@@ -57,7 +58,19 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
             "Maximum delay (non-masked enemies)"
             12000
             "The maximum amount of time in between voice playbacks for non-masked enemies (in milliseconds)."
-    
+
+    member val EnableArmsOut =
+        bindMaskedEnemy
+            "Enable arms-out animation"
+            false
+            "Whether the zombie arms animation should be used."
+
+    member val EnableMaskTexture =
+        bindMaskedEnemy
+            "Enable mask texture"
+            false
+            "Whether the masked enemy's mask texture should be shown."
+
 let localConfig = LocalConfig(loadConfig "General", loadConfig "Enemies")
 
 /// <summary>
@@ -73,6 +86,9 @@ type SyncedConfig =
         maximumDelayMasked: int
         minimumDelayNonMasked: int
         maximumDelayNonMasked: int
+
+        enableArmsOut: bool
+        enableMaskTexture: bool
     }
 
 let mutable private syncedConfig: Option<SyncedConfig> = None
@@ -89,6 +105,9 @@ let private toSyncedConfig () =
         maximumDelayMasked = localConfig.MaximumDelayMasked.Value
         minimumDelayNonMasked = localConfig.MinimumDelayMasked.Value
         maximumDelayNonMasked = localConfig.MaximumDelayMasked.Value
+
+        enableArmsOut = localConfig.EnableArmsOut.Value
+        enableMaskTexture = localConfig.EnableMaskTexture.Value
     }
 
 /// Get the currently synchronized config. This should only be used while in-game (not inside the menu).
