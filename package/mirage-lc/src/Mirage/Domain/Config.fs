@@ -29,11 +29,13 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
     member val internal Enemies = enemies
 
     member _.RegisterEnemy(enemyAI: EnemyAI) =
-        ignore <| enemies.Bind(
-            "Imitate voice",
-            enemyAI.enemyType.enemyName,
-            enemyAI :? MaskedPlayerEnemy
-        )
+        try
+            ignore <| enemies.Bind(
+                "Imitate voice",
+                enemyAI.enemyType.enemyName,
+                enemyAI :? MaskedPlayerEnemy
+            )
+        with | _ -> logError $"Failed to register an enemy to the config: {enemyAI.GetType().Name}"
 
     member val MinimumDelayMasked =
         bindImitateVoice
