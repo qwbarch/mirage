@@ -41,7 +41,7 @@ type MimicVoice() as self =
                     if enemyAI :? MaskedPlayerEnemy then
                         random.Next(getConfig().minimumDelayMasked, getConfig().maximumDelayMasked + 1)
                     else
-                        random.Next(getConfig().minimumDelayMasked, getConfig().maximumDelayMasked + 1)
+                        random.Next(getConfig().minimumDelayNonMasked, getConfig().maximumDelayNonMasked + 1)
                 do! mimicVoice
                 do! Async.Sleep delay
                 do! runMimicLoop

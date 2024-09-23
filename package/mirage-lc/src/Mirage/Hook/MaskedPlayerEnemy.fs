@@ -2,8 +2,12 @@ module Mirage.Hook.MaskedPlayerEnemy
 
 open FSharpPlus
 open UnityEngine
+open System
+open System.Collections.Generic
 open Mirage.Domain.Config
 open Mirage.Unity.MimicPlayer
+open Unity.Netcode
+open Mirage.Domain.Logger
 
 let hookMaskedEnemy () =
     On.MaskedPlayerEnemy.add_Start(fun orig self ->
@@ -30,4 +34,54 @@ let hookMaskedEnemy () =
         for player in self.allPlayerScripts do
             player.deadBody <- null
         orig.Invoke(self, bodiesInsured, connectedPlayersOnServer, scrapCollected)
+    )
+
+    let mutable maskedPrefab = null
+
+    On.GameNetworkManager.add_Start(fun orig self ->
+        orig.Invoke self
+        for prefab in NetworkManager.Singleton.NetworkConfig.Prefabs.m_Prefabs do
+            if not << isNull <| prefab.Prefab.GetComponent<MaskedPlayerEnemy>() then
+                logInfo "Found masked prefab."
+                maskedPrefab <- prefab.Prefab.GetComponent<MaskedPlayerEnemy>()
+    )
+
+    On.TimeOfDay.add_Start(fun orig self ->
+        orig.Invoke self
+        let minSpawnChance = 25.0
+
+        if self.IsHost then
+            let enemyType =
+                let enemy = Object.Instantiate<EnemyType> maskedPrefab.enemyType
+                let spawnCurve = enemy.probabilityCurve
+                let addKey time value = ignore << spawnCurve.AddKey <| Keyframe(time, value)
+                spawnCurve.ClearKeys()
+                addKey 0f 0f
+                addKey 0.19f 0f
+                addKey 0.2f 0.5f
+                addKey 0.5f 10f
+                addKey 0.9f 15f
+                addKey 1f 1f
+                enemy
+            
+            let isMaskedEnemy (enemy: SpawnableEnemyWithRarity) =
+                not << isNull <| enemy.enemyType.enemyPrefab.GetComponent<MaskedPlayerEnemy>()
+            let logs = new List<string>()
+            for level in StartOfRound.Instance.levels do
+                ignore <| level.Enemies.RemoveAll isMaskedEnemy
+                let mutable totalWeight =
+                    level.Enemies
+                        |> map _.rarity
+                        |> sum
+                if totalWeight <> 0 then
+                    let weight = int << ceil <| float totalWeight * minSpawnChance / (100.0 - minSpawnChance)
+                    totalWeight <- totalWeight + weight
+                    let spawnChance = float weight / float totalWeight * 100.0
+                    logs.Add $"Level: {level.PlanetName}. Weight: {weight}. SpawnChance: {spawnChance:F2}%%"
+                    let enemy = new SpawnableEnemyWithRarity()
+                    enemy.rarity <- weight
+                    enemy.enemyType <- enemyType
+                    enemy.enemyType.MaxCount <- 2
+                    level.Enemies.Add enemy
+            logInfo <| "Adjusting spawn weights for masked enemies:\n" + String.Join("\n", logs)
     )
