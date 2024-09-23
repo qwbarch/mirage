@@ -38,12 +38,6 @@ type MimicPlayer() =
             randomPlayer()
         else
             round.allPlayerScripts[playerId]
-    
-    let mimicPlayer (player: PlayerControllerB) (maskedEnemy: MaskedPlayerEnemy) =
-        if not (isNull maskedEnemy) then
-            maskedEnemy.mimickingPlayer <- player
-            maskedEnemy.SetSuit player.currentSuitID
-            maskedEnemy.SetVisibilityOfMaskedEnemy()
 
     member _.MimickingPlayer with get() = mimickingPlayer
 
@@ -54,11 +48,11 @@ type MimicPlayer() =
     member _.OnSetMimicId = onSetMimicId.Publish
 
     member this.Awake() = enemyAI <- this.GetComponent<EnemyAI>()
-    
+
     member this.Start() =
         // StartMimicking for masked enemies gets run via a hook instead,
         // to ensure the mimickingPlayer is set before other mods try to interact with it.
-        if isNull <| this.GetComponent<MaskedPlayerEnemy>() then
+        if not <| enemyAI :? MaskedPlayerEnemy then
             this.StartMimicking()
 
     member this.StartMimicking() =
@@ -66,11 +60,11 @@ type MimicPlayer() =
             mimicId <- Guid.NewGuid()
             let maskedEnemy = this.GetComponent<MaskedPlayerEnemy>()
             let mimickingPlayer =
-                if (enemyAI : EnemyAI) :? MaskedPlayerEnemy then
+                if enemyAI :? MaskedPlayerEnemy && Set.contains maskedEnemy.enemyType.enemyName (getConfig().enemies) then
                     if isNull maskedEnemy.mimickingPlayer then Some <| randomPlayer()
                     else Some maskedEnemy.mimickingPlayer
                 else if not (enemyAI :? DressGirlAI) && Set.contains enemyAI.enemyType.enemyName <| getConfig().enemies then
-                    // DressGirl is during the Update() step instead, if it's enabled.
+                    // DressGirlAI is set during the Update() step instead, if it's enabled.
                     Some <| randomPlayer()
                 else
                     None
@@ -82,12 +76,15 @@ type MimicPlayer() =
         let player = StartOfRound.Instance.allPlayerScripts[playerId]
         logMimic $"Mimicking player #{player.playerClientId}"
         mimickingPlayer <- player
-        mimicPlayer player <| this.GetComponent<MaskedPlayerEnemy>()
+        let maskedEnemy = this.GetComponent<MaskedPlayerEnemy>()
+        if not <| isNull maskedEnemy then
+            maskedEnemy.mimickingPlayer <- player
+            maskedEnemy.SetSuit player.currentSuitID
+            maskedEnemy.SetVisibilityOfMaskedEnemy()
         this.GetComponent<AudioStream>().AllowedSenderId <- Some player.actualClientId
         if this.IsHost then
             this.MimicPlayerClientRpc(playerId, mimicId.ToString())
         onSetMimicId.Trigger mimicId
-
 
     [<ClientRpc>]
     member this.MimicPlayerClientRpc(playerId, mimicId') =

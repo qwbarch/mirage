@@ -4,6 +4,7 @@ open BepInEx
 open System.IO
 open System.Diagnostics
 open NAudio.Lame
+open UnityEngine
 open Mirage.PluginInfo
 open Mirage.Domain.Netcode
 open Mirage.Domain.Logger
@@ -15,8 +16,6 @@ open Mirage.Hook.Config
 open Mirage.Hook.Microphone
 open Mirage.Hook.Dissonance
 open Mirage.Hook.MaskedPlayerEnemy
-open UnityEngine
-open FSharpPlus
 
 [<BepInPlugin(pluginId, pluginName, pluginVersion)>]
 type Plugin() =
