@@ -2,7 +2,6 @@ module Mirage.Hook.Prefab
 
 open FSharpPlus
 open Unity.Netcode
-open Mirage.Domain.Config
 open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicPlayer
 open Mirage.Unity.MirageVoice
@@ -22,13 +21,4 @@ let registerPrefab () =
                             typeof<MimicPlayer>
                             typeof<MimicVoice>
                         ]
-    )
-
-    On.StartOfRound.add_Awake(fun orig self ->
-        orig.Invoke self
-        for prefab in GameNetworkManager.Instance.GetComponent<NetworkManager>().NetworkConfig.Prefabs.m_Prefabs do
-            let enemyAI = prefab.Prefab.GetComponent<EnemyAI>()
-            if not <| isNull enemyAI then
-                localConfig.RegisterEnemy enemyAI
-        localConfig.ClearOrphanedEntries()
     )
