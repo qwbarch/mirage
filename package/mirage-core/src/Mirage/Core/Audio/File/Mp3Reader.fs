@@ -17,5 +17,7 @@ type Mp3Reader =
 let readMp3File (filePath: string) =
     forkReturn <| async {
         let! bytes = Async.AwaitTask <| File.ReadAllBytesAsync filePath
-        return { reader = new Mp3FileReader(new MemoryStream(bytes)) }
+        use stream = new MemoryStream(bytes)
+        use reader = new WaveFileReader(stream)
+        return { reader = new Mp3FileReader(reader) }
     }

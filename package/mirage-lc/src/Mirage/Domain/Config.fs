@@ -141,10 +141,6 @@ type SyncedConfig =
         enableArmsOut: bool
         enableMaskTexture: bool
         mimicVoiceWhileHiding: bool
-
-        enableSpawnControl: bool
-        maskedSpawnChance: float
-        maxMaskedSpawns: int
     }
 
 let mutable private syncedConfig: Option<SyncedConfig> = None
@@ -165,10 +161,6 @@ let private toSyncedConfig () =
         enableArmsOut = localConfig.EnableArmsOut.Value
         enableMaskTexture = localConfig.EnableMaskTexture.Value
         mimicVoiceWhileHiding = localConfig.MimicVoiceWhileHiding.Value
-
-        enableSpawnControl = localConfig.EnableSpawnControl.Value
-        maskedSpawnChance = localConfig.MaskedSpawnChance.Value
-        maxMaskedSpawns = localConfig.MaxMaskedSpawns.Value
     }
 
 /// Get the currently synchronized config. This should only be used while in-game (not inside the menu).
