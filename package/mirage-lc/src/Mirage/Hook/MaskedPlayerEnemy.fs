@@ -9,6 +9,8 @@ open Mirage.Unity.MimicPlayer
 open Unity.Netcode
 open Mirage.Domain.Logger
 
+let mutable private maskedPrefab = null
+
 let hookMaskedEnemy () =
     On.MaskedPlayerEnemy.add_Start(fun orig self ->
         self.GetComponent<MimicPlayer>().StartMimicking()
@@ -36,21 +38,16 @@ let hookMaskedEnemy () =
         orig.Invoke(self, bodiesInsured, connectedPlayersOnServer, scrapCollected)
     )
 
-    let mutable maskedPrefab = null
-
     On.GameNetworkManager.add_Start(fun orig self ->
         orig.Invoke self
         for prefab in NetworkManager.Singleton.NetworkConfig.Prefabs.m_Prefabs do
-            if not << isNull <| prefab.Prefab.GetComponent<MaskedPlayerEnemy>() then
-                logInfo "Found masked prefab."
+            if not (isNull <| prefab.Prefab.GetComponent<MaskedPlayerEnemy>()) && not (isNull maskedPrefab) then
                 maskedPrefab <- prefab.Prefab.GetComponent<MaskedPlayerEnemy>()
     )
 
     On.TimeOfDay.add_Start(fun orig self ->
         orig.Invoke self
-        let minSpawnChance = 25.0
-
-        if self.IsHost then
+        if self.IsHost && getConfig().enableSpawnControl then
             let enemyType =
                 let enemy = Object.Instantiate<EnemyType> maskedPrefab.enemyType
                 let spawnCurve = enemy.probabilityCurve
@@ -63,10 +60,10 @@ let hookMaskedEnemy () =
                 addKey 0.9f 15f
                 addKey 1f 1f
                 enemy
-            
             let isMaskedEnemy (enemy: SpawnableEnemyWithRarity) =
                 not << isNull <| enemy.enemyType.enemyPrefab.GetComponent<MaskedPlayerEnemy>()
             let logs = new List<string>()
+            let minSpawnChance = getConfig().maskedSpawnChance
             for level in StartOfRound.Instance.levels do
                 ignore <| level.Enemies.RemoveAll isMaskedEnemy
                 let mutable totalWeight =
@@ -81,7 +78,7 @@ let hookMaskedEnemy () =
                     let enemy = new SpawnableEnemyWithRarity()
                     enemy.rarity <- weight
                     enemy.enemyType <- enemyType
-                    enemy.enemyType.MaxCount <- 2
+                    enemy.enemyType.MaxCount <- getConfig().maxMaskedSpawns
                     level.Enemies.Add enemy
             logInfo <| "Adjusting spawn weights for masked enemies:\n" + String.Join("\n", logs)
     )

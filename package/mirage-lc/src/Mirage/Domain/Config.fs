@@ -11,11 +11,13 @@ open Unity.Collections
 open Mirage.Prelude
 open Mirage.PluginInfo
 open Mirage.Domain.Logger
+open System.Reflection
+open System.Collections.Generic
 
 let private loadConfig configName = ConfigFile(Path.Combine(Paths.ConfigPath, $"Mirage.{configName}.cfg"), true)
 
 type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
-    let bind section key value (description: string) =
+    let bind section key value (description: ConfigDescription) =
         general.Bind(
             section,
             key,
@@ -24,9 +26,23 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
         )
     let bindImitateVoice = bind "Imitate voice"
     let bindMaskedEnemy = bind "Masked enemy"
+    let bindSpawnControl key (value: 'A) (description: 'B) = bind "Spawn control" key value description
 
     member val internal General = general
     member val internal Enemies = enemies
+
+    member _.ClearOrphanedEntries() =
+        let clear (config: ConfigFile) =
+            let entries =
+                config
+                    .GetType()
+                    .GetProperty("OrphanedEntries", BindingFlags.NonPublic ||| BindingFlags.Instance)
+                    .GetValue(config, null)
+                    :?> Dictionary<ConfigDefinition, string>
+            entries.Clear()
+            config.Save()
+        clear general
+        clear enemies
 
     member _.RegisterEnemy(enemyAI: EnemyAI) =
         try
@@ -38,46 +54,73 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
         with | _ -> logError $"Failed to register an enemy to the config: {enemyAI.GetType().Name}"
 
     member val MinimumDelayMasked =
+        let description = "The minimum amount of time in between voice playbacks for masked enemies (in milliseconds)."
         bindImitateVoice
             "Minimum delay (masked enemy)"
             7000
-            "The minimum amount of time in between voice playbacks for masked enemies (in milliseconds)."
+            <| ConfigDescription(description, AcceptableValueRange(1, 600000))
 
     member val MaximumDelayMasked =
+        let description = "The maximum amount of time in between voice playbacks for masked enemies (in milliseconds)."
         bindImitateVoice
             "Maximum delay (masked enemy)"
             12000
-            "The maximum amount of time in between voice playbacks for masked enemies (in milliseconds)."
+            <| ConfigDescription(description, AcceptableValueRange(1, 600000))
 
     member val MinimumDelayNonMasked =
+        let description = "The minimum amount of time in between voice playbacks for non-masked enemies (in milliseconds)."
         bindImitateVoice
             "Minimum delay (non-masked enemies)"
             7000
-            "The minimum amount of time in between voice playbacks for non-masked enemies (in milliseconds)."
+            <| ConfigDescription(description, AcceptableValueRange(1, 600000))
 
     member val MaximumDelayNonMasked =
+        let description = "The maximum amount of time in between voice playbacks for non-masked enemies (in milliseconds)."
         bindImitateVoice
             "Maximum delay (non-masked enemies)"
             12000
-            "The maximum amount of time in between voice playbacks for non-masked enemies (in milliseconds)."
+            <| ConfigDescription(description, AcceptableValueRange(1, 600000))
 
     member val EnableArmsOut =
         bindMaskedEnemy
             "Enable arms-out animation"
             false
-            "Whether the zombie arms animation should be used."
+            <| ConfigDescription(description = "Whether the zombie arms animation should be used.", tags = zero)
 
     member val EnableMaskTexture =
         bindMaskedEnemy
             "Enable mask texture"
             false
-            "Whether the masked enemy's mask texture should be shown."
+            <| ConfigDescription(description = "Whether the masked enemy's mask texture should be shown.", tags = zero)
 
     member val MimicVoiceWhileHiding =
         bindMaskedEnemy
             "Mimic voice while hiding"
             false
-            "Whether or not masked enemies should mimic voices while hiding on the ship"
+            <| ConfigDescription(description = "Whether or not masked enemies should mimic voices while hiding on the ship", tags = zero)
+    
+    member val EnableSpawnControl =
+        bindSpawnControl
+            "Enable spawn control (masked enemies)"
+            true
+            <| ConfigDescription(description = "If set to false, masked enemy spawns are untouched and are left at the vanilla spawn rates.\nIf set to true, masked enemy spawns will use the configured spawn chance.", tags = zero)
+
+    member val MaskedSpawnChance =
+        let description =
+            "The percentage chance a masked enemy should naturally spawn. Spawn weights are internally calculated and modified to fit this percentage based on the moon.\n"
+                + "Note: The spawn chance is based on each attempt the game tries to spawn an enemy. If you want a basically guaranteed spawn each round, set this to 25"
+        bindSpawnControl
+            "Masked enemy spawn chance"
+            2.0
+            <| ConfigDescription(description, AcceptableValueRange(0.1, 25.0))
+
+    member val MaxMaskedSpawns =
+        let description = "The maximum number of masked enemies that can be naturally spawned within the same round."
+        bindSpawnControl
+            "Max spawned masked enemies"
+            2
+            <| ConfigDescription(description, tags = zero)
+        
 
 let localConfig = LocalConfig(loadConfig "General", loadConfig "Enemies")
 
@@ -98,6 +141,10 @@ type SyncedConfig =
         enableArmsOut: bool
         enableMaskTexture: bool
         mimicVoiceWhileHiding: bool
+
+        enableSpawnControl: bool
+        maskedSpawnChance: float
+        maxMaskedSpawns: int
     }
 
 let mutable private syncedConfig: Option<SyncedConfig> = None
@@ -118,6 +165,10 @@ let private toSyncedConfig () =
         enableArmsOut = localConfig.EnableArmsOut.Value
         enableMaskTexture = localConfig.EnableMaskTexture.Value
         mimicVoiceWhileHiding = localConfig.MimicVoiceWhileHiding.Value
+
+        enableSpawnControl = localConfig.EnableSpawnControl.Value
+        maskedSpawnChance = localConfig.MaskedSpawnChance.Value
+        maxMaskedSpawns = localConfig.MaxMaskedSpawns.Value
     }
 
 /// Get the currently synchronized config. This should only be used while in-game (not inside the menu).
