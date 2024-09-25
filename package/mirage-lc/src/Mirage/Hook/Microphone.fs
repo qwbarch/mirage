@@ -2,12 +2,12 @@ module Mirage.Hook.Microphone
 
 #nowarn "40"
 
+open Dissonance
 open Dissonance.Audio.Capture
 open System
 open FSharpPlus
 open FSharpx.Control
 open NAudio.Wave
-open Dissonance
 open Silero.API
 open Mirage.Domain.Setting
 open Mirage.Core.Audio.PCM
@@ -47,7 +47,7 @@ type MicrophoneSubscriber() =
 
 let readMicrophone recordingDirectory =
     let silero = SileroVAD SamplesPerWindow
-    let recorder = Recorder recordingDirectory << konst <| result ()
+    let recorder = Recorder recordingDirectory << konst <| result  ()
     let voiceDetector = VoiceDetector id (result << detectSpeech silero) (writeRecorder recorder)
     let resampler = Resampler (writeDetector voiceDetector)
     let rec consumer =
@@ -70,12 +70,17 @@ let readMicrophone recordingDirectory =
 
     // Normally during the opening doors sequence, the game suffers from dropped audio frames, causing recordings to sound glitchy.
     // To reduce the likelihood of recording glitched sounds, audio recordings only start after the sequence is completely finished.
-    On.StartOfRound.add_openingDoorsSequence(fun orig self ->
+    On.StartOfRound.add_StartTrackingAllPlayerVoices(fun orig self ->
         isReady <- true
         orig.Invoke self
     )
 
+    // Set isReady: false when exiting to the main menu, or the round is over.
     On.StartOfRound.add_OnDestroy(fun orig self ->
+        isReady <- false
+        orig.Invoke self
+    )
+    On.StartOfRound.add_ReviveDeadPlayers(fun orig self ->
         isReady <- false
         orig.Invoke self
     )

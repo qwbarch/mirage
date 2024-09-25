@@ -3,11 +3,10 @@ module Mirage.Unity.AudioStream
 open FSharpPlus
 open UnityEngine
 open Unity.Netcode
-open Mirage.Core.Audio.File.Mp3Reader
+open Mirage.Core.Audio.File.WaveReader
 open Mirage.Domain.Audio.Sender
 open Mirage.Domain.Audio.Receiver
 open Mirage.Domain.Audio.Frame
-open Mirage.Domain.Logger
 
 [<AllowNullLiteral>]
 type AudioStream() as self =
@@ -22,33 +21,30 @@ type AudioStream() as self =
             callback()
 
     /// Load the mp3 file and play it locally, while sending the audio to play on all other clients.
-    let streamAudioHost mp3Reader =
+    let streamAudioHost (waveReader: WaveReader) =
         async {
-            let pcmHeader = PcmHeader mp3Reader
+            let pcmHeader = PcmHeader waveReader
             iter dispose audioReceiver
             audioReceiver <- Some <| AudioReceiver self.AudioSource pcmHeader
             let onFrameRead frameData =
                 onReceiveFrame audioReceiver.Value frameData
                 self.SendFrameClientRpc frameData
             self.InitializeAudioReceiverClientRpc pcmHeader
-            use audioSender = AudioSender onFrameRead mp3Reader
+            use audioSender = AudioSender onFrameRead waveReader
             sendAudio audioSender
-            do! Async.Sleep(int mp3Reader.reader.TotalTime.TotalMilliseconds)
+            do! Async.Sleep(int waveReader.mp3Reader.TotalTime.TotalMilliseconds)
         }
 
     /// Load the mp3 file, and then send it to the server to broadcast to all other clients.
-    let streamAudioClient mp3Reader =
+    let streamAudioClient (waveReader: WaveReader) =
         async {
-            logInfo "streamAudioClient running"
-            let pcmHeader = PcmHeader mp3Reader
+            let pcmHeader = PcmHeader waveReader
             let serverRpcParams = ServerRpcParams()
             let sendFrame frameData = self.SendFrameServerRpc(frameData, serverRpcParams)
             self.InitializeAudioReceiverServerRpc(pcmHeader, serverRpcParams)
-            use audioSender = AudioSender sendFrame mp3Reader
+            use audioSender = AudioSender sendFrame waveReader
             sendAudio audioSender
-            logInfo $"total seconds: {mp3Reader.reader.TotalTime.TotalSeconds}"
-            logInfo $"total ms as seconds: {int <| mp3Reader.reader.TotalTime.TotalMilliseconds / 1000.0}"
-            do! Async.Sleep(int mp3Reader.reader.TotalTime.TotalMilliseconds)
+            do! Async.Sleep(int waveReader.mp3Reader.TotalTime.TotalMilliseconds)
         }
 
     member val AudioSource: AudioSource = null with get, set
@@ -67,11 +63,11 @@ type AudioStream() as self =
             if Some localId <> this.AllowedSenderId then
                 invalidOp $"StreamAudioFromFile cannot be run from this client. LocalId: {localId}. AllowedId: {this.AllowedSenderId}."
             else
-                let! mp3Reader = readMp3File filePath
+                let! waveReader = readWavFile filePath
                 if this.IsHost then
-                    do! streamAudioHost mp3Reader
+                    do! streamAudioHost waveReader
                 else 
-                    do! streamAudioClient mp3Reader
+                    do! streamAudioClient waveReader
         }
 
     /// Initialize the audio receiver to playback audio when audio frames are received.

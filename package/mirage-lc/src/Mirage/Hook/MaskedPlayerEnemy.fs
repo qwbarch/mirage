@@ -41,7 +41,7 @@ let hookMaskedEnemy () =
     On.GameNetworkManager.add_Start(fun orig self ->
         orig.Invoke self
         for prefab in NetworkManager.Singleton.NetworkConfig.Prefabs.m_Prefabs do
-            if not (isNull <| prefab.Prefab.GetComponent<MaskedPlayerEnemy>()) && not (isNull maskedPrefab) then
+            if not (isNull <| prefab.Prefab.GetComponent<MaskedPlayerEnemy>()) && isNull maskedPrefab then
                 maskedPrefab <- prefab.Prefab.GetComponent<MaskedPlayerEnemy>()
     )
 

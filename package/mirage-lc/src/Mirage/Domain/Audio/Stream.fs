@@ -2,7 +2,7 @@ module Mirage.Domain.Audio.Stream
 
 open System.Diagnostics
 open System.Collections.Generic
-open Mirage.Core.Audio.File.Mp3Reader
+open Mirage.Core.Audio.File.WaveReader
 open Mirage.Prelude
 open Mirage.Domain.Audio.Frame
 
@@ -19,14 +19,14 @@ let private frequency = float Stopwatch.Frequency / 1000.0
 /// <param name="sendFrame">
 /// Function to run whenever frame data is available. A value of <b>None</b> is passed when the stream is over.
 /// </param>
-let streamAudio mp3Reader (sendFrame: Option<FrameData> -> Async<Unit>) : Async<Unit> =
+let streamAudio (waveReader: WaveReader) (sendFrame: Option<FrameData> -> Async<Unit>) : Async<Unit> =
     async {
         let mutable previousTime = 0.0
         let mutable currentBuffer = 0.0
-        let mutable frame = mp3Reader.reader.ReadNextFrame()
+        let mutable frame = waveReader.mp3Reader.ReadNextFrame()
         let delayBuffer = new LinkedList<float>()
         while not <| isNull frame do
-            let currentTime = mp3Reader.reader.CurrentTime.TotalMilliseconds * frequency
+            let currentTime = waveReader.mp3Reader.CurrentTime.TotalMilliseconds * frequency
             let delay = currentTime - previousTime
             ignore <| delayBuffer.AddLast delay
             previousTime <- currentTime
@@ -47,9 +47,9 @@ let streamAudio mp3Reader (sendFrame: Option<FrameData> -> Async<Unit>) : Async<
 
             do! sendFrame << Some <|
                 {   rawData = frame.RawData
-                    sampleIndex = int mp3Reader.reader.tableOfContents[mp3Reader.reader.tocIndex - 1].SamplePosition
+                    sampleIndex = int waveReader.mp3Reader.tableOfContents[waveReader.mp3Reader.tocIndex - 1].SamplePosition
                 }
 
-            frame <- mp3Reader.reader.ReadNextFrame()
+            frame <- waveReader.mp3Reader.ReadNextFrame()
         do! sendFrame None
     }

@@ -7,7 +7,6 @@ open System.IO
 open FSharpPlus
 open FSharpx.Control
 open NAudio.Wave
-open NAudio.Lame
 open Mirage.Core.Async.Fork
 
 type private WaveAction
@@ -29,7 +28,7 @@ let createWaveWriter (directory: string) inputFormat =
             ignore <| Directory.CreateDirectory directory
         }
         let fileId = Guid.NewGuid()
-        let filePath = Path.Join(directory, $"{fileId}.mp3")
+        let filePath = Path.Join(directory, $"{fileId}.wav")
         let writer = new WaveFileWriter(filePath, inputFormat)
         let channel = new BlockingQueueAgent<WaveAction>(Int32.MaxValue)
         let rec consumer =
