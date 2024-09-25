@@ -72,7 +72,7 @@ type MimicVoice() as self =
     member this.LateUpdate() = voicePlayback.transform.position <- this.transform.position
 
     member _.Update() =
-        if isNull mimicPlayer.MimickingPlayer then
+        if isNull mimicPlayer.MimickingPlayer || isNull enemyAI then
             audioStream.AudioSource.mute <- true
         else
             let localPlayer = StartOfRound.Instance.localPlayerController
