@@ -30,7 +30,10 @@ type MimicVoice() as self =
         let mimicVoice =
             map ignore << OptionT.run <| monad {
                 try
-                    if mimicPlayer.MimickingPlayer = StartOfRound.Instance.localPlayerController then
+                    if not (isNull enemyAI)
+                       && not (isNull mimicPlayer.MimickingPlayer)
+                       && mimicPlayer.MimickingPlayer = StartOfRound.Instance.localPlayerController
+                    then
                         let! recording = OptionT getRecording
                         do! lift <| audioStream.StreamAudioFromFile recording
                 with | error -> logError $"Error occurred while mimicking voice: {error}"
