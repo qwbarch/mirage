@@ -25,7 +25,7 @@ type Settings =
 let defaultSettings =
     {   localPlayerVolume = 1.0f
         hearLocalVoiceWhileAlive = true
-        recordWhileDead = true
+        recordWhileDead = false
         neverDeleteRecordings = false
     }
 
