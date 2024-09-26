@@ -1,6 +1,8 @@
 namespace Mirage
 
 open BepInEx
+open Dissonance
+open System
 open System.IO
 open System.Diagnostics
 open NAudio.Lame
@@ -33,6 +35,10 @@ type Plugin() =
                 "Failed to load NAudio.Lame. This means no monsters will be able to play your voice.\n"
                     + "Please report this to qwbarch at https://github.com/qwbarch/mirage/issues\n"
                     + $"Path failed: {lameDllPath}"
+
+        // Credits goes to DissonanceLagFix: https://thunderstore.io/c/lethal-company/p/linkoid/DissonanceLagFix/
+        for category in Seq.cast<LogCategory> <| Enum.GetValues typeof<LogCategory> do
+            Logs.SetLogLevel(category, LogLevel.Error)
 
         initRecordingManager recordingDirectory
         initSettings <| Path.Join(mirageDirectory, "settings.json")
