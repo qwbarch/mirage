@@ -20,8 +20,8 @@ copy %src%\FSharp.Core.dll .
 copy %src%\FSharpPlus.dll .
 copy %src%\FSharpx.Async.dll .
 copy %src%\FSharpx.Collections.dll .
-copy %src%\MathNet.Numerics.dll .
-copy %src%\MathNet.Numerics.FSharp.dll .
+rem copy %src%\MathNet.Numerics.dll .
+rem copy %src%\MathNet.Numerics.FSharp.dll .
 
 rem Prepare SileroVAD files.
 mkdir SileroVAD

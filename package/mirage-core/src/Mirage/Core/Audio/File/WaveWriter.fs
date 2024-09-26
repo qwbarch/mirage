@@ -1,46 +1,42 @@
-module Mirage.Core.Audio.File.Mp3Writer
+module Mirage.Core.Audio.File.WaveWriter
 
 #nowarn "40"
 
 open System
+open System.IO
 open FSharpPlus
 open FSharpx.Control
-open NAudio.Lame
-open Mirage.Core.Audio.PCM
-open System.IO
+open NAudio.Wave
 open Mirage.Core.Async.Fork
 
-type private Mp3Action
+type private WaveAction
     = WriteSamples of float32[]
     | Dispose
 
-type Mp3Writer =
+type WaveWriter =
     private
-        {   channel: BlockingQueueAgent<Mp3Action>
-            writer: LameMP3FileWriter
+        {   channel: BlockingQueueAgent<WaveAction>
+            writer: WaveFileWriter
             fileId: Guid
             filePath: string
         }
 
-let createMp3Writer (directory: string) inputFormat (preset: LAMEPreset) =
+let createWaveWriter (directory: string) inputFormat =
     async {
         // Create the directory on a background thread.
         do! forkReturn <| async {
             ignore <| Directory.CreateDirectory directory
         }
         let fileId = Guid.NewGuid()
-        let filePath = Path.Join(directory, $"{fileId}.mp3")
-        let writer = new LameMP3FileWriter(filePath, inputFormat, preset)
-        let channel = new BlockingQueueAgent<Mp3Action>(Int32.MaxValue)
+        let filePath = Path.Join(directory, $"{fileId}.wav")
+        let writer = new WaveFileWriter(filePath, inputFormat)
+        let channel = new BlockingQueueAgent<WaveAction>(Int32.MaxValue)
         let rec consumer =
             async {
                 let! action = channel.AsyncGet()
                 match action with
                     | WriteSamples samples ->
-                        do! toPCMBytes samples
-                            |> writer.WriteAsync
-                            |> _.AsTask()
-                            |> Async.AwaitTask
+                        writer.WriteSamples(samples, 0, samples.Length)
                         do! consumer
                     | Dispose ->
                         do! Async.AwaitTask(writer.FlushAsync())

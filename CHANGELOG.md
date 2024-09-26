@@ -1,5 +1,88 @@
 ## Changelog
 
+### 1.9,0
+
+**Note**: This will be the last update, unless any major gamebreaking bugs requires my attention. For anyone expecting the v2 (voice recognition + machine learning) update, please read the README on why this update has been dropped.
+
+- Config has been reworked and requires you to **redo your config**. You will need to delete ``Mirage.cfg`` (backup the file in case you need it), and then use the newly generated ``Mirage.General.cfg`` and ``Mirage.Enemies.cfg`` configuration files.
+- Enemy configs are now generated at runtime, no longer requiring a manual update for Mirage every time Zeekers adds new enemies.
+- Optimized the codebase for better performance.
+- Now uses [SileroVAD](https://github.com/snakers4/silero-vad) for better voice activity detection, resulting in better recordings when using voice activity.
+- ``SpawnOnPlayerDeath`` as a feature has been removed. Use the [Zombies](https://thunderstore.io/c/lethal-company/p/Synaxin/Zombies/) as a replacement.
+
+### 1.8.1
+
+- Fixed a compatibility issue for linux users. Thanks to [Coppertiel](https://thunderstore.io/c/lethal-company/p/Coppertiel/) for reporting the bug!
+
+### 1.8.0
+
+- Added support for the following v56 enemies:
+    - Clay Surgeon
+    - Bush Wolf
+
+### 1.7.2
+
+- Added a config option to set the maximum number of naturally spawned masked enemies. By default, this is set to 2.
+  Masked enemy spawns have already been capped at 2 since ``v1.7.1``, this update simply allows you to adjust that value.
+
+### 1.7.1
+
+- Fixed a bug that caused non-ascii file paths to fail to load. This means players with non-english usernames will finally be able to hear their own voices.
+
+### 1.7.0
+
+- Added a config entry ``RecordWhileDead``, that continues to record a player's voice while they're dead. Default value: ``false``.
+- Fixed a bug that caused monsters to try to mimic disconnected players (resulting in no sound, since players must be connected in order to send their voices to others).
+
+### 1.6.1
+
+- Added a config entry ``UseCustomSpawnCurve``, that when enabled, changes masked enemies to spawn later in the day.
+    - Requires ``EnableOverrideSpawnChance = true`` in order to work.
+    - Credits: [TheDebbyCase](https://thunderstore.io/c/lethal-company/p/deB/) for explaining in-depth how spawn curves work.
+
+### 1.6.0
+
+- Fixed a bug that caused player dead bodies to disappaer.
+
+### 1.5.4
+
+- Temporarily reverted back to ``v1.5.2`` due to a new bug introduced in ``v1.5.3``.
+
+### 1.5.3
+
+- ~~Fixed a bug that caused player dead bodies to disappear.~~
+
+### 1.5.2
+
+- Voice clips are no longer created when [ToggleMute](https://thunderstore.io/c/lethal-company/p/quackandcheese/ToggleMute/) is toggled.
+
+### 1.5.1
+
+- Audio spatializer warning logs are now hidden.
+    - This is a vanilla bug that occured more often with Mirage, due to cloning audio sources used by the vanilla game.
+    - This log does not provide any value when debugging issues, so I opted to hide them instead.
+    - Thanks to [IAmBatby](https://github.com/IAmBatby) and [mattymatty](https://github.com/mattymatty97) for their help/implementation.
+
+### 1.5.0
+
+- Fixed ``LocalPlayerVolume`` being accidentally synced. Each player can now control the volume of their mimicked voices, as originally intended.
+- Fixed a bug that caused the ghost girl to mimic voices even with ``EnableGhostGirl`` set to ``false``.
+- Fixed a bug that caused the ghost girl to mimic voices at the wrong timings.
+- Recordings now also delete on game startup (previously only deleted when closing the game), while ``IgnoreRecordingsDeletion`` is set to ``false``.
+- Changed the way masked enemies disable the arms-out animation to hopefully get rid of the rare issue of it having its arms-out when it's not supposed to.
+
+### 1.4.0
+
+- Added a config entry for the new enemies (butler, butler bees, flower snake, old bird).
+- Removed debug logs that I previously left in by accident in ``v1.3.2``.
+- Fixed a bug that caused modded enemies that extends from a vanilla enemy type to share its config entry.
+- Fixed a bug that potentially caused an out-of-bounds error if a player dc'd when an enemy tries to mimic a player.
+
+### 1.3.2
+
+- Fixed a bug introduced in ``v1.3.0``, where some players didn't have their recordings folder deleted upon closing the game.
+- Fixed a bug introduced in ``v1.3.1``, where voice clips sometimes get repeated multiple times in a row.
+
 ### 1.3.1
 
 - Enemies mimicking a player now picks at a slightly less random way to avoid mimicking the same player multiple times in a row.

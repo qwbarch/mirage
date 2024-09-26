@@ -29,33 +29,35 @@ let private resample (resampler: WdlResampler) (samples: Samples) : Samples =
     Array.Copy(outBuffer, 0, buffer, 0, outAvailable)
     buffer
 
+[<Struct>]
 type AudioFrame =
     {   samples: Samples
         format: WaveFormat
     }
 
+[<Struct>]
 type ResampledAudio =
     {   original: AudioFrame
         resampled: AudioFrame
     }
 
 /// A live resampler for a microphone's input.
-type Resampler =
-    private { agent: BlockingQueueAgent<AudioFrame> }
+type Resampler<'State> =
+    private { agent: BlockingQueueAgent<ValueTuple<'State, AudioFrame>> }
     interface IDisposable with
         member this.Dispose() = dispose this.agent
 
-let Resampler (onResampled: ResampledAudio -> Async<Unit>) =
+let Resampler<'State> (onResampled: ValueTuple<'State, ResampledAudio> -> Async<Unit>) =
     let resampler = WdlResampler()
     resampler.SetMode(true, 2, false)
     resampler.SetFilterParms()
     resampler.SetFeedMode true
-    let agent = new BlockingQueueAgent<AudioFrame>(Int32.MaxValue)    
+    let agent = new BlockingQueueAgent<ValueTuple<'State, AudioFrame>>(Int32.MaxValue)    
     let originalSamples = new List<float32>()
     let resampledSamples = new List<float32>()
     let rec consumer =
         async {
-            let! frame = agent.AsyncGet()
+            let! struct (state, frame) = agent.AsyncGet()
             originalSamples.AddRange frame.samples
             resampledSamples.AddRange <|
                 if frame.format.SampleRate <> SampleRate then
@@ -73,7 +75,7 @@ let Resampler (onResampled: ResampledAudio -> Async<Unit>) =
                     let samples = resampledSamples.GetRange(0, SamplesPerWindow)
                     resampledSamples.RemoveRange(0, SamplesPerWindow)
                     samples.ToArray()
-                do! onResampled <|
+                let resampledAudio =
                     {   original =
                             {   samples = original
                                 format = frame.format
@@ -83,6 +85,7 @@ let Resampler (onResampled: ResampledAudio -> Async<Unit>) =
                                 format = WriterFormat
                             }
                     }
+                do! onResampled <| struct (state, resampledAudio)
             do! consumer
         }
     Async.Start consumer

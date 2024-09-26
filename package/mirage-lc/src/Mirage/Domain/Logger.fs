@@ -8,6 +8,7 @@ open Mirage.PluginInfo
 
 type private LogType = LogInfo | LogDebug | LogWarning | LogError
 
+/// Logs messages in one thread to make it thread-safe.
 let private channel =
     let self = new BlockingQueueAgent<ValueTuple<LogType, string>>(Int32.MaxValue)
     Async.Start <| async {

@@ -5,7 +5,7 @@ open System.IO
 open NAudio.Wave
 open FSharpPlus
 open Unity.Netcode
-open Mirage.Core.Audio.File.Mp3Reader
+open Mirage.Core.Audio.File.WaveReader
 
 /// Represents a compressed audio frame, and the sample index it begins at, after decompressing the frame.
 [<Struct>]
@@ -36,8 +36,8 @@ type PcmHeader =
             serializer.SerializeValue(&this.bitRate)
 
 /// Creates a <b>PcmHeader</b> using the given <b>Mp3Reader</b>.
-let PcmHeader mp3Reader =
-    let reader = mp3Reader.reader
+let PcmHeader (waveReader: WaveReader) =
+    let reader = waveReader.mp3Reader
     {   samples = int reader.totalSamples
         channels = reader.Mp3WaveFormat.Channels
         frequency = reader.Mp3WaveFormat.SampleRate

@@ -1,57 +1,62 @@
-module Mirage.Unity.MimicVoice
+module Mirage.Unity.MirageVoice
 
 #nowarn "40"
 
-open System
 open FSharpPlus
 open FSharpPlus.Data
-open FSharpx.Control
+open System
 open UnityEngine
 open Unity.Netcode
 open Dissonance.Audio.Playback
-open Predictor.MimicPool
-open Predictor.Domain
-open Mirage.Core.Async.LVar
 open Mirage.Hook.Dissonance
 open Mirage.Domain.Audio.Recording
 open Mirage.Domain.Logger
 open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicPlayer
-open Mirage.Unity.Predictor
+open Mirage.Domain.Config
+open Mirage.Domain.Setting
 
-[<AllowNullLiteral>]
+let private random = Random()
+
 type MimicVoice() as self =
     inherit NetworkBehaviour()
 
-    let recordingManager = RecordingManager()
-    let mutable mimicPlayer: MimicPlayer = null
-    let mutable predictor: Predictor = null
-    let mutable audioStream: AudioStream = null
     let mutable voicePlayback: GameObject = null
+    let mutable audioStream: AudioStream = null
+    let mutable mimicPlayer: MimicPlayer = null
+    let mutable enemyAI: EnemyAI = null
 
     let startVoiceMimic () =
         let mimicVoice =
             map ignore << OptionT.run <| monad {
                 try
-                    if mimicPlayer.MimickingPlayer = StartOfRound.Instance.localPlayerController then
-                        let! recording = OptionT <| getRecording recordingManager
+                    if not (isNull enemyAI)
+                       && not (isNull mimicPlayer.MimickingPlayer)
+                       && mimicPlayer.MimickingPlayer = StartOfRound.Instance.localPlayerController
+                    then
+                        let! recording = OptionT getRecording
                         do! lift <| audioStream.StreamAudioFromFile recording
                 with | error -> logError $"Error occurred while mimicking voice: {error}"
             }
         let rec runMimicLoop =
             async {
+                let delay =
+                    if enemyAI :? MaskedPlayerEnemy then
+                        random.Next(getConfig().minimumDelayMasked, getConfig().maximumDelayMasked + 1)
+                    else
+                        random.Next(getConfig().minimumDelayNonMasked, getConfig().maximumDelayNonMasked + 1)
                 do! mimicVoice
-                do! Async.Sleep 5000
+                do! Async.Sleep delay
                 do! runMimicLoop
             }
         Async.StartImmediate(runMimicLoop, self.destroyCancellationToken)
 
     member this.Awake() =
-        mimicPlayer <- this.GetComponent<MimicPlayer>()
-        predictor <- this.GetComponent<Predictor>()
         audioStream <- this.GetComponent<AudioStream>()
+        mimicPlayer <- this.GetComponent<MimicPlayer>()
+        enemyAI <- this.GetComponent<EnemyAI>()
 
-        voicePlayback <- Object.Instantiate<GameObject> dissonance._playbackPrefab2
+        voicePlayback <- Object.Instantiate<GameObject> <| getDissonance()._playbackPrefab2
         let removeComponent : Type -> unit = Object.Destroy << voicePlayback.GetComponent
         iter removeComponent
             [   typeof<VoicePlayback>
@@ -64,84 +69,44 @@ type MimicVoice() as self =
         voicePlayback.transform.parent <- audioStream.transform
         voicePlayback.SetActive true
     
+    member _.Start() = startVoiceMimic()
+
     /// Update voice playback object to always be at the same location as the parent.
     member this.LateUpdate() = voicePlayback.transform.position <- this.transform.position
 
-    override this.OnNetworkSpawn() =
-        base.OnNetworkSpawn()
-
-        // AudioStream functions require it to be run from the unity thread.
-        // mimicInit runs the callback from a different thread, requiring its queued action to have to be passed back to the unity thread.
-        let channel = new BlockingQueueAgent<string>(Int32.MaxValue)
-        let rec consumer =
-            async {
-                let! file = channel.AsyncGet()
-                logInfo $"Mimic {mimicPlayer.MimicId} requested file: {file}"
-                do! audioStream.StreamAudioFromFile file
-                do! consumer
-            }
-        Async.StartImmediate(consumer, this.destroyCancellationToken)
-
-        mimicPlayer.OnSetMimicId.Add <| fun mimicId ->
-            if mimicPlayer.MimickingPlayer = StartOfRound.Instance.localPlayerController then
-                logInfo $"OnNetworkSpawn mimicId: {mimicPlayer.MimicId}"
-                mimicInit mimicId <| fun payload ->
-                    if List.isEmpty payload.vadTimings || List.isEmpty payload.whisperTimings then
-                        logError "sendMimicText failed due to vadTimings or whisperTimings being empty."
-                    else
-                        logInfo $"Player #{mimicPlayer.MimickingPlayer.playerClientId} sendMimicText is requesting the file: {payload.recordingId}.mp3"
-                        channel.Add $"{Application.dataPath}/../Mirage/Recording/{payload.recordingId}.mp3"
-                        logInfo "sendMimicText: added to channel"
-                        Async.StartImmediate <| async {
-                            logInfo "sendMimicText: inside async block"
-                            let voiceActivityAtom = snd << List.head <| payload.vadTimings
-                            logInfo "sendMimicText: voiceActivityAtom"
-                            let spokeAtom = snd << List.last <| payload.whisperTimings
-                            logInfo "sendMimicText: spokeAtom"
-                            let heardAtom =
-                                {   text = spokeAtom.text
-                                    speakerId = predictor.SpeakerId
-                                    speakerClass = voiceActivityAtom.speakerId
-                                    isMimic = true
-                                    sentenceId = spokeAtom.sentenceId
-                                    elapsedMillis = spokeAtom.elapsedMillis
-                                    transcriptionProb = spokeAtom.transcriptionProb
-                                    nospeechProb = spokeAtom.nospeechProb
-                                    distanceToSpeaker = 0f
-                                }
-                            logInfo "sendMimicText: heardAtom"
-                            logInfo "sendMimicText: Registering SpokeAtom"
-                            predictor.Register <| SpokeAtom spokeAtom
-                            logInfo "sendMimicText: Retrieving player predictors"
-                            let! playerPredictors = readLVar Predictor.Players
-                            flip iter playerPredictors <| fun playerPredictor ->
-                                logInfo "sendMimicText: playerPredictor.Register HeardAtom"
-                                playerPredictor.Register << HeardAtom <|
-                                    {   heardAtom with
-                                            distanceToSpeaker =
-                                                Vector3.Distance(
-                                                    playerPredictor.transform.position,
-                                                    this.transform.position
-                                                )
-                                    }
-                            logInfo "sendMimicText: Retrieving enemy predictors"
-                            let! enemyPredictors = readLVar Predictor.Enemies
-                            flip iter enemyPredictors <| fun enemyPredictor ->
-                                logInfo "sendMimicText: enemyPredictor"
-                                if predictor <> enemyPredictor then
-                                    logInfo "sendMimicText: enemyPredictor is not the current enemy. registering HeardAtom"
-                                    enemyPredictor.Register << HeardAtom <|
-                                        {   heardAtom with
-                                                distanceToSpeaker = 
-                                                    Vector3.Distance(
-                                                        mimicPlayer.MimickingPlayer.transform.position,
-                                                        this.transform.position
-                                                    )
-                                        }
-                                logInfo "sendMimicText finished current enemy"
-                            logInfo "sendMimicText fully finished"
-                        }
-    
-    override _.OnNetworkDespawn() =
-        base.OnDestroy()
-        mimicKill mimicPlayer.MimicId
+    member _.Update() =
+        if isNull mimicPlayer.MimickingPlayer || isNull enemyAI then
+            audioStream.AudioSource.mute <- true
+        else
+            let localPlayer = StartOfRound.Instance.localPlayerController
+            let spectatingPlayer = if isNull localPlayer.spectatedPlayerScript then localPlayer else localPlayer.spectatedPlayerScript
+            let isMimicLocalPlayerMuted () =
+                let alwaysMute = getSettings().localPlayerVolume = 0f
+                let muteWhileNotDead =
+                    (not <| getSettings().hearLocalVoiceWhileAlive)
+                        && not mimicPlayer.MimickingPlayer.isPlayerDead
+                mimicPlayer.MimickingPlayer = localPlayer && (muteWhileNotDead || alwaysMute)
+            let isNotHauntedOrDisappearedDressGirl () =
+                enemyAI :? DressGirlAI && (
+                    let dressGirlAI = enemyAI :?> DressGirlAI
+                    let isVisible = dressGirlAI.staringInHaunt || dressGirlAI.moveTowardsDestination && dressGirlAI.movingTowardsTargetPlayer
+                    not dressGirlAI.hauntingLocalPlayer || not isVisible
+                )
+            let maskedEnemyIsHiding () =
+                enemyAI :? MaskedPlayerEnemy
+                    && Vector3.Distance(enemyAI.transform.position, (enemyAI :?> MaskedPlayerEnemy).shipHidingSpot) < 0.4f
+                    && enemyAI.agent.speed = 0f
+                    && (enemyAI :?> MaskedPlayerEnemy).crouching
+            audioStream.AudioSource.volume <-
+                if mimicPlayer.MimickingPlayer = localPlayer then
+                    getSettings().localPlayerVolume
+                else
+                    mimicPlayer.MimickingPlayer.currentVoiceChatAudioSource.volume
+            audioStream.AudioSource.outputAudioMixerGroup <-
+                SoundManager.Instance.playerVoiceMixers[int mimicPlayer.MimickingPlayer.playerClientId]
+            audioStream.AudioSource.mute <-
+                enemyAI.isEnemyDead
+                    || (not (getConfig().mimicVoiceWhileHiding) && maskedEnemyIsHiding())
+                    || isMimicLocalPlayerMuted()
+                    || isNotHauntedOrDisappearedDressGirl()
+                    || spectatingPlayer.isInsideFactory = enemyAI.isOutside

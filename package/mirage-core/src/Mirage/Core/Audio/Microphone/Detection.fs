@@ -17,16 +17,19 @@ let [<Literal>] private SamplingRate = 16000
 let [<Literal>] private MinSilenceDurationMs = 600
 let private MinSilenceSamples = float32 SamplingRate * float32 MinSilenceDurationMs / 1000f
 
+[<Struct>]
 type VADFrame =
     {   elapsedTime: int
         probability: float32
     }
 
+[<Struct>]
 type DetectStart =
     {   originalFormat: WaveFormat
         resampledFormat: WaveFormat
     }
 
+[<Struct>]
 type DetectFound =
     {   vadFrame: VADFrame
         /// Samples containing only the current audio frame.
@@ -61,15 +64,15 @@ type DetectAction
 type DetectVoice = Samples -> Async<float32>
 
 /// Detect if speech is found. All async functions are run on a separate thread.
-type VoiceDetector =
-    private { agent: BlockingQueueAgent<ResampledAudio> }
+type VoiceDetector<'State> =
+    private { agent: BlockingQueueAgent<ValueTuple<'State, ResampledAudio>> }
     interface IDisposable with
         member this.Dispose() = dispose this.agent
 
 /// Initialize a vad detector by providing a vad algorithm, an action to
 /// perform when speech is detected, as well as a source to read samples from.
-let VoiceDetector (detectSpeech: DetectVoice) (onVoiceDetected: DetectAction -> Async<Unit>) =
-    let agent = new BlockingQueueAgent<ResampledAudio>(Int32.MaxValue)
+let VoiceDetector<'State> (stopDetection: 'State -> bool) (detectSpeech: DetectVoice) (onVoiceDetected: DetectAction -> Async<Unit>) =
+    let agent = new BlockingQueueAgent<ValueTuple<'State, ResampledAudio>>(Int32.MaxValue)
     let samples =
         {|  original = new List<float32>()
             resampled = new List<float32>()
@@ -80,11 +83,15 @@ let VoiceDetector (detectSpeech: DetectVoice) (onVoiceDetected: DetectAction -> 
     let mutable voiceDetected = false
     let rec consumer =
         async {
-            let! currentAudio = agent.AsyncGet()
+            let! struct (state, currentAudio) = agent.AsyncGet()
             &currentIndex += currentAudio.original.samples.Length
             samples.original.AddRange currentAudio.original.samples
             samples.resampled.AddRange currentAudio.resampled.samples
-            let! probability = detectSpeech currentAudio.resampled.samples
+            let! probability =
+                if stopDetection state then
+                    result 0f
+                else
+                    detectSpeech currentAudio.resampled.samples
             let fullAudio =
                 {   original =
                         {   format = currentAudio.original.format

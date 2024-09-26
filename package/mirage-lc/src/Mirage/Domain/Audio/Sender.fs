@@ -6,15 +6,13 @@ open FSharpPlus
 open FSharpx.Control
 open Mirage.Domain.Audio.Frame
 open Mirage.Domain.Audio.Stream
-open Mirage.Core.Audio.File.Mp3Reader
+open Mirage.Core.Audio.File.WaveReader
 
-/// <summary>
 /// Send audio to all <b>AudioReceiver</b>s.
-/// </summary>
 type AudioSender =
     private
         {   sendFrame: FrameData -> unit
-            mp3Reader: Mp3Reader
+            waveReader: WaveReader
             channel: BlockingQueueAgent<Option<FrameData>>
             canceller: CancellationTokenSource
             mutable disposed: bool
@@ -25,7 +23,7 @@ type AudioSender =
                 this.disposed <- true
                 this.canceller.Cancel()
                 dispose this.canceller
-                dispose this.mp3Reader
+                dispose this.waveReader
                 dispose this.channel
 
 /// <summary>
@@ -37,22 +35,19 @@ type AudioSender =
 /// <param name="filePath">
 /// Source audio to stream from, supporting only <b>.wav</b> audio files.
 /// </param>
-let AudioSender sendFrame mp3Reader =
+let AudioSender sendFrame waveReader =
     let sender =
         {   sendFrame = sendFrame
-            mp3Reader = mp3Reader
+            waveReader = waveReader
             channel = new BlockingQueueAgent<Option<FrameData>>(Int32.MaxValue)
             canceller = new CancellationTokenSource()
             disposed = false
         }
     sender
 
-/// <summary>
-/// Begin sending audio.
-/// </summary>
-let sendAudio (sender: AudioSender) : Unit =
+let sendAudio sender =
     // The "producer" processes the audio frames from a separate thread, and passes it onto the consumer.
-    let producer = streamAudio sender.mp3Reader sender.channel.AsyncAdd
+    let producer = streamAudio sender.waveReader sender.channel.AsyncAdd
 
     // The "consumer" reads the processed audio frames and then runs the sendFrame function.
     let rec consumer =

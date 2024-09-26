@@ -1,27 +1,24 @@
 module Mirage.Unity.MimicPlayer
 
+open FSharpPlus
 open System
 open System.Collections.Generic
-open FSharpPlus
-open GameNetcodeStuff
 open Unity.Netcode
+open GameNetcodeStuff
 open Mirage.Domain.Logger
 open Mirage.Unity.AudioStream
+open Mirage.Domain.Config
 
 /// Holds what players that can be mimicked, to avoid duplicates.
-let private playerPool = new List<int>()
+let private playerPool = List<int>()
 
-/// <summary>
-/// A component that attaches to an <b>EnemyAI</b> to mimic a player.
-/// If the attached enemy is a <b>MaskedPlayerEnemy</b>, this will also copy its visuals.
-/// </summary>
 [<AllowNullLiteral>]
 type MimicPlayer() =
     inherit NetworkBehaviour()
 
-    let onSetMimicId = new Event<Guid>()
+    let onSetMimicId = Event<Guid>()
+    let random = Random()
 
-    let random = new Random()
     let mutable enemyAI: EnemyAI = null
     let mutable mimicId: Guid = Guid.Empty
     let mutable mimickingPlayer: PlayerControllerB = null
@@ -37,21 +34,14 @@ type MimicPlayer() =
         let player = StartOfRound.Instance.allPlayerScripts[playerId]
         playerPool.RemoveAt index
         // If a disconnected, the index might be out of bounds. In that case, fetch a new id.
-        // This is a simple band-aid fix and isn't ideal, but this'll do for now.
         if playerId > round.connectedPlayersAmount || player.disconnectedMidGame then
             randomPlayer()
         else
             round.allPlayerScripts[playerId]
 
-    let mimicPlayer (player: PlayerControllerB) (maskedEnemy: MaskedPlayerEnemy) =
-        if not (isNull maskedEnemy) then
-            maskedEnemy.mimickingPlayer <- player
-            maskedEnemy.SetSuit player.currentSuitID
-            // Why >= -80f? This is taken from MaskedPlayerEnemy.killAnimation()
-            maskedEnemy.SetEnemyOutside(player.transform.position.y >= -80f)
-            maskedEnemy.SetVisibilityOfMaskedEnemy()
-
     member _.MimickingPlayer with get() = mimickingPlayer
+
+    member _.MimicId with get() = mimicId
 
     /// This event is called when mimic id is set.
     [<CLIEvent>]
@@ -60,34 +50,38 @@ type MimicPlayer() =
     member this.Awake() = enemyAI <- this.GetComponent<EnemyAI>()
 
     member this.Start() =
-        // StartMimicking for masked enemies gets run via a patch instead,
+        // StartMimicking for masked enemies gets run via a hook instead,
         // to ensure the mimickingPlayer is set before other mods try to interact with it.
-        if isNull <| this.GetComponent<MaskedPlayerEnemy>() then
+        if not <| enemyAI :? MaskedPlayerEnemy then
             this.StartMimicking()
-
-    member _.MimicId with get() = mimicId
 
     member this.StartMimicking() =
         if this.IsHost then
             mimicId <- Guid.NewGuid()
             let maskedEnemy = this.GetComponent<MaskedPlayerEnemy>()
             let mimickingPlayer =
-                if (enemyAI : EnemyAI) :? MaskedPlayerEnemy then
+                if enemyAI :? MaskedPlayerEnemy && Set.contains maskedEnemy.enemyType.enemyName (getConfig().enemies) then
                     if isNull maskedEnemy.mimickingPlayer then Some <| randomPlayer()
                     else Some maskedEnemy.mimickingPlayer
-                //else if mimicEnemyEnabled enemyAI then Some <| randomPlayer()
-                else None
+                else if not (enemyAI :? DressGirlAI) && Set.contains enemyAI.enemyType.enemyName <| getConfig().enemies then
+                    // DressGirlAI is set during the Update() step instead, if it's enabled.
+                    Some <| randomPlayer()
+                else
+                    None
             flip iter mimickingPlayer <| fun player ->
                 this.MimicPlayer(int player.playerClientId)
 
-    /// <summary>
     /// Mimic the given player locally. An attached <b>MimicVoice</b> automatically uses the mimicked player for voices.
-    /// </summary>
     member this.MimicPlayer(playerId) =
         let player = StartOfRound.Instance.allPlayerScripts[playerId]
         logMimic $"Mimicking player #{player.playerClientId}"
         mimickingPlayer <- player
-        mimicPlayer player <| this.GetComponent<MaskedPlayerEnemy>()
+        let maskedEnemy = this.GetComponent<MaskedPlayerEnemy>()
+        if not <| isNull maskedEnemy then
+            maskedEnemy.mimickingPlayer <- player
+            maskedEnemy.SetSuit player.currentSuitID
+            maskedEnemy.SetEnemyOutside(player.transform.position.y < -80f)
+            maskedEnemy.SetVisibilityOfMaskedEnemy()
         this.GetComponent<AudioStream>().AllowedSenderId <- Some player.actualClientId
         if this.IsHost then
             this.MimicPlayerClientRpc(playerId, mimicId.ToString())
@@ -115,7 +109,7 @@ type MimicPlayer() =
             // Set the mimicking player after the haunting player changes.
             // In singleplayer, the haunting player will always be the local player.
             // In multiplayer, the haunting player will always be the non-local player.
-            if enemyAI :? DressGirlAI then
+            if enemyAI :? DressGirlAI && Set.contains enemyAI.enemyType.enemyName (getConfig().enemies) then
                 let dressGirlAI = enemyAI :?> DressGirlAI
                 let round = StartOfRound.Instance
 

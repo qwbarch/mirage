@@ -15,27 +15,23 @@
   <ItemGroup>
     <ProjectReference Include="../../mirage-core/src/Mirage.fsproj" />
     <ProjectReference Include="../../silero-vad/src/Silero.fsproj" />
-    <ProjectReference Include="../../openai-whisper/src/Whisper.fsproj" />
-    <ProjectReference Include="../../behaviour-predictor/src/Predictor.fsproj" />
     <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1" PrivateAssets="all" />
     <PackageReference Include="BepInEx.Core" Version="5.4.21" />
-    <PackageReference Include="LethalCompany.GameLibs.Steam" Version="56.0.0-ngd.0" Publicize="true" />
+    <PackageReference Include="LethalCompany.GameLibs.Steam" Version="62.0.1-ngd.0" Publicize="true" />
     <PackageReference Include="FSharpPlus" Version="1.6.1" />
-    <PackageReference Include="Xilophor.StaticNetcodeLib" Version="1.1.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="LethalSettings" Version="1.4.0" />
     <Reference Include="FSharpx.Async">
       <HintPath>../../../lib/FSharpx.Async/FSharpx.Async.dll</HintPath>
-    </Reference>
-    <Reference Include="MMHOOK_Assembly-CSharp">
-      <HintPath>../../../lib/MMHOOK/MMHOOK_Assembly-CSharp.dll</HintPath>
-    </Reference>
-    <Reference Include="MMHOOK_DissonanceVoip">
-      <HintPath>../../../lib/MMHOOK/MMHOOK_DissonanceVoip.dll</HintPath>
     </Reference>
     <Reference Include="MMHOOK_Unity.Netcode.Runtime">
       <HintPath>../../../lib/MMHOOK/MMHOOK_Unity.Netcode.Runtime.dll</HintPath>
     </Reference>
-    <Reference Include="MMHOOK_Facepunch Transport for Netcode for GameObjects.dll">
-      <HintPath>../../../lib/MMHOOK/MMHOOK_Facepunch Transport for Netcode for GameObjects.dll</HintPath>
+    <Reference Include="MMHOOK_DissonanceVoip">
+      <HintPath>../../../lib/MMHOOK/MMHOOK_DissonanceVoip.dll</HintPath>
+    </Reference>
+    <Reference Include="MMHOOK_Assembly-CSharp">
+      <HintPath>../../../lib/MMHOOK/MMHOOK_Assembly-CSharp.dll</HintPath>
     </Reference>
     <Reference Include="NAudio" Publicize="true">
       <HintPath>../../../lib/NAudio/NAudio.dll</HintPath>
@@ -46,32 +42,31 @@
     <Reference Include="NAudio.WinMM" Publicize="true">
       <HintPath>../../../lib/NAudio/NAudio.WinMM.dll</HintPath>
     </Reference>
-	<Reference Include="NAudio.Lame" Publicize="true">
+	  <Reference Include="NAudio.Lame" Publicize="true">
       <HintPath>../../../lib/NAudio.Lame/NAudio.Lame.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Mirage/PluginInfo.fs" />
     <Compile Include="Mirage/Domain/Netcode.fs" />
-    <Compile Include="Mirage/Domain/Logger.fs" />
     <Compile Include="Mirage/Domain/Audio/Frame.fs" />
+    <Compile Include="Mirage/Domain/Audio/Receiver.fs" />
     <Compile Include="Mirage/Domain/Audio/Stream.fs" />
     <Compile Include="Mirage/Domain/Audio/Sender.fs" />
-    <Compile Include="Mirage/Domain/Audio/Receiver.fs" />
+    <Compile Include="Mirage/Domain/Setting.fs" />
     <Compile Include="Mirage/Domain/Audio/Recording.fs" />
+    <Compile Include="Mirage/Domain/Logger.fs" />
+    <Compile Include="Mirage/Domain/Config.fs" />
     <Compile Include="Mirage/Hook/Dissonance.fs" />
+    <Compile Include="Mirage/Hook/AudioSpatializer.fs" />
+    <Compile Include="Mirage/Hook/Config.fs" />
     <Compile Include="Mirage/Unity/AudioStream.fs" />
     <Compile Include="Mirage/Unity/MimicPlayer.fs" />
-    <Compile Include="Mirage/Unity/Predictor.fs" />
     <Compile Include="Mirage/Unity/MimicVoice.fs" />
-    <Compile Include="Mirage/Domain/Audio/Microphone.fs" />
-    <Compile Include="Mirage/Hook/Microphone.fs" />
-    <Compile Include="Mirage/Unity/Recognition.fs" />
-    <Compile Include="Mirage/Hook/Predictor.fs" />
-    <Compile Include="Mirage/Hook/AudioSpatializer.fs" />
-    <Compile Include="Mirage/Hook/RegisterPrefab.fs" />
     <Compile Include="Mirage/Hook/MaskedPlayerEnemy.fs" />
-    <Compile Include="Mirage/Plugin.fs" />
+    <Compile Include="Mirage/Hook/Prefab.fs" />
+    <Compile Include="Mirage/Hook/Microphone.fs" />
     <Compile Include="Properties/AssemblyInfo.fs" />
+    <Compile Include="Mirage/Plugin.fs" />
   </ItemGroup>
 </Project>

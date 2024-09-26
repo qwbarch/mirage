@@ -7,20 +7,20 @@ open FSharpPlus
 open FSharpx.Control
 open NAudio.Lame
 open NAudio.Wave
-open Mirage.Core.Audio.File.Mp3Writer
+open Mirage.Core.Audio.File.WaveWriter
 open Mirage.Core.Audio.Microphone.Detection
 open Mirage.Core.Audio.Microphone.Resampler
 
 let [<Literal>] private WriterPreset = LAMEPreset.STANDARD
 
 type RecordStart =
-    {   mp3Writer: Mp3Writer
+    {   mp3Writer: WaveWriter
         originalFormat: WaveFormat
         resampledFormat: WaveFormat
     }
 
 type RecordFound =
-    {   mp3Writer: Mp3Writer
+    {   mp3Writer: WaveWriter
         vadFrame: VADFrame
         fullAudio: ResampledAudio
         currentAudio: ResampledAudio
@@ -28,7 +28,7 @@ type RecordFound =
 
 /// Note: After the callback finishes for this action, the mp3 writer is disposed.
 type RecordEnd =
-    {   mp3Writer: Mp3Writer
+    {   mp3Writer: WaveWriter
         vadFrame: VADFrame
         vadTimings: list<VADFrame>
         fullAudio: ResampledAudio
@@ -56,7 +56,7 @@ let Recorder directory (onRecording: RecordAction -> Async<Unit>) =
             let! action = agent.AsyncGet() 
             match action with
                 | DetectStart payload ->
-                    let! writer = createMp3Writer directory payload.originalFormat WriterPreset
+                    let! writer = createWaveWriter directory payload.originalFormat
                     mp3Writer <- Some writer
                     do! onRecording << RecordStart <|
                         {   mp3Writer = mp3Writer.Value
@@ -64,6 +64,7 @@ let Recorder directory (onRecording: RecordAction -> Async<Unit>) =
                             resampledFormat = payload.resampledFormat
                         }
                 | DetectEnd payload ->
+                    do! writeMp3File mp3Writer.Value payload.fullAudio.original.samples
                     do! onRecording << RecordEnd <|
                         {   mp3Writer = mp3Writer.Value
                             vadFrame = payload.vadFrame
@@ -74,7 +75,6 @@ let Recorder directory (onRecording: RecordAction -> Async<Unit>) =
                         }
                     do! closeMp3Writer mp3Writer.Value
                 | DetectFound payload ->
-                    do! writeMp3File mp3Writer.Value payload.currentAudio.original.samples
                     do! onRecording << RecordFound <|
                         {   mp3Writer = mp3Writer.Value
                             vadFrame = payload.vadFrame
