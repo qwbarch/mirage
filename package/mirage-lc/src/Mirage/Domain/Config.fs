@@ -164,7 +164,10 @@ let private toSyncedConfig () =
     }
 
 /// Get the currently synchronized config. This should only be used while in-game (not inside the menu).
-let getConfig () = syncedConfig.Value
+let getConfig () =
+    if Option.isNone syncedConfig then
+        logError "syncedConfig has not been initialized yet."
+    syncedConfig.Value
 
 /// An action for synchronizing the <b>SyncedConfig</b>.
 type internal SyncAction = RequestSync | ReceiveSync

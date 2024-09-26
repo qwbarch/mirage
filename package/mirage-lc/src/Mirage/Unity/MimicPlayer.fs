@@ -80,6 +80,7 @@ type MimicPlayer() =
         if not <| isNull maskedEnemy then
             maskedEnemy.mimickingPlayer <- player
             maskedEnemy.SetSuit player.currentSuitID
+            maskedEnemy.SetEnemyOutside(player.transform.position.y < -80f)
             maskedEnemy.SetVisibilityOfMaskedEnemy()
         this.GetComponent<AudioStream>().AllowedSenderId <- Some player.actualClientId
         if this.IsHost then

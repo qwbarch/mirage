@@ -15,7 +15,6 @@ let hookMaskedEnemy () =
     On.MaskedPlayerEnemy.add_Start(fun orig self ->
         self.GetComponent<MimicPlayer>().StartMimicking()
         orig.Invoke self
-        self.SetEnemyOutside self.isOutside
         if not <| getConfig().enableMaskTexture then
             self.GetComponentsInChildren<Transform>()
                 |> filter _.name.StartsWith("HeadMask")
