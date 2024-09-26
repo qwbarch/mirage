@@ -8,7 +8,6 @@ open Mirage.Core.Audio.File.WaveReader
 open Mirage.Domain.Audio.Sender
 open Mirage.Domain.Audio.Receiver
 open Mirage.Domain.Audio.Frame
-open Mirage.Domain.Logger
 
 type AudioStartEvent =
     {   /// Number of sample frames.
@@ -53,7 +52,7 @@ type AudioStream() as self =
             callback()
 
     /// Load the mp3 file and play it locally, while sending the audio to play on all other clients.
-    let streamAudioHost (waveReader: WaveReader) =
+    let streamAudioHost waveReader =
         async {
             let pcmHeader = PcmHeader waveReader
             iter dispose audioReceiver
@@ -68,7 +67,7 @@ type AudioStream() as self =
         }
 
     /// Load the mp3 file, and then send it to the server to broadcast to all other clients.
-    let streamAudioClient (waveReader: WaveReader) =
+    let streamAudioClient waveReader =
         async {
             let pcmHeader = PcmHeader waveReader
             let serverRpcParams = ServerRpcParams()

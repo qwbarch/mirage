@@ -112,7 +112,7 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
         bindSpawnControl
             "Masked enemy spawn chance"
             2.0
-            <| ConfigDescription(description, AcceptableValueRange(0.1, 25.0))
+            <| ConfigDescription(description, AcceptableValueRange(0.1, 50.0))
 
     member val MaxMaskedSpawns =
         let description = "The maximum number of masked enemies that can be naturally spawned within the same round."
