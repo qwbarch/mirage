@@ -8,6 +8,7 @@
 - Enemy configs are now generated at runtime, no longer requiring a manual update for Mirage every time Zeekers adds new enemies.
 - Optimized the codebase for better performance.
 - Now uses [SileroVAD](https://github.com/snakers4/silero-vad) for better voice activity detection, resulting in better recordings when using voice activity.
+- ``SpawnOnPlayerDeath`` as a feature has been removed. Use the [Zombies](https://thunderstore.io/c/lethal-company/p/Synaxin/Zombies/) as a replacement.
 
 ### 1.8.1
 

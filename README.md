@@ -68,6 +68,7 @@ To anyone who was excited for the v2 update: I apologize for the disappointment,
 
 - [StarlancerAIFix](https://thunderstore.io/c/lethal-company/p/AudioKnight/StarlancerAIFix/) - Fixes the ``EnableEnemyMesh`` spam when masked enemies move to areas it shouldn't have access to.
 - [GeneralImprovements](https://thunderstore.io/c/lethal-company/p/ShaosilGaming/GeneralImprovements/) - Optionally adds player nametags to masked enemies, disables radar spinning, etc.
+- [Zombies](https://thunderstore.io/c/lethal-company/p/Synaxin/Zombies/) - ``SpawnOnPlayerDeath`` has been removed, and this mod covers that functionality, plus more! Use this if you want players to revive as a zombie.
 
 ## Can I reupload the mod to Thunderstore?
 
