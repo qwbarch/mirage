@@ -1,6 +1,6 @@
 ## Changelog
 
-### 1.9,0
+### 1.9.0
 
 **Note**: This will be the last update, unless any major gamebreaking bugs requires my attention. For anyone expecting the v2 (voice recognition + machine learning) update, please read the README on why this update has been dropped.
 

@@ -1,5 +1,6 @@
 module Mirage.Unity.AudioStream
 
+open System
 open FSharpPlus
 open UnityEngine
 open Unity.Netcode
@@ -8,6 +9,7 @@ open Mirage.Core.Audio.File.WaveReader
 open Mirage.Domain.Audio.Sender
 open Mirage.Domain.Audio.Receiver
 open Mirage.Domain.Audio.Frame
+open Mirage.Domain.Logger
 
 type AudioStartEvent =
     {   /// Number of sample frames.
@@ -31,19 +33,24 @@ type AudioStreamEvent
     /// Event that is trigered when audio samples are received.
     | AudioReceivedEvent of AudioReceivedEvent
 
+type AudioStreamEventArgs(eventData: AudioStreamEvent) =
+    inherit EventArgs()
+    member _.EventData = eventData
+
 [<AllowNullLiteral>]
 type AudioStream() as self =
     inherit NetworkBehaviour()
 
     let mutable audioReceiver: Option<AudioReceiver> = None
 
-    let event = Event<AudioStreamEvent>()
+    let event = Event<EventHandler<_>, _>()
     let onFrameDecompressed (samples: Samples) sampleIndex =
-        event.Trigger <|
+        let eventData =
             AudioReceivedEvent
                 {   samples = samples
                     sampleIndex = sampleIndex
                 }
+        event.Trigger(self, AudioStreamEventArgs(eventData))
 
     /// Run the callback if the sender client id matches the <b>AllowedSenderId</b> value.
     let onValidSender (this: NetworkBehaviour) (serverRpcParams: ServerRpcParams) callback =
@@ -79,7 +86,8 @@ type AudioStream() as self =
         }
 
     /// An event that triggers when a new audio clip begins.
-    member val OnAudioStream =  event.Publish
+    [<CLIEvent>]
+    member _.OnAudioStream =  event.Publish
 
     member val AudioSource: AudioSource = null with get, set
 
@@ -119,12 +127,13 @@ type AudioStream() as self =
     member this.InitializeAudioReceiverClientRpc(pcmHeader) =
         if not this.IsHost then
             this.InitializeAudioReceiver pcmHeader
-        event.Trigger <|
+        let eventData =
             AudioStartEvent
                 {   lengthSamples = pcmHeader.samples
                     channels = pcmHeader.channels
                     frequency = pcmHeader.frequency
                 }
+        event.Trigger(this, AudioStreamEventArgs(eventData))
 
     /// Send the current frame data to the host, to eventually broadcast to all other clients.
     [<ServerRpc(RequireOwnership = false)>]
