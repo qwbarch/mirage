@@ -1,6 +1,6 @@
 ## Changelog
 
-### 1.9.0
+### 1.9.1
 
 **Note**: This will be the last update, unless any major gamebreaking bugs requires my attention. For anyone expecting the v2 (voice recognition + machine learning) update, please read the README on why this update has been dropped.
 
@@ -12,6 +12,10 @@
 - Added compatibility with [LethalIntelligence](https://thunderstore.io/c/lethal-company/p/VirusTLNR/LethalIntelligenceExperimental/).
 - Thanks to [Lunxara](https://www.twitch.tv/lunxara), [JacuJ](https://thunderstore.io/c/lethal-company/p/JacuJ/), BBAPepsiMan, and JokerMan for extensively testing the update. I was only able to fix a lot of the subtle bugs they found because of their extensive testing.
 - Updated icon, created by [IntegrityFate](https://integrityfate.com/).
+
+### 1.9.0
+
+- Made a mistake with the upload, this version is skipped.
 
 ### 1.8.1
 

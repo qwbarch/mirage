@@ -9,7 +9,6 @@ open Mirage.Core.Audio.File.WaveReader
 open Mirage.Domain.Audio.Sender
 open Mirage.Domain.Audio.Receiver
 open Mirage.Domain.Audio.Frame
-open Mirage.Domain.Logger
 
 type AudioStartEvent =
     {   /// Number of sample frames.
