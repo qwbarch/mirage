@@ -2,6 +2,7 @@
 
 pushd ..\..\silero-vad\script
 call build-lib.bat || exit /b
+call build.bat || exit /b
 popd
 
 call build.bat
@@ -19,13 +20,15 @@ copy %src%\FSharp.Control.AsyncSeq.dll .
 copy %src%\FSharp.Core.dll .
 copy %src%\FSharpPlus.dll .
 copy %src%\FSharpx.Async.dll .
-copy %src%\FSharpx.Collections.dll .
+rem copy %src%\FSharpx.Collections.dll .
 rem copy %src%\MathNet.Numerics.dll .
 rem copy %src%\MathNet.Numerics.FSharp.dll .
 
 rem Prepare SileroVAD files.
 mkdir SileroVAD
 pushd SileroVAD
+
+set src=..\..\..\..\..\..\silero-vad\bin
 
 copy ..\%src%\SileroVAD.API.dll .
 copy ..\%src%\SileroVAD.dll .
@@ -46,7 +49,7 @@ popd
 
 rem Move to the bin folder.
 popd
-pushd bin
+pushd ..\bin
 
 rem Create the Mirage.Core package.
 powershell Compress-Archive^
@@ -54,10 +57,8 @@ powershell Compress-Archive^
     -Path "Mirage.Core",^
           "../manifest.json",^
           "../icon.png",^
-          "../../../README.md",^
-          "../../../CHANGELOG.md",^
-          "../../../LICENSE"^
-    -DestinationPath "../bin/mirage.zip"
+          "../README.md"^
+    -DestinationPath "../bin/mirage-core.zip"
 
 
 popd
