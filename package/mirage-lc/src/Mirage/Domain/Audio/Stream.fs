@@ -21,8 +21,10 @@ let private frequency = float Stopwatch.Frequency / 1000.0
 /// </param>
 let streamAudio (waveReader: WaveReader) (sendFrame: Option<FrameData> -> Async<Unit>) : Async<Unit> =
     async {
+        let getSampleIndex () = int waveReader.mp3Reader.tableOfContents[waveReader.mp3Reader.tocIndex - 1].SamplePosition
         let mutable previousTime = 0.0
         let mutable currentBuffer = 0.0
+        let mutable sampleIndex = 0
         let mutable frame = waveReader.mp3Reader.ReadNextFrame()
         let delayBuffer = new LinkedList<float>()
         while not <| isNull frame do
@@ -47,8 +49,9 @@ let streamAudio (waveReader: WaveReader) (sendFrame: Option<FrameData> -> Async<
 
             do! sendFrame << Some <|
                 {   rawData = frame.RawData
-                    sampleIndex = int waveReader.mp3Reader.tableOfContents[waveReader.mp3Reader.tocIndex - 1].SamplePosition
+                    sampleIndex = sampleIndex
                 }
+            sampleIndex <- getSampleIndex()
 
             frame <- waveReader.mp3Reader.ReadNextFrame()
         do! sendFrame None
