@@ -50,7 +50,6 @@ type AudioStream() as self =
                 {   samples = samples
                     sampleIndex = sampleIndex
                 }
-        logWarning $"AudioReceivedEvent: {eventData}"
         event.Trigger(self, AudioStreamEventArgs(eventData))
 
     /// Run the callback if the sender client id matches the <b>AllowedSenderId</b> value.

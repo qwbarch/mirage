@@ -69,6 +69,7 @@ To anyone who was excited for the v2 update: I apologize for the disappointment,
 - [StarlancerAIFix](https://thunderstore.io/c/lethal-company/p/AudioKnight/StarlancerAIFix/) - Fixes the ``EnableEnemyMesh`` spam when masked enemies move to areas it shouldn't have access to.
 - [GeneralImprovements](https://thunderstore.io/c/lethal-company/p/ShaosilGaming/GeneralImprovements/) - Optionally adds player nametags to masked enemies, disables radar spinning, etc.
 - [Zombies](https://thunderstore.io/c/lethal-company/p/Synaxin/Zombies/) - ``SpawnOnPlayerDeath`` has been removed, and this mod covers that functionality, plus more! Use this if you want players to revive as a zombie.
+- [LethalIntelligenceExperimental](https://thunderstore.io/c/lethal-company/p/VirusTLNR/LethalIntelligenceExperimental/) - Masked AI changes, as well as supporting walkie talkies with Mirage.
 
 ## Can I reupload the mod to Thunderstore?
 
@@ -82,6 +83,7 @@ If you're making small changes for your friends, you will need to share the comp
 
 ## Acknowledgements
 
+- [1DWalker](https://github.com/1DWalker) - Huge contributor to the dropped v2 update, and is the main person I ran tests with throughout the entire development of Mirage.
 - [RugbugRedfern](https://rugbug.net) - Mirage is heavily inspired by [Skinwalkers](https://thunderstore.io/c/lethal-company/p/RugbugRedfern/Skinwalkers/). Thank you for creating one of the best mods in the game!
 - [Evaisa](https://github.com/EvaisaDev) and [LordFireSpeed](https://github.com/Lordfirespeed) - For creating the amazing [UnityNetcodePatcher](https://github.com/EvaisaDev/UnityNetcodePatcher), which this mod uses during its build process.
 - [Lunxara](https://www.twitch.tv/lunxara) - Helped host a lot of experimental tests for Mirage. Check out her stream! https://www.twitch.tv/lunxara
@@ -91,7 +93,9 @@ If you're making small changes for your friends, you will need to share the comp
 - [IAmBatby](https://github.com/IAmBatby) and [BananaPuncher714](https://github.com/BananaPuncher714) - For answering my spawn control related questions, regarding [LethalLevelLoader](https://thunderstore.io/c/lethal-company/p/IAmBatby/LethalLevelLoader/) and [LethalQuantities](https://thunderstore.io/c/lethal-company/p/BananaPuncher714/LethalQuantities/).
 - [Zaggy1024](https://github.com/Zaggy1024) - For pointing me towards setting up a debug build of the game, which is required for me to be able to run a performance profiler.
 - [IAmBatby](https://github.com/IAmBatby) and [mattymatty](https://github.com/mattymatty97) - For their help/implementation on getting rid of the audio spatializer warning log spam.
-- [Lunxara](https://www.twitch.tv/lunxara), [JacuJ](https://thunderstore.io/c/lethal-company/p/JacuJ/), BBAPepsiMan, and JokerMan - For testing the final experimental update. I was only able to fix a lot of the subtle bugs they found because of their extensive testing.
+- [Lunxara](https://www.twitch.tv/lunxara), [JacuJ](https://thunderstore.io/c/lethal-company/p/JacuJ/), BBAPepsiMan, and [JokerMan](https://steamcommunity.com/id/t1gre456/) - For testing the final experimental update. I was only able to fix a lot of the subtle bugs they found because of their extensive testing.
+- Endoxicom - Helped test a lot of the v2 update's hardware requirements that I was trying to figure out at the time.
+- [Vladiester](https://www.youtube.com/@Vladiester) - Helped test a lot of the experimental builds, as well as testing my Content Warning version of the mod.
 
 ## Changelog
 

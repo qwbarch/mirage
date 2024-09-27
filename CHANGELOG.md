@@ -9,6 +9,9 @@
 - Optimized the codebase for better performance.
 - Now uses [SileroVAD](https://github.com/snakers4/silero-vad) for better voice activity detection, resulting in better recordings when using voice activity.
 - ``SpawnOnPlayerDeath`` as a feature has been removed. Use the [Zombies](https://thunderstore.io/c/lethal-company/p/Synaxin/Zombies/) as a replacement.
+- Added compatibility with [LethalIntelligence](https://thunderstore.io/c/lethal-company/p/VirusTLNR/LethalIntelligenceExperimental/).
+- Thanks to [Lunxara](https://www.twitch.tv/lunxara), [JacuJ](https://thunderstore.io/c/lethal-company/p/JacuJ/), BBAPepsiMan, and JokerMan for extensively testing the update. I was only able to fix a lot of the subtle bugs they found because of their extensive testing.
+- Updated icon, created by [IntegrityFate](https://integrityfate.com/).
 
 ### 1.8.1
 

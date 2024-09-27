@@ -11,10 +11,10 @@ rem Remove the previously packaged files.
 rmdir /s /q ..\bin
 
 rem Prepare Mirage.Core package.
-mkdir ..\bin\Mirage.Core\BepInEx\core\Mirage.Core
-pushd ..\bin\Mirage.Core\BepInEx\core\Mirage.Core
+mkdir ..\bin\BepInEx\core\Mirage.Core
+pushd ..\bin\BepInEx\core\Mirage.Core
 
-set src=..\..\..\..\..\src\bin\Debug\netstandard2.1
+set src=..\..\..\..\src\bin\Debug\netstandard2.1
 
 copy %src%\FSharp.Control.AsyncSeq.dll .
 copy %src%\FSharp.Core.dll .
@@ -28,18 +28,18 @@ rem Prepare SileroVAD files.
 mkdir SileroVAD
 pushd SileroVAD
 
-set src=..\..\..\..\..\..\silero-vad\bin
+set src=..\..\..\..\..\silero-vad\bin
 
 copy ..\%src%\SileroVAD.API.dll .
 copy ..\%src%\SileroVAD.dll .
 
-set src=..\..\..\..\..\..\..\..\lib\onnxruntime
+set src=..\..\..\..\..\..\..\lib\onnxruntime
 copy %src%\lib\onnxruntime.dll .
 copy %src%\lib\onnxruntime.lib .
 copy %src%\lib\onnxruntime_providers_shared.dll .
 copy %src%\lib\onnxruntime_providers_shared.lib .
 
-set src=..\..\..\..\..\..\..\..\model\silero-vad
+set src=..\..\..\..\..\..\..\model\silero-vad
 copy %src%\lang_dict_95.json .
 copy %src%\lang_group_dict_95.json .
 copy %src%\silero_vad.jit .
@@ -54,7 +54,7 @@ pushd ..\bin
 rem Create the Mirage.Core package.
 powershell Compress-Archive^
     -Force^
-    -Path "Mirage.Core",^
+    -Path "BepInEx",^
           "../manifest.json",^
           "../icon.png",^
           "../README.md"^
