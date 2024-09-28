@@ -1,5 +1,9 @@
 ## Changelog
 
+### 1.9.2
+
+- Updated MirageCore, which was missing dependencies causing players to crash.
+
 ### 1.9.1
 
 **Note**: This will be the last update, unless any major gamebreaking bugs requires my attention. For anyone expecting the v2 (voice recognition + machine learning) update, please read the README on why this update has been dropped.
