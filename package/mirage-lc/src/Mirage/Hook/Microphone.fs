@@ -9,11 +9,11 @@ open FSharpPlus
 open FSharpx.Control
 open NAudio.Wave
 open Silero.API
-open Mirage.Domain.Setting
 open Mirage.Core.Audio.PCM
 open Mirage.Core.Audio.Microphone.Resampler
 open Mirage.Core.Audio.Microphone.Detection
 open Mirage.Core.Audio.Microphone.Recorder
+open Mirage.Domain.Config
 
 let [<Literal>] SamplesPerWindow = 1024
 
@@ -53,7 +53,7 @@ let readMicrophone recordingDirectory =
     let rec consumer =
         async {
             let! state = channel.AsyncGet()
-            if state.isReady && (getSettings().recordWhileDead || not state.isPlayerDead) then
+            if state.isReady && (getConfig().enableRecordVoiceWhileDead || not state.isPlayerDead) then
                 let frame =
                     {   samples = state.samples
                         format = state.format

@@ -24,7 +24,7 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
             value,
             description
         )
-    let bindImitateVoice = bind "Imitate voice"
+    let bindImitateVoice key (value: 'A) (description: 'B) = bind "Imitate voice" key value description
     let bindMaskedEnemy = bind "Masked enemy"
     let bindSpawnControl key (value: 'A) (description: 'B) = bind "Spawn control" key value description
 
@@ -80,6 +80,24 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
             "Maximum delay (non-masked enemies)"
             12000
             <| ConfigDescription(description, AcceptableValueRange(1, 600000))
+    
+    member val EnableMimicVoiceWhileAlive =
+        let description =
+            "If true, players will always be able to hear monsters mimicking their voice.\n"
+                + "If false, players will only be able to hear monsters mimicking their voice while the player is dead."
+        bindImitateVoice
+            "Enable the ability for players to hear enemies mimicking their voice while the player is alive."
+            true
+            <| ConfigDescription(description, tags = zero)
+    
+    member val EnableRecordVoiceWhileDead =
+        let description =
+            "If true, the microphone will always be recording during the round (after the lever is pulled).\n"
+                + "If false, the microphone will only record while the player is alive (after the lever is pulled)."
+        bindImitateVoice
+            "Enable recording player voices while the player is dead."
+            false
+            <| ConfigDescription(description, tags = zero)
 
     member val EnableArmsOut =
         bindMaskedEnemy
@@ -120,7 +138,6 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
             "Max spawned masked enemies"
             2
             <| ConfigDescription(description, tags = zero)
-        
 
 let localConfig = LocalConfig(loadConfig "General", loadConfig "Enemies")
 
@@ -137,6 +154,9 @@ type SyncedConfig =
         maximumDelayMasked: int
         minimumDelayNonMasked: int
         maximumDelayNonMasked: int
+
+        enableMimicVoiceWhileAlive: bool
+        enableRecordVoiceWhileDead: bool
 
         enableArmsOut: bool
         enableMaskTexture: bool
@@ -157,6 +177,9 @@ let private toSyncedConfig () =
         maximumDelayMasked = localConfig.MaximumDelayMasked.Value
         minimumDelayNonMasked = localConfig.MinimumDelayMasked.Value
         maximumDelayNonMasked = localConfig.MaximumDelayMasked.Value
+
+        enableMimicVoiceWhileAlive = localConfig.EnableMimicVoiceWhileAlive.Value
+        enableRecordVoiceWhileDead = localConfig.EnableRecordVoiceWhileDead.Value
 
         enableArmsOut = localConfig.EnableArmsOut.Value
         enableMaskTexture = localConfig.EnableMaskTexture.Value

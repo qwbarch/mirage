@@ -21,6 +21,7 @@
     <PackageReference Include="FSharpPlus" Version="1.6.1" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="LethalSettings" Version="1.4.0" />
+    <PackageReference Include="TeamBMX.LobbyCompatibility" Version="1.2.0" />
     <Reference Include="FSharpx.Async">
       <HintPath>../../../lib/FSharpx.Async/FSharpx.Async.dll</HintPath>
     </Reference>
@@ -67,6 +68,7 @@
     <Compile Include="Mirage/Hook/Prefab.fs" />
     <Compile Include="Mirage/Hook/Microphone.fs" />
     <Compile Include="Properties/AssemblyInfo.fs" />
+    <Compile Include="Mirage/Compatibility.fs" />
     <Compile Include="Mirage/Plugin.fs" />
   </ItemGroup>
 </Project>

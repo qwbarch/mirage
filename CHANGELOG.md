@@ -1,5 +1,12 @@
 ## Changelog
 
+### 1.10.0
+
+- Moved (and renamed) the following settings back to being a synced config option:
+    - "Only hear a monster mimicking your own voice while spectating"
+    - "Only record your voice while alive"
+- Re-added LobbyCompatibility as a soft dependency.
+
 ### 1.9.2
 
 - Updated MirageCore, which was missing dependencies causing players to crash.

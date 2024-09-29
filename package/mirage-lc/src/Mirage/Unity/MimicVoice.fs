@@ -83,7 +83,7 @@ type MimicVoice() as self =
             let isMimicLocalPlayerMuted () =
                 let alwaysMute = getSettings().localPlayerVolume = 0f
                 let muteWhileNotDead =
-                    (not <| getSettings().hearLocalVoiceWhileAlive)
+                    not (getConfig().enableMimicVoiceWhileAlive)
                         && not mimicPlayer.MimickingPlayer.isPlayerDead
                 mimicPlayer.MimickingPlayer = localPlayer && (muteWhileNotDead || alwaysMute)
             let isNotHauntedOrDisappearedDressGirl () =
