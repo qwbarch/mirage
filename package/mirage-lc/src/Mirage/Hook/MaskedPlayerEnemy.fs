@@ -60,24 +60,26 @@ let hookMaskedEnemy () =
                 addKey 1f 1f
                 enemy
             let isMaskedEnemy (enemy: SpawnableEnemyWithRarity) =
-                not << isNull <| enemy.enemyType.enemyPrefab.GetComponent<MaskedPlayerEnemy>()
+                // Not all mods have the enemyType and/or enemyPrefab setup.
+                not (isNull enemy.enemyType)
+                    && not (isNull enemy.enemyType.enemyPrefab)
+                    && not (isNull <| enemy.enemyType.enemyPrefab.GetComponent<MaskedPlayerEnemy>())
             let logs = new List<string>()
             let minSpawnChance = localConfig.MaskedSpawnChance.Value
             for level in StartOfRound.Instance.levels do
-                ignore <| level.Enemies.RemoveAll isMaskedEnemy
                 let mutable totalWeight =
                     level.Enemies
+                        |> filter (not << isMaskedEnemy)
                         |> map _.rarity
                         |> sum
+                let enemy = find isMaskedEnemy level.Enemies
                 if totalWeight <> 0 then
                     let weight = int << ceil <| float totalWeight * minSpawnChance / (100.0 - minSpawnChance)
                     totalWeight <- totalWeight + weight
                     let spawnChance = float weight / float totalWeight * 100.0
                     logs.Add $"Level: {level.PlanetName}. Weight: {weight}. SpawnChance: {spawnChance:F2}%%"
-                    let enemy = new SpawnableEnemyWithRarity()
                     enemy.rarity <- weight
                     enemy.enemyType <- enemyType
                     enemy.enemyType.MaxCount <- localConfig.MaxMaskedSpawns.Value
-                    level.Enemies.Add enemy
             logInfo <| "Adjusting spawn weights for masked enemies:\n" + String.Join("\n", logs)
     )

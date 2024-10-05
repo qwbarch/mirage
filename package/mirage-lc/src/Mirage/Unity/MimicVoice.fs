@@ -50,6 +50,8 @@ type MimicVoice() as self =
                 do! runMimicLoop
             }
         Async.StartImmediate(runMimicLoop, self.destroyCancellationToken)
+    
+    member val IsMimickingVoice = false with get, set
 
     member this.Awake() =
         audioStream <- this.GetComponent<AudioStream>()

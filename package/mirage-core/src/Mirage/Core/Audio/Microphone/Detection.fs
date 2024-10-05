@@ -14,7 +14,7 @@ open Mirage.Core.Audio.Microphone.Resampler
 let [<Literal>] private StartThreshold = 0.6f
 let [<Literal>] private EndThreshold = 0.45f
 let [<Literal>] private SamplingRate = 16000
-let [<Literal>] private MinSilenceDurationMs = 600
+let [<Literal>] private MinSilenceDurationMs = 2000
 let private MinSilenceSamples = float32 SamplingRate * float32 MinSilenceDurationMs / 1000f
 
 [<Struct>]

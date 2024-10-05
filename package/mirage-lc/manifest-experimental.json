@@ -1,6 +1,6 @@
 {
     "name": "MirageExperimental",
-    "version_number": "0.0.30",
+    "version_number": "0.0.31",
     "website_url": "https://github.com/qwbarch/lc-mirage",
     "description": "This is an experimental build. You probably don't want to be using this.",
     "dependencies": [
