@@ -72,14 +72,14 @@ let hookMaskedEnemy () =
                         |> filter (not << isMaskedEnemy)
                         |> map _.rarity
                         |> sum
-                let enemy = find isMaskedEnemy level.Enemies
-                if totalWeight <> 0 then
-                    let weight = int << ceil <| float totalWeight * minSpawnChance / (100.0 - minSpawnChance)
-                    totalWeight <- totalWeight + weight
-                    let spawnChance = float weight / float totalWeight * 100.0
-                    logs.Add $"Level: {level.PlanetName}. Weight: {weight}. SpawnChance: {spawnChance:F2}%%"
-                    enemy.rarity <- weight
-                    enemy.enemyType <- enemyType
-                    enemy.enemyType.MaxCount <- localConfig.MaxMaskedSpawns.Value
+                flip iter (tryFind isMaskedEnemy level.Enemies) <| fun enemy ->
+                    if totalWeight <> 0 then
+                        let weight = int << ceil <| float totalWeight * minSpawnChance / (100.0 - minSpawnChance)
+                        totalWeight <- totalWeight + weight
+                        let spawnChance = float weight / float totalWeight * 100.0
+                        logs.Add $"Level: {level.PlanetName}. Weight: {weight}. SpawnChance: {spawnChance:F2}%%"
+                        enemy.rarity <- weight
+                        enemy.enemyType <- enemyType
+                        enemy.enemyType.MaxCount <- localConfig.MaxMaskedSpawns.Value
             logInfo <| "Adjusting spawn weights for masked enemies:\n" + String.Join("\n", logs)
     )
