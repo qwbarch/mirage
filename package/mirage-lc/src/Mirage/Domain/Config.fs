@@ -133,7 +133,9 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
             <| ConfigDescription(description, AcceptableValueRange(0.1, 50.0))
 
     member val MaxMaskedSpawns =
-        let description = "The maximum number of masked enemies that can be naturally spawned within the same round."
+        let description =
+            "The maximum number of masked enemies that can be naturally spawned within the same round.\n"
+                + "Note: If this config option isn't working, it's often due to other mods overwriting the max spawns after Mirage sets it."
         bindSpawnControl
             "Max spawned masked enemies"
             2

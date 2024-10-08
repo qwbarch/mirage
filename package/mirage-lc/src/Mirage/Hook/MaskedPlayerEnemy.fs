@@ -61,25 +61,28 @@ let hookMaskedEnemy () =
                 enemy
             let isMaskedEnemy (enemy: SpawnableEnemyWithRarity) =
                 // Not all mods have the enemyType and/or enemyPrefab setup.
-                not (isNull enemy.enemyType)
+                not (isNull enemy)
+                    && not (isNull enemy.enemyType)
                     && not (isNull enemy.enemyType.enemyPrefab)
-                    && not (isNull <| enemy.enemyType.enemyPrefab.GetComponent<MaskedPlayerEnemy>())
+                    && enemy.enemyType.enemyName = maskedPrefab.enemyType.enemyName
             let logs = new List<string>()
             let minSpawnChance = localConfig.MaskedSpawnChance.Value
             for level in StartOfRound.Instance.levels do
+                ignore <| level.Enemies.RemoveAll isMaskedEnemy
                 let mutable totalWeight =
                     level.Enemies
                         |> filter (not << isMaskedEnemy)
                         |> map _.rarity
                         |> sum
-                flip iter (tryFind isMaskedEnemy level.Enemies) <| fun enemy ->
-                    if totalWeight <> 0 then
-                        let weight = int << ceil <| float totalWeight * minSpawnChance / (100.0 - minSpawnChance)
-                        totalWeight <- totalWeight + weight
-                        let spawnChance = float weight / float totalWeight * 100.0
-                        logs.Add $"Level: {level.PlanetName}. Weight: {weight}. SpawnChance: {spawnChance:F2}%%"
-                        enemy.rarity <- weight
-                        enemy.enemyType <- enemyType
-                        enemy.enemyType.MaxCount <- localConfig.MaxMaskedSpawns.Value
+                if totalWeight > 0 then
+                    let weight = int << ceil <| float totalWeight * minSpawnChance / (100.0 - minSpawnChance)
+                    totalWeight <- totalWeight + weight
+                    let spawnChance = float weight / float totalWeight * 100.0
+                    logs.Add $"Level: {level.PlanetName}. Weight: {weight}. SpawnChance: {spawnChance:F2}%%"
+                    let enemy = SpawnableEnemyWithRarity()
+                    enemy.rarity <- weight
+                    enemy.enemyType <- enemyType
+                    enemy.enemyType.MaxCount <- localConfig.MaxMaskedSpawns.Value
+                    level.Enemies.Add enemy
             logInfo <| "Adjusting spawn weights for masked enemies:\n" + String.Join("\n", logs)
     )
