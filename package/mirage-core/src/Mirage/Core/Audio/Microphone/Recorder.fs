@@ -10,8 +10,6 @@ open Mirage.Core.Audio.File.WaveWriter
 open Mirage.Core.Audio.Microphone.Detection
 open Mirage.Core.Audio.Microphone.Resampler
 
-let MinAudioDuration = 150 // Minimum # of milliseconds for a recording to save.
-
 type RecordStart =
     {   originalFormat: WaveFormat
         resampledFormat: WaveFormat
@@ -45,7 +43,7 @@ type Recorder =
     interface IDisposable with
         member this.Dispose() = dispose this.agent
 
-let Recorder directory (onRecording: RecordAction -> Async<Unit>) =
+let Recorder minAudioDurationMs directory (onRecording: RecordAction -> Async<Unit>) =
     let agent = new BlockingQueueAgent<DetectAction>(Int32.MaxValue)
     let rec consumer =
         async {
@@ -57,7 +55,7 @@ let Recorder directory (onRecording: RecordAction -> Async<Unit>) =
                             resampledFormat = payload.resampledFormat
                         }
                 | DetectEnd payload ->
-                    if payload.audioDurationMs > MinAudioDuration then
+                    if payload.audioDurationMs > minAudioDurationMs then
                         let! waveWriter = createWaveWriter directory payload.fullAudio.original.format
                         do! writeWaveFile waveWriter payload.fullAudio.original.samples
                         do! onRecording << RecordEnd <|

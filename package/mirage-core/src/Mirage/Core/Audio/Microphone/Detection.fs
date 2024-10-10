@@ -14,8 +14,6 @@ open Mirage.Core.Audio.Microphone.Resampler
 let [<Literal>] private StartThreshold = 0.7f
 let [<Literal>] private EndThreshold = 0.45f
 let [<Literal>] private SamplingRate = 16000
-let [<Literal>] private MinSilenceDurationMs = 2000
-let private MinSilenceSamples = float32 SamplingRate * float32 MinSilenceDurationMs / 1000f
 
 [<Struct>]
 type VADFrame =
@@ -71,7 +69,8 @@ type VoiceDetector<'State> =
 
 /// Initialize a vad detector by providing a vad algorithm, an action to
 /// perform when speech is detected, as well as a source to read samples from.
-let VoiceDetector<'State> (stopDetection: 'State -> bool) (detectSpeech: DetectVoice) (onVoiceDetected: DetectAction -> Async<Unit>) =
+let VoiceDetector<'State> minSilenceDurationMs (stopDetection: 'State -> bool) (detectSpeech: DetectVoice) (onVoiceDetected: DetectAction -> Async<Unit>) =
+    let minSilenceSamples = float32 SamplingRate * float32 minSilenceDurationMs / 1000f
     let agent = new BlockingQueueAgent<ValueTuple<'State, ResampledAudio>>(Int32.MaxValue)
     let samples =
         {|  original = new List<float32>()
@@ -128,7 +127,7 @@ let VoiceDetector<'State> (stopDetection: 'State -> bool) (detectSpeech: DetectV
             else if probability < EndThreshold && voiceDetected then
                 if endIndex = 0 then
                     endIndex <- currentIndex
-                if float32 (currentIndex - endIndex) < MinSilenceSamples then
+                if float32 (currentIndex - endIndex) < minSilenceSamples then
                     do! onVoiceDetected detectFound
                 else
                     endIndex <- 0
