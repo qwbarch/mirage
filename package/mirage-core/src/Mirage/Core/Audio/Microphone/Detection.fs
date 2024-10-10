@@ -11,7 +11,7 @@ open Mirage.Prelude
 open Mirage.Core.Audio.PCM
 open Mirage.Core.Audio.Microphone.Resampler
 
-let [<Literal>] private StartThreshold = 0.6f
+let [<Literal>] private StartThreshold = 0.7f
 let [<Literal>] private EndThreshold = 0.45f
 let [<Literal>] private SamplingRate = 16000
 let [<Literal>] private MinSilenceDurationMs = 2000

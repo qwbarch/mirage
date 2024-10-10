@@ -1,10 +1,9 @@
 {
     "name": "MirageExperimental",
-    "version_number": "0.0.33",
+    "version_number": "0.0.34",
     "website_url": "https://github.com/qwbarch/lc-mirage",
     "description": "This is an experimental build. You probably don't want to be using this.",
     "dependencies": [
-        "qwbarch-MirageCore-1.0.1",
-        "willis81808-LethalSettings-1.4.0"
+        "qwbarch-MirageCore-1.0.1"
     ]
 }

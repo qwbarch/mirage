@@ -53,13 +53,13 @@ let createWaveWriter (directory: string) inputFormat =
     }
 
 /// Write the given frame of pcm data into the mp3 file.
-let writeMp3File mp3Writer = mp3Writer.channel.AsyncAdd << WriteSamples
+let writeWaveFile waveWriter = waveWriter.channel.AsyncAdd << WriteSamples
 
 /// Closes the mp3 file.
-let closeMp3Writer mp3Writer = mp3Writer.channel.AsyncAdd Dispose
+let closeMp3Writer waveWriter = waveWriter.channel.AsyncAdd Dispose
 
 /// Retrieve the identifier of the file.
-let getFileId mp3Writer = mp3Writer.fileId
+let getFileId = _.fileId
 
 /// Get the file path of the mp3 file.
 let getFilePath mp3Writer = mp3Writer.filePath

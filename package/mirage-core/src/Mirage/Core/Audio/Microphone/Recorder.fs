@@ -5,23 +5,20 @@ module Mirage.Core.Audio.Microphone.Recorder
 open System
 open FSharpPlus
 open FSharpx.Control
-open NAudio.Lame
 open NAudio.Wave
 open Mirage.Core.Audio.File.WaveWriter
 open Mirage.Core.Audio.Microphone.Detection
 open Mirage.Core.Audio.Microphone.Resampler
 
-let [<Literal>] private WriterPreset = LAMEPreset.STANDARD
+let MinAudioDuration = 150 // Minimum # of milliseconds for a recording to save.
 
 type RecordStart =
-    {   mp3Writer: WaveWriter
-        originalFormat: WaveFormat
+    {   originalFormat: WaveFormat
         resampledFormat: WaveFormat
     }
 
 type RecordFound =
-    {   mp3Writer: WaveWriter
-        vadFrame: VADFrame
+    {   vadFrame: VADFrame
         fullAudio: ResampledAudio
         currentAudio: ResampledAudio
     }
@@ -50,34 +47,31 @@ type Recorder =
 
 let Recorder directory (onRecording: RecordAction -> Async<Unit>) =
     let agent = new BlockingQueueAgent<DetectAction>(Int32.MaxValue)
-    let mutable mp3Writer = None
     let rec consumer =
         async {
             let! action = agent.AsyncGet() 
             match action with
                 | DetectStart payload ->
-                    let! writer = createWaveWriter directory payload.originalFormat
-                    mp3Writer <- Some writer
                     do! onRecording << RecordStart <|
-                        {   mp3Writer = mp3Writer.Value
-                            originalFormat = payload.originalFormat
+                        {   originalFormat = payload.originalFormat
                             resampledFormat = payload.resampledFormat
                         }
                 | DetectEnd payload ->
-                    do! writeMp3File mp3Writer.Value payload.fullAudio.original.samples
-                    do! onRecording << RecordEnd <|
-                        {   mp3Writer = mp3Writer.Value
-                            vadFrame = payload.vadFrame
-                            vadTimings = payload.vadTimings
-                            fullAudio = payload.fullAudio
-                            currentAudio = payload.currentAudio
-                            audioDurationMs = payload.audioDurationMs
-                        }
-                    do! closeMp3Writer mp3Writer.Value
+                    if payload.audioDurationMs > MinAudioDuration then
+                        let! waveWriter = createWaveWriter directory payload.fullAudio.original.format
+                        do! writeWaveFile waveWriter payload.fullAudio.original.samples
+                        do! onRecording << RecordEnd <|
+                            {   mp3Writer = waveWriter
+                                vadFrame = payload.vadFrame
+                                vadTimings = payload.vadTimings
+                                fullAudio = payload.fullAudio
+                                currentAudio = payload.currentAudio
+                                audioDurationMs = payload.audioDurationMs
+                            }
+                        do! closeMp3Writer waveWriter
                 | DetectFound payload ->
                     do! onRecording << RecordFound <|
-                        {   mp3Writer = mp3Writer.Value
-                            vadFrame = payload.vadFrame
+                        {   vadFrame = payload.vadFrame
                             fullAudio = payload.fullAudio
                             currentAudio = payload.currentAudio
                         }

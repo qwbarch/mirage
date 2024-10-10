@@ -13,7 +13,6 @@ open Mirage.Core.Audio.File.WaveWriter
 open Mirage.Core.Audio.Microphone.Resampler
 open Mirage.Core.Audio.Microphone.Recorder
 open Mirage.Core.Audio.Microphone.Detection
-open FSharpPlus.Data
 
 /// State of a transcription for a batched transcription job.
 type private BatchedState<'PlayerId> =
@@ -287,19 +286,20 @@ let VoiceTranscriber<'PlayerId, 'Transcription>
                                         }
                                     }
                             | RecordFound payload ->
-                                Async.StartImmediate << map ignore << OptionT.run <| monad {
-                                    let samples = payload.fullAudio.resampled.samples
-                                    if samples.Length > 0 then
-                                        let! transcription = OptionT <| tryTranscribeAudio samples
-                                        printfn "after transcribeAudio RecordFound"
-                                        printfn "before onTranscribe"
-                                        do! OptionT.lift << onTranscribe << TranscribeLocalAction << TranscribeFound <|
-                                            {   fileId = getFileId payload.mp3Writer
-                                                vadFrame = payload.vadFrame
-                                                transcription = transcription
-                                            }
-                                        printfn "after onTranscribe"
-                                }
+                                ()
+                                //Async.StartImmediate << map ignore << OptionT.run <| monad {
+                                //    let samples = payload.fullAudio.resampled.samples
+                                //    if samples.Length > 0 then
+                                //        let! transcription = OptionT <| tryTranscribeAudio samples
+                                //        printfn "after transcribeAudio RecordFound"
+                                //        printfn "before onTranscribe"
+                                //        do! OptionT.lift << onTranscribe << TranscribeLocalAction << TranscribeFound <|
+                                //            {   fileId = getFileId payload.mp3Writer
+                                //                vadFrame = payload.vadFrame
+                                //                transcription = transcription
+                                //            }
+                                //        printfn "after onTranscribe"
+                                //}
                 do! consumer
             }
         Async.Start consumer
