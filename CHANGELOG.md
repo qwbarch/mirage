@@ -1,5 +1,12 @@
 ## Changelog
 
+### 1.11.0
+
+- Added two config options ``MinSilenceDurationMs`` and ``MinAudioDurationMs``, explained in their descriptions.
+- Fixed an issue where recordings would end abruptely, even though the user didn't finish speaking their sentence.
+- Fixed an issue related to ``Enable spawn control (masked enemies)`` being enabled.
+- Thanks to ``nattaboy`` for all the feedback while testing the experimental build for the past week!
+
 ### 1.10.0
 
 - Moved (and renamed) the following settings back to being a synced config option:

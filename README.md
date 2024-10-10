@@ -39,6 +39,20 @@ For bugs, submit a [new issue](https://github.com/qwbarch/mirage/issues) on GitH
 
 No, Mirage is a standalone mod. Installing both Mirage and Skinwalkers will result in Skinwalkers playing voice at the same time as Mirage.
 
+#### Can I use an older version of Mirage?
+
+If you want to use an older version, use Mirage ``v1.8.2``. You will need to ensure ``MirageCore`` is uninstalled, and install [BarchLib](https://thunderstore.io/c/lethal-company/p/qwbarch/BarchLib/) ``v1.0.2`` instead.  
+If you have ``MirageCore`` enabled when playing on ``v1.8.2``, the game **will** crash.
+
+While ``v1.8.2`` works fine as of today (10/10/2024), there are no guarantees it will work in future versions.
+
+#### Why do I need LethalSettings? Can I remove it?
+
+LethalSettings is used in Mirage to provide a simple to understand UI for personal preferences, where they're not synced for every player.  
+No other mod as of right now provides the functionality that I need, hence the dependency on it, as I will not define my own UI.  
+
+If you are completely allergic to LethalSettings, read the above section and switch to Mirage ``v1.8.2`` instead, which does not depend on it.
+
 #### Can I use MaskedEnemyOverhaul with this mod?
 
 MaskedEnemyOverhaul will cause the masked enemy's suit and mimicking voice to not match.  
