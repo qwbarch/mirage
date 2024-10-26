@@ -21,6 +21,7 @@ open Mirage.Hook.Dissonance
 open Mirage.Hook.MaskedPlayerEnemy
 
 [<BepInPlugin(pluginId, pluginName, pluginVersion)>]
+[<BepInDependency("com.willis.lc.lethalsettings", BepInDependency.DependencyFlags.HardDependency)>]
 [<BepInDependency(LobbyCompatibility.PluginInfo.PLUGIN_GUID, BepInDependency.DependencyFlags.SoftDependency)>]
 type Plugin() =
     inherit BaseUnityPlugin()

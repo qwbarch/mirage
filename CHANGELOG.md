@@ -1,5 +1,9 @@
 ## Changelog
 
+### 1.11.1
+
+- Fixed a ``NullReferenceException`` issue with ``AudioReceiver``.
+
 ### 1.11.0
 
 - Added two config options ``MinSilenceDurationMs`` and ``MinAudioDurationMs``, explained in their descriptions.

@@ -40,6 +40,7 @@ type AudioStreamEventArgs(eventData: AudioStreamEvent) =
 type AudioStream() as self =
     inherit NetworkBehaviour()
 
+    let mutable audioSender: Option<AudioSender> = None
     let mutable audioReceiver: Option<AudioReceiver> = None
 
     let event = Event<EventHandler<_>, _>()
@@ -60,15 +61,17 @@ type AudioStream() as self =
     /// Load the mp3 file and play it locally, while sending the audio to play on all other clients.
     let streamAudioHost waveReader =
         async {
+            iter dispose audioSender
             let pcmHeader = PcmHeader waveReader
             iter dispose audioReceiver
             audioReceiver <- Some <| AudioReceiver self.AudioSource pcmHeader onFrameDecompressed
             let onFrameRead frameData =
-                onReceiveFrame audioReceiver.Value frameData
-                self.SendFrameClientRpc frameData
+                if Option.isSome audioReceiver then
+                    onReceiveFrame audioReceiver.Value frameData
+                    self.SendFrameClientRpc frameData
             self.InitializeAudioReceiverClientRpc pcmHeader
-            use audioSender = AudioSender onFrameRead waveReader
-            sendAudio audioSender
+            audioSender <- Some <| AudioSender onFrameRead waveReader
+            sendAudio audioSender.Value
             do! Async.Sleep(int waveReader.mp3Reader.TotalTime.TotalMilliseconds)
         }
 
