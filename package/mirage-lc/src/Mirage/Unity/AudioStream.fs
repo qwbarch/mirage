@@ -6,6 +6,7 @@ open UnityEngine
 open Unity.Netcode
 open Mirage.Core.Audio.PCM
 open Mirage.Core.Audio.File.WaveReader
+open Mirage.Domain.Logger
 open Mirage.Domain.Audio.Sender
 open Mirage.Domain.Audio.Receiver
 open Mirage.Domain.Audio.Frame
@@ -61,29 +62,33 @@ type AudioStream() as self =
     /// Load the mp3 file and play it locally, while sending the audio to play on all other clients.
     let streamAudioHost waveReader =
         async {
-            iter dispose audioSender
-            let pcmHeader = PcmHeader waveReader
-            iter dispose audioReceiver
-            audioReceiver <- Some <| AudioReceiver self.AudioSource pcmHeader onFrameDecompressed
-            let onFrameRead frameData =
-                if Option.isSome audioReceiver then
-                    onReceiveFrame audioReceiver.Value frameData
-                    self.SendFrameClientRpc frameData
-            self.InitializeAudioReceiverClientRpc pcmHeader
-            audioSender <- Some <| AudioSender onFrameRead waveReader
-            sendAudio audioSender.Value
+            try
+                iter dispose audioSender
+                let pcmHeader = PcmHeader waveReader
+                iter dispose audioReceiver
+                audioReceiver <- Some <| AudioReceiver self.AudioSource pcmHeader onFrameDecompressed
+                let onFrameRead frameData =
+                    if Option.isSome audioReceiver then
+                        onReceiveFrame audioReceiver.Value frameData
+                        self.SendFrameClientRpc frameData
+                self.InitializeAudioReceiverClientRpc pcmHeader
+                audioSender <- Some <| AudioSender onFrameRead waveReader
+                sendAudio audioSender.Value
+            with | error -> logError $"Exception found while running streamAudioHost: {error}"
             do! Async.Sleep(int waveReader.mp3Reader.TotalTime.TotalMilliseconds)
         }
 
     /// Load the mp3 file, and then send it to the server to broadcast to all other clients.
     let streamAudioClient waveReader =
         async {
-            let pcmHeader = PcmHeader waveReader
-            let serverRpcParams = ServerRpcParams()
-            let sendFrame frameData = self.SendFrameServerRpc(frameData, serverRpcParams)
-            self.InitializeAudioReceiverServerRpc(pcmHeader, serverRpcParams)
-            use audioSender = AudioSender sendFrame waveReader
-            sendAudio audioSender
+            try
+                let pcmHeader = PcmHeader waveReader
+                let serverRpcParams = ServerRpcParams()
+                let sendFrame frameData = self.SendFrameServerRpc(frameData, serverRpcParams)
+                self.InitializeAudioReceiverServerRpc(pcmHeader, serverRpcParams)
+                use audioSender = AudioSender sendFrame waveReader
+                sendAudio audioSender
+            with | error -> logError $"Exception found while running streamAudioClient: {error}"
             do! Async.Sleep(int waveReader.mp3Reader.TotalTime.TotalMilliseconds)
         }
 
