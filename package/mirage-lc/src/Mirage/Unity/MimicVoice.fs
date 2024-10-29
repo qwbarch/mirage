@@ -103,7 +103,10 @@ type MimicVoice() as self =
                 if mimicPlayer.MimickingPlayer = localPlayer then
                     getSettings().localPlayerVolume
                 else
-                    mimicPlayer.MimickingPlayer.currentVoiceChatAudioSource.volume
+                    if isNull mimicPlayer.MimickingPlayer || isNull mimicPlayer.MimickingPlayer.currentVoiceChatAudioSource then
+                        1f
+                    else
+                        mimicPlayer.MimickingPlayer.currentVoiceChatAudioSource.volume
             audioStream.AudioSource.outputAudioMixerGroup <-
                 SoundManager.Instance.playerVoiceMixers[int mimicPlayer.MimickingPlayer.playerClientId]
             audioStream.AudioSource.mute <-
