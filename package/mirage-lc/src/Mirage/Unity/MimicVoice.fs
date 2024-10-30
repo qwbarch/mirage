@@ -15,6 +15,7 @@ open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicPlayer
 open Mirage.Domain.Config
 open Mirage.Domain.Setting
+open System.Diagnostics
 
 let private random = Random()
 
@@ -45,8 +46,17 @@ type MimicVoice() as self =
                         random.Next(getConfig().minimumDelayMasked, getConfig().maximumDelayMasked + 1)
                     else
                         random.Next(getConfig().minimumDelayNonMasked, getConfig().maximumDelayNonMasked + 1)
+                logInfo "MimicVoice: Before mimicVoice (mimic loop)"
+                let sw = Stopwatch()
+                sw.Start()
                 do! mimicVoice
+                sw.Stop()
+                let elapsedSecs = (float sw.ElapsedMilliseconds / 1000.0).ToString("F2")
+                logInfo $"MimicVoice: After mimicVoice (mimic loop). Elapsed time: {elapsedSecs}"
+                let delaySecs = (float delay / 1000.0).ToString("F2")
+                logInfo $"MimicVoice: Sleeping for {delaySecs} seconds"
                 do! Async.Sleep delay
+                logInfo "MimicVoice: Finished sleeping."
                 do! runMimicLoop
             }
         Async.StartImmediate(runMimicLoop, self.destroyCancellationToken)
@@ -103,6 +113,7 @@ type MimicVoice() as self =
                 if mimicPlayer.MimickingPlayer = localPlayer then
                     getSettings().localPlayerVolume
                 else
+                    // Might as well use 1f as the default if any of those fields are null.
                     if isNull mimicPlayer.MimickingPlayer || isNull mimicPlayer.MimickingPlayer.currentVoiceChatAudioSource then
                         1f
                     else

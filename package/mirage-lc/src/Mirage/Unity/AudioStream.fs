@@ -75,6 +75,8 @@ type AudioStream() as self =
                 audioSender <- Some <| AudioSender onFrameRead waveReader
                 sendAudio audioSender.Value
             with | error -> logError $"Exception found while running streamAudioHost: {error}"
+            let seconds = (waveReader.mp3Reader.TotalTime.TotalMilliseconds / 1000.0).ToString("F2")
+            logInfo $"streamAudioHost. sleeping for {seconds} seconds"
             do! Async.Sleep(int waveReader.mp3Reader.TotalTime.TotalMilliseconds)
         }
 
@@ -82,13 +84,16 @@ type AudioStream() as self =
     let streamAudioClient waveReader =
         async {
             try
+                iter dispose audioSender
                 let pcmHeader = PcmHeader waveReader
                 let serverRpcParams = ServerRpcParams()
                 let sendFrame frameData = self.SendFrameServerRpc(frameData, serverRpcParams)
                 self.InitializeAudioReceiverServerRpc(pcmHeader, serverRpcParams)
-                use audioSender = AudioSender sendFrame waveReader
-                sendAudio audioSender
+                audioSender <- Some <| AudioSender sendFrame waveReader
+                sendAudio audioSender.Value
             with | error -> logError $"Exception found while running streamAudioClient: {error}"
+            let seconds = (waveReader.mp3Reader.TotalTime.TotalMilliseconds / 1000.0).ToString("F2")
+            logInfo $"streamAudioClient. sleeping for {seconds} seconds"
             do! Async.Sleep(int waveReader.mp3Reader.TotalTime.TotalMilliseconds)
         }
 
