@@ -28,35 +28,45 @@ type MimicVoice() as self =
     let mutable enemyAI: EnemyAI = null
 
     let startVoiceMimic () =
-        let mimicVoice =
+        //let logMimicVoice guid message =
+        //    if not (isNull enemyAI) && not (isNull mimicPlayer.MimickingPlayer) && mimicPlayer.MimickingPlayer = StartOfRound.Instance.localPlayerController then
+        //        logInfo $"MimicVoice ({guid}): {message}"
+        let mimicVoice guid =
             map ignore << OptionT.run <| monad {
                 try
+                    //let log = logMimicVoice guid
+                    //log "mimicVoice start."
                     if not (isNull enemyAI)
                        && not (isNull mimicPlayer.MimickingPlayer)
                        && mimicPlayer.MimickingPlayer = StartOfRound.Instance.localPlayerController
                     then
+                        //log "mimicVoice getRecording."
                         let! recording = OptionT getRecording
-                        do! lift <| audioStream.StreamAudioFromFile recording
+                        //log "mimicVoice StreamAudioFromFile."
+                        let sw = Stopwatch()
+                        sw.Start()
+                        do! lift <| audioStream.StreamAudioFromFile(recording, guid)
+                        sw.Stop()
+                        //let elapsedSecs = (float sw.ElapsedMilliseconds / 1000.0).ToString("F2")
+                        //log $"After mimicVoice (mimic loop). Elapsed time: {elapsedSecs}"
+                        //log "mimicVoice finished."
                 with | error -> logError $"Error occurred while mimicking voice: {error}"
             }
         let rec runMimicLoop =
             async {
+                let guid = Guid.NewGuid()
+                //let log = logMimicVoice guid
                 let delay =
                     if enemyAI :? MaskedPlayerEnemy then
                         random.Next(getConfig().minimumDelayMasked, getConfig().maximumDelayMasked + 1)
                     else
                         random.Next(getConfig().minimumDelayNonMasked, getConfig().maximumDelayNonMasked + 1)
-                logInfo "MimicVoice: Before mimicVoice (mimic loop)"
-                let sw = Stopwatch()
-                sw.Start()
-                do! mimicVoice
-                sw.Stop()
-                let elapsedSecs = (float sw.ElapsedMilliseconds / 1000.0).ToString("F2")
-                logInfo $"MimicVoice: After mimicVoice (mimic loop). Elapsed time: {elapsedSecs}"
-                let delaySecs = (float delay / 1000.0).ToString("F2")
-                logInfo $"MimicVoice: Sleeping for {delaySecs} seconds"
+                //log "Before mimicVoice (mimic loop)"
+                do! mimicVoice guid
+                //let delaySecs = (float delay / 1000.0).ToString("F2")
+                //log $"Sleeping for {delaySecs} seconds"
                 do! Async.Sleep delay
-                logInfo "MimicVoice: Finished sleeping."
+                //log "Finished sleeping."
                 do! runMimicLoop
             }
         Async.StartImmediate(runMimicLoop, self.destroyCancellationToken)

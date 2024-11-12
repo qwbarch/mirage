@@ -1,5 +1,10 @@
 ## Changelog
 
+### 1.11.2
+
+- Fixed non-masked voice playback delays (accidentally had them set to the same as masked delays).
+- Fixed a null reference exception.
+
 ### 1.11.1
 
 - Fixed a ``NullReferenceException`` issue with ``AudioReceiver``.

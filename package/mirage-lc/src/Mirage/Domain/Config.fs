@@ -199,8 +199,8 @@ let private toSyncedConfig () =
     {   enemies = enemies
         minimumDelayMasked = localConfig.MinimumDelayMasked.Value
         maximumDelayMasked = localConfig.MaximumDelayMasked.Value
-        minimumDelayNonMasked = localConfig.MinimumDelayMasked.Value
-        maximumDelayNonMasked = localConfig.MaximumDelayMasked.Value
+        minimumDelayNonMasked = localConfig.MinimumDelayNonMasked.Value
+        maximumDelayNonMasked = localConfig.MaximumDelayNonMasked.Value
 
         enableMimicVoiceWhileAlive = localConfig.EnableMimicVoiceWhileAlive.Value
         enableRecordVoiceWhileDead = localConfig.EnableRecordVoiceWhileDead.Value
