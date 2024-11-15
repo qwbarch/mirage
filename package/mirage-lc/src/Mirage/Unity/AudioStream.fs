@@ -72,11 +72,8 @@ type AudioStream() as self =
                 //audioReceiver <- Some <| AudioReceiver self.AudioSource pcmHeader onFrameDecompressed
 
                 let onFrameRead frameData =
-                    // non-null check for self instance is necessary because this function is still called
-                    // when returning to the main menu.
-                    if not (isNull self) && Option.isSome audioReceiver then
-                        onReceiveFrame audioReceiver.Value frameData
-                        self.SendFrameClientRpc frameData
+                    onReceiveFrame frameData audioReceiver
+                    self.SendFrameClientRpc frameData
                 //logError $"streamAudioHost ({guid}): InitializeAudioReceiverClientRpc"
                 self.InitializeAudioReceiver pcmHeader
                 self.InitializeAudioReceiverClientRpc pcmHeader
@@ -163,12 +160,11 @@ type AudioStream() as self =
     [<ServerRpc(RequireOwnership = false)>]
     member this.SendFrameServerRpc(frameData, serverRpcParams) =
         onValidSender this serverRpcParams <| fun () ->
-            if audioReceiver.IsSome then
-                onReceiveFrame audioReceiver.Value frameData
+            onReceiveFrame frameData audioReceiver
             this.SendFrameClientRpc frameData
 
     /// Send the current frame data to each client.
     [<ClientRpc(Delivery = RpcDelivery.Unreliable)>]
     member this.SendFrameClientRpc(frameData) =
-        if not this.IsHost && audioReceiver.IsSome then
-            onReceiveFrame audioReceiver.Value frameData
+        if not this.IsHost then
+            onReceiveFrame frameData audioReceiver

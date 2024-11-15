@@ -6,6 +6,7 @@ open System.IO
 open System.Collections.Generic
 open Mirage.Core.Async.Fork
 open Mirage.Domain.Setting
+open Mirage.Domain.Logger
 
 type RecordingManager =
     private
@@ -59,5 +60,9 @@ let internal getRecording =
                 let index = recordingManager.random.Next recordingManager.recordings.Count
                 let recording = recordingManager.recordings[index]
                 recordingManager.recordings.RemoveAt index
-                Some recording
+                if not <| recording.EndsWith ".mp3" then
+                    logWarning $"Found an unsupported recording, make sure it's an mp3 file: {recording}"
+                    None
+                else
+                    Some recording
     }

@@ -1,5 +1,10 @@
 ## Changelog
 
+### 1.12.0
+
+- Fixed the ``AcmNotPossible calling acmFormatSuggest`` exception that caused some players to not be able to use Mirage.
+- Audio files are now saved as a ``.mp3`` instead of a ``.wav``. If you have ``NeverDeleteRecordings`` enabled, you will need to delete your previously saved recordings (or convert them to ``.mp3``).
+
 ### 1.11.2
 
 - Fixed non-masked voice playback delays (accidentally had them set to the same as masked delays).
