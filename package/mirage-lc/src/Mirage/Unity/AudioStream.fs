@@ -5,7 +5,7 @@ open FSharpPlus
 open UnityEngine
 open Unity.Netcode
 open Mirage.Core.Audio.PCM
-open Mirage.Core.Audio.File.WaveReader
+open Mirage.Core.Audio.File.Mp3Reader
 open Mirage.Domain.Logger
 open Mirage.Domain.Audio.Sender
 open Mirage.Domain.Audio.Receiver
@@ -60,15 +60,17 @@ type AudioStream() as self =
             callback()
 
     /// Load the mp3 file and play it locally, while sending the audio to play on all other clients.
-    let streamAudioHost waveReader guid =
+    let streamAudioHost mp3Reader guid =
         async {
             try
                 //logError $"streamAudioHost ({guid}): start"
                 iter dispose audioSender
-                let pcmHeader = PcmHeader waveReader
-                iter dispose audioReceiver
+                let pcmHeader = PcmHeader mp3Reader
+
+                //iter dispose audioReceiver
                 //logError $"streamAudioHost ({guid}): AudioReceiver"
-                audioReceiver <- Some <| AudioReceiver self.AudioSource pcmHeader onFrameDecompressed
+                //audioReceiver <- Some <| AudioReceiver self.AudioSource pcmHeader onFrameDecompressed
+
                 let onFrameRead frameData =
                     // non-null check for self instance is necessary because this function is still called
                     // when returning to the main menu.
@@ -76,34 +78,35 @@ type AudioStream() as self =
                         onReceiveFrame audioReceiver.Value frameData
                         self.SendFrameClientRpc frameData
                 //logError $"streamAudioHost ({guid}): InitializeAudioReceiverClientRpc"
+                self.InitializeAudioReceiver pcmHeader
                 self.InitializeAudioReceiverClientRpc pcmHeader
                 //logError $"streamAudioHost ({guid}): AudioSender"
-                audioSender <- Some <| AudioSender onFrameRead waveReader
+                audioSender <- Some <| AudioSender onFrameRead mp3Reader
                 //logError $"streamAudioHost ({guid}): Before sendAudio"
                 sendAudio audioSender.Value
                 //logError $"streamAudioHost ({guid}): After sendAudio"
             with | error -> logError $"Exception found while running streamAudioHost: {error}"
-            let seconds = (waveReader.mp3Reader.TotalTime.TotalMilliseconds / 1000.0).ToString("F2")
+            //let seconds = (mp3Reader.reader.TotalTime.TotalMilliseconds / 1000.0).ToString("F2")
             //logInfo $"streamAudioHost ({guid}): sleeping for {seconds} seconds"
-            do! Async.Sleep(int waveReader.mp3Reader.TotalTime.TotalMilliseconds)
+            do! Async.Sleep(int mp3Reader.reader.TotalTime.TotalMilliseconds)
             //logInfo $"streamAudioHost ({guid}): finished sleeping for {seconds} seconds"
         }
 
     /// Load the mp3 file, and then send it to the server to broadcast to all other clients.
-    let streamAudioClient waveReader =
+    let streamAudioClient mp3Reader =
         async {
             try
                 iter dispose audioSender
-                let pcmHeader = PcmHeader waveReader
+                let pcmHeader = PcmHeader mp3Reader
                 let serverRpcParams = ServerRpcParams()
                 let sendFrame frameData = self.SendFrameServerRpc(frameData, serverRpcParams)
                 self.InitializeAudioReceiverServerRpc(pcmHeader, serverRpcParams)
-                audioSender <- Some <| AudioSender sendFrame waveReader
+                audioSender <- Some <| AudioSender sendFrame mp3Reader
                 sendAudio audioSender.Value
             with | error -> logError $"Exception found while running streamAudioClient: {error}"
-            let seconds = (waveReader.mp3Reader.TotalTime.TotalMilliseconds / 1000.0).ToString("F2")
+            //let seconds = (waveReader.mp3Reader.TotalTime.TotalMilliseconds / 1000.0).ToString("F2")
             //logInfo $"streamAudioClient. sleeping for {seconds} seconds"
-            do! Async.Sleep(int waveReader.mp3Reader.TotalTime.TotalMilliseconds)
+            do! Async.Sleep(int mp3Reader.reader.TotalTime.TotalMilliseconds)
         }
 
     /// An event that triggers when a new audio clip begins.
@@ -126,11 +129,11 @@ type AudioStream() as self =
             if Some localId <> this.AllowedSenderId then
                 invalidOp $"StreamAudioFromFile cannot be run from this client. LocalId: {localId}. AllowedId: {this.AllowedSenderId}."
             else
-                let! waveReader = readWavFile filePath
+                let! mp3Reader = readMp3File filePath
                 if this.IsHost then
-                    do! streamAudioHost waveReader guid
+                    do! streamAudioHost mp3Reader guid
                 else 
-                    do! streamAudioClient waveReader
+                    do! streamAudioClient mp3Reader
         }
 
     /// Initialize the audio receiver to playback audio when audio frames are received.
@@ -160,12 +163,12 @@ type AudioStream() as self =
     [<ServerRpc(RequireOwnership = false)>]
     member this.SendFrameServerRpc(frameData, serverRpcParams) =
         onValidSender this serverRpcParams <| fun () ->
-            onReceiveFrame audioReceiver.Value frameData
+            if audioReceiver.IsSome then
+                onReceiveFrame audioReceiver.Value frameData
             this.SendFrameClientRpc frameData
 
     /// Send the current frame data to each client.
     [<ClientRpc(Delivery = RpcDelivery.Unreliable)>]
     member this.SendFrameClientRpc(frameData) =
-        if not this.IsHost then
+        if not this.IsHost && audioReceiver.IsSome then
             onReceiveFrame audioReceiver.Value frameData
-            if not this.AudioSource.isPlaying then this.AudioSource.Play()

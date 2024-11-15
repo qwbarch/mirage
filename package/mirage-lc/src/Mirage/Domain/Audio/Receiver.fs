@@ -21,12 +21,15 @@ type AudioReceiver =
     
     interface IDisposable with
         member this.Dispose() =
-            if not this.disposed then
-                this.disposed <- true
-                this.audioSource.Stop()
+            try
+                if not this.disposed then
+                    this.disposed <- true
+                    this.audioSource.Stop()
+                    dispose this.decompressor
+            finally
                 UnityEngine.Object.Destroy this.audioSource.clip
                 this.audioSource.clip <- null
-                dispose this.decompressor
+
 
 /// Start receiving audio data from the server, and playing it back live.
 /// 

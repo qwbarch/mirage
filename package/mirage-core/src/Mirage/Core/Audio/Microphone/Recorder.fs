@@ -5,8 +5,9 @@ module Mirage.Core.Audio.Microphone.Recorder
 open System
 open FSharpPlus
 open FSharpx.Control
+open NAudio.Lame
 open NAudio.Wave
-open Mirage.Core.Audio.File.WaveWriter
+open Mirage.Core.Audio.File.Mp3Writer
 open Mirage.Core.Audio.Microphone.Detection
 open Mirage.Core.Audio.Microphone.Resampler
 
@@ -23,7 +24,7 @@ type RecordFound =
 
 /// Note: After the callback finishes for this action, the mp3 writer is disposed.
 type RecordEnd =
-    {   mp3Writer: WaveWriter
+    {   mp3Writer: Mp3Writer
         vadFrame: VADFrame
         vadTimings: list<VADFrame>
         fullAudio: ResampledAudio
@@ -56,17 +57,17 @@ let Recorder minAudioDurationMs directory (onRecording: RecordAction -> Async<Un
                         }
                 | DetectEnd payload ->
                     if payload.audioDurationMs > minAudioDurationMs then
-                        let! waveWriter = createWaveWriter directory payload.fullAudio.original.format
-                        do! writeWaveFile waveWriter payload.fullAudio.original.samples
+                        let! mp3Writer = createMp3Writer directory payload.fullAudio.original.format LAMEPreset.STANDARD
+                        do! writeMp3File mp3Writer payload.fullAudio.original.samples
                         do! onRecording << RecordEnd <|
-                            {   mp3Writer = waveWriter
+                            {   mp3Writer = mp3Writer
                                 vadFrame = payload.vadFrame
                                 vadTimings = payload.vadTimings
                                 fullAudio = payload.fullAudio
                                 currentAudio = payload.currentAudio
                                 audioDurationMs = payload.audioDurationMs
                             }
-                        do! closeMp3Writer waveWriter
+                        do! closeMp3Writer mp3Writer
                 | DetectFound payload ->
                     do! onRecording << RecordFound <|
                         {   vadFrame = payload.vadFrame

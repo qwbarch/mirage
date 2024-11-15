@@ -39,8 +39,8 @@
     <Compile Include="Mirage/Core/Async/Print.fs" />
     <Compile Include="Mirage/Core/Async/TVar.fs" />
     <Compile Include="Mirage/Core/Audio/PCM.fs" />
-    <Compile Include="Mirage/Core/Audio/File/WaveReader.fs" />
-    <Compile Include="Mirage/Core/Audio/File/WaveWriter.fs" />
+    <Compile Include="Mirage/Core/Audio/File/Mp3Reader.fs" />
+    <Compile Include="Mirage/Core/Audio/File/Mp3Writer.fs" />
     <Compile Include="Mirage/Core/Audio/Microphone/Resampler.fs" />
     <Compile Include="Mirage/Core/Audio/Microphone/Detection.fs" />
     <Compile Include="Mirage/Core/Audio/Microphone/Recorder.fs" />

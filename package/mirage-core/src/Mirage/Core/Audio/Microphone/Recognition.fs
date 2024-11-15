@@ -9,7 +9,7 @@ open FSharpx.Control
 open Mirage.Prelude
 open Mirage.Core.Async.Lock
 open Mirage.Core.Audio.PCM
-open Mirage.Core.Audio.File.WaveWriter
+open Mirage.Core.Audio.File.Mp3Writer
 open Mirage.Core.Audio.Microphone.Resampler
 open Mirage.Core.Audio.Microphone.Recorder
 open Mirage.Core.Audio.Microphone.Detection
