@@ -220,10 +220,9 @@ let getConfig () = Option.defaultWith (konst <| toSyncedConfig()) syncedConfig
 type internal SyncAction = RequestSync | ReceiveSync
 
 /// Convert the action to the message event name.
-let private toNamedMessage (action: SyncAction) =
-    match action with
-        | RequestSync -> $"{pluginId}_OnRequestConfigSync"
-        | ReceiveSync -> $"{pluginId}_OnReceiveConfigSync"
+let private toNamedMessage = function
+    | RequestSync -> $"{pluginId}_OnRequestConfigSync"
+    | ReceiveSync -> $"{pluginId}_OnReceiveConfigSync"
 
 let private messageManager () = NetworkManager.Singleton.CustomMessagingManager
 let private isClient () = NetworkManager.Singleton.IsClient
