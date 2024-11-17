@@ -9,6 +9,7 @@ open Mirage.Revive.Hook.Config
 open Mirage.Revive.Hook.MaskedPlayerEnemy
 
 [<BepInPlugin(pluginId, pluginName, pluginVersion)>]
+[<BepInDependency(LobbyCompatibility.PluginInfo.PLUGIN_GUID, BepInDependency.DependencyFlags.SoftDependency)>]
 type Plugin() =
     inherit BaseUnityPlugin()
 

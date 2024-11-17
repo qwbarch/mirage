@@ -60,33 +60,20 @@ type AudioStream() as self =
             callback()
 
     /// Load the mp3 file and play it locally, while sending the audio to play on all other clients.
-    let streamAudioHost mp3Reader guid =
+    let streamAudioHost mp3Reader =
         async {
             try
-                //logError $"streamAudioHost ({guid}): start"
                 iter dispose audioSender
                 let pcmHeader = PcmHeader mp3Reader
-
-                //iter dispose audioReceiver
-                //logError $"streamAudioHost ({guid}): AudioReceiver"
-                //audioReceiver <- Some <| AudioReceiver self.AudioSource pcmHeader onFrameDecompressed
-
                 let onFrameRead frameData =
                     onReceiveFrame frameData audioReceiver
                     self.SendFrameClientRpc frameData
-                //logError $"streamAudioHost ({guid}): InitializeAudioReceiverClientRpc"
                 self.InitializeAudioReceiver pcmHeader
                 self.InitializeAudioReceiverClientRpc pcmHeader
-                //logError $"streamAudioHost ({guid}): AudioSender"
                 audioSender <- Some <| AudioSender onFrameRead mp3Reader
-                //logError $"streamAudioHost ({guid}): Before sendAudio"
                 sendAudio audioSender.Value
-                //logError $"streamAudioHost ({guid}): After sendAudio"
             with | error -> logError $"Exception found while running streamAudioHost: {error}"
-            //let seconds = (mp3Reader.reader.TotalTime.TotalMilliseconds / 1000.0).ToString("F2")
-            //logInfo $"streamAudioHost ({guid}): sleeping for {seconds} seconds"
             do! Async.Sleep(int mp3Reader.reader.TotalTime.TotalMilliseconds)
-            //logInfo $"streamAudioHost ({guid}): finished sleeping for {seconds} seconds"
         }
 
     /// Load the mp3 file, and then send it to the server to broadcast to all other clients.
@@ -101,8 +88,6 @@ type AudioStream() as self =
                 audioSender <- Some <| AudioSender sendFrame mp3Reader
                 sendAudio audioSender.Value
             with | error -> logError $"Exception found while running streamAudioClient: {error}"
-            //let seconds = (waveReader.mp3Reader.TotalTime.TotalMilliseconds / 1000.0).ToString("F2")
-            //logInfo $"streamAudioClient. sleeping for {seconds} seconds"
             do! Async.Sleep(int mp3Reader.reader.TotalTime.TotalMilliseconds)
         }
 
@@ -120,7 +105,7 @@ type AudioStream() as self =
         iter dispose audioReceiver
 
     /// Stream audio from the player (can be host or non-host) to all other players.
-    member this.StreamAudioFromFile(filePath, guid) =
+    member this.StreamAudioFromFile(filePath) =
         async {
             let localId = StartOfRound.Instance.localPlayerController.actualClientId
             if Some localId <> this.AllowedSenderId then
@@ -128,7 +113,7 @@ type AudioStream() as self =
             else
                 let! mp3Reader = readMp3File filePath
                 if this.IsHost then
-                    do! streamAudioHost mp3Reader guid
+                    do! streamAudioHost mp3Reader
                 else 
                     do! streamAudioClient mp3Reader
         }

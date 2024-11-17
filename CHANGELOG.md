@@ -1,5 +1,11 @@
 ## Changelog
 
+### 1.12.1
+
+- Recordings no longer cut off while holding your push to talk key (now matches the recording behaviour from older versions of Mirage).
+    - The ``Minimum silence duration (in milliseconds)`` config option no longer affects push to talk users, and is only used for voice activity.
+    - The ``Minimum audio duration (in milliseconds)`` config option no longer affects push to talk users, and is only used for voice activity.
+
 ### 1.12.0
 
 - Fixed the ``AcmNotPossible calling acmFormatSuggest`` exception that caused some players to not be able to use Mirage.

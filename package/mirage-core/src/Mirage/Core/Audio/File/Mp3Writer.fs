@@ -32,20 +32,24 @@ let createMp3Writer (directory: string) inputFormat (preset: LAMEPreset) =
         let filePath = Path.Join(directory, $"{fileId}.mp3")
         let writer = new LameMP3FileWriter(filePath, inputFormat, preset)
         let channel = new BlockingQueueAgent<Mp3Action>(Int32.MaxValue)
+        let mutable disposed = false
         let rec consumer =
             async {
                 let! action = channel.AsyncGet()
                 match action with
                     | WriteSamples samples ->
-                        do! toPCMBytes samples
-                            |> writer.WriteAsync
-                            |> _.AsTask()
-                            |> Async.AwaitTask
-                        do! consumer
+                        if not disposed then
+                            do! toPCMBytes samples
+                                |> writer.WriteAsync
+                                |> _.AsTask()
+                                |> Async.AwaitTask
+                            do! consumer
                     | Dispose ->
-                        do! Async.AwaitTask(writer.FlushAsync())
-                        dispose writer
-                        dispose channel
+                        if not disposed then
+                            disposed <- true
+                            do! Async.AwaitTask(writer.FlushAsync())
+                            dispose writer
+                            dispose channel
             }
         Async.Start consumer
         return {

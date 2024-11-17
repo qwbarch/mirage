@@ -59,7 +59,7 @@ let readMicrophone recordingDirectory =
                     {   samples = state.samples
                         format = state.format
                     }
-                Async.StartImmediate <| writeResampler resampler (state.isMuted, frame)
+                Async.StartImmediate <| writeResampler resampler (state.pushToTalkEnabled && not state.isMuted, frame)
             do! consumer
         }
     Async.Start consumer
