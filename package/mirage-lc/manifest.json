@@ -1,6 +1,6 @@
 {
     "name": "Mirage",
-    "version_number": "1.12.0",
+    "version_number": "1.12.1",
     "website_url": "https://github.com/qwbarch/lc-mirage",
     "description": "Voice mimicking where all players hear the same voice, with a focus on masked enemies. Alternative to Skinwalkers + MaskedEnemyOverhaul.",
     "dependencies": [

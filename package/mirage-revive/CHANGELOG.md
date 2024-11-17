@@ -1,5 +1,9 @@
 ## Changelog
 
+### 1.1.0
+
+- Added a missing soft dependency BepInEx flag.
+
 ### 1.0.0
 
 - Initial release.
