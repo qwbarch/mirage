@@ -21,6 +21,8 @@ type Mp3Writer =
             fileId: Guid
             filePath: string
         }
+    interface IDisposable with
+        member this.Dispose() = this.channel.Add Dispose
 
 let createMp3Writer (directory: string) inputFormat (preset: LAMEPreset) =
     async {
