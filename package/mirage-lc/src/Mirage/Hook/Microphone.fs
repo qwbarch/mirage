@@ -5,10 +5,10 @@ module Mirage.Hook.Microphone
 open Dissonance
 open Dissonance.Audio.Capture
 open System
+open Silero.API
 open FSharpPlus
 open FSharpx.Control
 open NAudio.Wave
-open Silero.API
 open Mirage.Core.Audio.PCM
 open Mirage.Core.Audio.Microphone.Resampler
 open Mirage.Core.Audio.Microphone.Detection
@@ -59,7 +59,11 @@ let readMicrophone recordingDirectory =
                     {   samples = state.samples
                         format = state.format
                     }
-                Async.StartImmediate <| writeResampler resampler (state.pushToTalkEnabled && not state.isMuted, frame)
+                let probability =
+                    if state.isMuted then Some 0f
+                    else if state.pushToTalkEnabled then Some 1f
+                    else None
+                Async.StartImmediate <| writeResampler resampler (probability, frame)
             do! consumer
         }
     Async.Start consumer

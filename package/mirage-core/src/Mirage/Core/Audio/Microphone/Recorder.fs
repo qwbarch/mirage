@@ -56,8 +56,8 @@ let Recorder minAudioDurationMs directory (onRecording: RecordAction -> Async<Un
                             resampledFormat = payload.resampledFormat
                         }
                 | DetectEnd payload ->
-                    if payload.audioDurationMs > minAudioDurationMs then
-                        let! mp3Writer = createMp3Writer directory payload.fullAudio.original.format LAMEPreset.STANDARD
+                    if payload.audioDurationMs >= minAudioDurationMs then
+                        use! mp3Writer = createMp3Writer directory payload.fullAudio.original.format LAMEPreset.STANDARD
                         do! writeMp3File mp3Writer payload.fullAudio.original.samples
                         do! onRecording << RecordEnd <|
                             {   mp3Writer = mp3Writer

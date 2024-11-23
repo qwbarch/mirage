@@ -1,5 +1,10 @@
 ## Changelog
 
+### 1.12.2
+
+- Fixed a bug introduced in ``12.12.1``, where recordings are created even if the push-to-talk button isn't pressed.
+- Fixed a bug that caused some recordings to be choppy.
+
 ### 1.12.1
 
 - Recordings no longer cut off while holding your push to talk key (now matches the recording behaviour from older versions of Mirage).
