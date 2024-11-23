@@ -16,7 +16,7 @@ type RecordingManager =
             recordings: List<string>
             random: Random
             recordingDirectory: string
-            lastRecording: option<string>
+            mutable lastRecording: option<string>
         }
 
 let mutable private recordingManager =
@@ -50,7 +50,8 @@ let internal getRecordings =
             with | _ -> zero
     }
 
-/// Get a recording to be played by a voice mimic.
+/// Get a recording to be played by a voice mimic.  
+/// Note: Currently not thread-safe due to __lastRecording__. This function should only ever be called from within the same thread.
 let rec internal getRecording =
     async {
         if recordingManager.recordings.Count = 0 then
@@ -69,6 +70,7 @@ let rec internal getRecording =
             // In the case where the currently held recordings is reloaded and the pulled recording happens to be
             // the same as the last recording, a new recording is pulled to avoid playing the same recording twice in a row.
             else if Some recording = recordingManager.lastRecording then
+                recordingManager.lastRecording <- Some recording
                 return! getRecording
             else
                 return Some recording

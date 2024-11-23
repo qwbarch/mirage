@@ -50,12 +50,12 @@
   <ItemGroup>
     <Compile Include="Mirage/PluginInfo.fs" />
     <Compile Include="Mirage/Domain/Netcode.fs" />
+    <Compile Include="Mirage/Domain/Logger.fs" />
     <Compile Include="Mirage/Domain/Audio/Frame.fs" />
     <Compile Include="Mirage/Domain/Audio/Receiver.fs" />
     <Compile Include="Mirage/Domain/Audio/Stream.fs" />
     <Compile Include="Mirage/Domain/Audio/Sender.fs" />
     <Compile Include="Mirage/Domain/Setting.fs" />
-    <Compile Include="Mirage/Domain/Logger.fs" />
     <Compile Include="Mirage/Domain/Audio/Recording.fs" />
     <Compile Include="Mirage/Domain/Config.fs" />
     <Compile Include="Mirage/Hook/Dissonance.fs" />

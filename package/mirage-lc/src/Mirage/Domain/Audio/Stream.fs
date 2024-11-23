@@ -5,6 +5,7 @@ open System.Collections.Generic
 open Mirage.Core.Audio.File.Mp3Reader
 open Mirage.Prelude
 open Mirage.Domain.Audio.Frame
+open Mirage.Domain.Logger
 
 let private maximumBuffer = float Stopwatch.Frequency * 2.0 // 2 seconds (of audio duration) buffered.
 let private frequency = float Stopwatch.Frequency / 1000.0

@@ -16,8 +16,7 @@ let private random = Random()
 /// Killed players are tracked to prevent spawning multiple masked enemies when the player dies, since one of the hooks runs multiple times.
 let private killedPlayers = new HashSet<uint64>()
 
-/// Mask item prefab, needed for spawning a masked enemy.
-let mutable private maskItem: HauntedMaskItem = null
+let mutable private maskedEnemyPrefab = null
 
 let private spawnMaskedEnemy (player: PlayerControllerB) causeOfDeath deathAnimation spawnBody bodyVelocity =
     if killedPlayers.Add player.playerClientId then
@@ -49,7 +48,7 @@ let private spawnMaskedEnemy (player: PlayerControllerB) causeOfDeath deathAnima
             let rotationY = player.transform.eulerAngles.y
             let maskedEnemy =
                 Object.Instantiate<GameObject>(
-                    maskItem.mimicEnemy.enemyPrefab,
+                    maskedEnemyPrefab,
                     player.transform.position,
                     Quaternion.Euler <| Vector3(0f, rotationY, 0f)
                 )
@@ -68,10 +67,11 @@ let revivePlayersOnDeath () =
     On.GameNetworkManager.add_Start(fun orig self ->
         orig.Invoke self
         for prefab in self.GetComponent<NetworkManager>().NetworkConfig.Prefabs.m_Prefabs do
-            let item = prefab.Prefab.gameObject.GetComponent<HauntedMaskItem>()
-            if not <| isNull item then
-                maskItem <- item
-        if isNull maskItem then
+            let maskedEnemy = prefab.Prefab.gameObject.GetComponent<MaskedPlayerEnemy>()
+            // enemyName must be matched to avoid mods that extend from MaskedPlayerEnemy.
+            if not <| isNull maskedEnemy && maskedEnemy.enemyType.enemyName = "MaskedPlayerEnemy" then
+                maskedEnemyPrefab <- maskedEnemy.gameObject
+        if isNull maskedEnemyPrefab then
             logWarning "HauntedMaskItem prefab is missing. Another mod is messing with this prefab when they shouldn't be."
     )
 
