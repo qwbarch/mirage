@@ -130,8 +130,8 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
                 + "Note: The spawn chance is based on each attempt the game tries to spawn an enemy. If you want a basically guaranteed spawn each round, set this to 25"
         bindSpawnControl
             "Masked enemy spawn chance"
-            2.0
-            <| ConfigDescription(description, AcceptableValueRange(0.1, 50.0))
+            2.0f
+            <| ConfigDescription(description, AcceptableValueRange(0.1f, 50.0f))
 
     member val MaxMaskedSpawns =
         let description =

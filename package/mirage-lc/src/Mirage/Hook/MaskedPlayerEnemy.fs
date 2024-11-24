@@ -66,7 +66,7 @@ let hookMaskedEnemy () =
                     && not (isNull enemy.enemyType.enemyPrefab)
                     && enemy.enemyType.enemyName = maskedPrefab.enemyType.enemyName
             let logs = new List<string>()
-            let minSpawnChance = localConfig.MaskedSpawnChance.Value
+            let minSpawnChance = float localConfig.MaskedSpawnChance.Value
             for level in StartOfRound.Instance.levels do
                 ignore <| level.Enemies.RemoveAll isMaskedEnemy
                 let mutable totalWeight =

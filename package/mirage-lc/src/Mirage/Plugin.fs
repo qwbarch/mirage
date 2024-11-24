@@ -8,7 +8,8 @@ open System.Diagnostics
 open NAudio.Lame
 open UnityEngine
 open Mirage.PluginInfo
-open Mirage.Compatibility
+open Mirage.Dependency.LethalConfig
+open Mirage.Dependency.LobbyCompatibility
 open Mirage.Domain.Netcode
 open Mirage.Domain.Logger
 open Mirage.Domain.Setting
@@ -43,10 +44,11 @@ type Plugin() =
         for category in Seq.cast<LogCategory> <| Enum.GetValues typeof<LogCategory> do
             Logs.SetLogLevel(category, LogLevel.Error)
 
+        //initNetcodePatcher()
         initLobbyCompatibility()
+        initLethalConfig()
         initRecordingManager recordingDirectory
         initSettings <| Path.Join(mirageDirectory, "settings.json")
-        initNetcodePatcher()
         Async.StartImmediate deleteRecordings
         Application.add_quitting(fun _ -> Async.StartImmediate deleteRecordings)
 

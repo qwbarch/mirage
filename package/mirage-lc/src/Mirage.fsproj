@@ -9,7 +9,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <DebugType>embedded</DebugType>
-    <Optimize>true</Optimize>
+    <Optimize>false</Optimize>
     <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=.</PathMap>
   </PropertyGroup>
   <ItemGroup>
@@ -22,6 +22,7 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="LethalSettings" Version="1.4.0" />
     <PackageReference Include="TeamBMX.LobbyCompatibility" Version="1.2.0" />
+    <PackageReference Include="AinaVT-LethalConfig" Version="1.4.3" Publicize="true" />
     <Reference Include="FSharpx.Async">
       <HintPath>../../../lib/FSharpx.Async/FSharpx.Async.dll</HintPath>
     </Reference>
@@ -68,7 +69,8 @@
     <Compile Include="Mirage/Hook/Prefab.fs" />
     <Compile Include="Mirage/Hook/Microphone.fs" />
     <Compile Include="Properties/AssemblyInfo.fs" />
-    <Compile Include="Mirage/Compatibility.fs" />
+    <Compile Include="Mirage/Dependency/LethalConfig.fs" />
+    <Compile Include="Mirage/Dependency/LobbyCompatibility.fs" />
     <Compile Include="Mirage/Plugin.fs" />
   </ItemGroup>
 </Project>
