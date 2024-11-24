@@ -13,7 +13,7 @@ let syncConfig () =
             requestSync()
     )
 
-    On.GameNetworkManager.add_StartDisconnect(fun orig self ->
+    On.MenuManager.add_Start(fun orig self ->
         orig.Invoke self
         revertSync()
     )

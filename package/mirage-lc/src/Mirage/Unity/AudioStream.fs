@@ -102,6 +102,7 @@ type AudioStream() as self =
 
     override _.OnDestroy() =
         base.OnDestroy()
+        iter dispose audioSender
         iter dispose audioReceiver
 
     /// Stream audio from the player (can be host or non-host) to all other players.
