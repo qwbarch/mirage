@@ -13,6 +13,7 @@
     <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1" PrivateAssets="all" />
     <PackageReference Include="BepInEx.Core" Version="5.4.21" />
     <PackageReference Include="AinaVT-LethalConfig" Version="1.4.3" Publicize="true" />
+    <PackageReference Include="TeamBMX.LobbyCompatibility" Version="1.2.0" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Compatibility.fs" />

@@ -9,7 +9,6 @@ open System.Reflection
 open NAudio.Lame
 open UnityEngine
 open Mirage.PluginInfo
-open Mirage.Dependency.LobbyCompatibility
 open Mirage.Compatibility
 open Mirage.Domain.Netcode
 open Mirage.Domain.Logger
@@ -49,7 +48,7 @@ type Plugin() =
             Logs.SetLogLevel(category, LogLevel.Error)
 
         initLethalConfig assembly localConfig.General
-        initLobbyCompatibility()
+        initLobbyCompatibility pluginName pluginVersion
         initRecordingManager recordingDirectory
         initSettings <| Path.Join(mirageDirectory, "settings.json")
         initNetcodePatcher()
