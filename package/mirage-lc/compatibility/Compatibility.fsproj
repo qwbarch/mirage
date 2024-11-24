@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <RootNamespace>Mirage.Compatibility</RootNamespace>
+    <AssemblyName>Mirage.Compatibility</AssemblyName>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <DebugType>embedded</DebugType>
+    <Optimize>false</Optimize>
+    <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=.</PathMap>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1" PrivateAssets="all" />
+    <PackageReference Include="BepInEx.Core" Version="5.4.21" />
+    <PackageReference Include="AinaVT-LethalConfig" Version="1.4.3" Publicize="true" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Compatibility.fs" />
+    <Compile Include="Properties/AssemblyInfo.fs" />
+  </ItemGroup>
+</Project>

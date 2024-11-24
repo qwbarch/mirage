@@ -9,10 +9,11 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <DebugType>embedded</DebugType>
-    <Optimize>false</Optimize>
+    <Optimize>true</Optimize>
     <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=.</PathMap>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../compatibility/Compatibility.fsproj" />
     <ProjectReference Include="../../mirage-core/src/Mirage.fsproj" />
     <ProjectReference Include="../../silero-vad/src/Silero.fsproj" />
     <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1" PrivateAssets="all" />
@@ -69,7 +70,6 @@
     <Compile Include="Mirage/Hook/Prefab.fs" />
     <Compile Include="Mirage/Hook/Microphone.fs" />
     <Compile Include="Properties/AssemblyInfo.fs" />
-    <Compile Include="Mirage/Dependency/LethalConfig.fs" />
     <Compile Include="Mirage/Dependency/LobbyCompatibility.fs" />
     <Compile Include="Mirage/Plugin.fs" />
   </ItemGroup>

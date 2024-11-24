@@ -5,15 +5,17 @@ open Dissonance
 open System
 open System.IO
 open System.Diagnostics
+open System.Reflection
 open NAudio.Lame
 open UnityEngine
 open Mirage.PluginInfo
-open Mirage.Dependency.LethalConfig
 open Mirage.Dependency.LobbyCompatibility
+open Mirage.Compatibility
 open Mirage.Domain.Netcode
 open Mirage.Domain.Logger
 open Mirage.Domain.Setting
 open Mirage.Domain.Audio.Recording
+open Mirage.Domain.Config
 open Mirage.Hook.AudioSpatializer
 open Mirage.Hook.Prefab
 open Mirage.Hook.Config
@@ -24,10 +26,12 @@ open Mirage.Hook.MaskedPlayerEnemy
 [<BepInPlugin(pluginId, pluginName, pluginVersion)>]
 [<BepInDependency("com.willis.lc.lethalsettings", BepInDependency.DependencyFlags.HardDependency)>]
 [<BepInDependency(LobbyCompatibility.PluginInfo.PLUGIN_GUID, BepInDependency.DependencyFlags.SoftDependency)>]
+[<BepInDependency(LethalConfig.PluginInfo.Guid, BepInDependency.DependencyFlags.SoftDependency)>]
 type Plugin() =
     inherit BaseUnityPlugin()
 
     member this.Awake() =
+        let assembly = Assembly.GetExecutingAssembly()
         let lameDllPath = Path.GetDirectoryName this.Info.Location
         let lameLoaded = LameDLL.LoadNativeDLL [|lameDllPath|]
         let baseDirectory = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName)
@@ -44,8 +48,8 @@ type Plugin() =
         for category in Seq.cast<LogCategory> <| Enum.GetValues typeof<LogCategory> do
             Logs.SetLogLevel(category, LogLevel.Error)
 
+        initLethalConfig assembly localConfig.General
         initLobbyCompatibility()
-        initLethalConfig()
         initRecordingManager recordingDirectory
         initSettings <| Path.Join(mirageDirectory, "settings.json")
         initNetcodePatcher()

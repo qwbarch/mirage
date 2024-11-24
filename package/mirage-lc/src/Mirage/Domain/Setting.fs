@@ -54,7 +54,7 @@ let initSettings filePath =
             Name = pluginName,
             Id = pluginId,
             Version = pluginVersion,
-            Description = "The preferences below only affect yourself. Each player can choose what they prefer.",
+            Description = "The preferences below only affect yourself. These values are not synced from the host.",
             MenuComponents =
                 [|  SliderComponent(
                         Value = settings.localPlayerVolume * 100.0f,
