@@ -21,7 +21,7 @@
     <PackageReference Include="LethalCompany.GameLibs.Steam" Version="67.0.0-ngd.0" Publicize="true" />
     <PackageReference Include="FSharpPlus" Version="1.6.1" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="LethalSettings" Version="1.4.0" />
+    <PackageReference Include="LethalSettings" Version="1.4.0" Publicize="true" />
     <PackageReference Include="TeamBMX.LobbyCompatibility" Version="1.2.0" />
     <PackageReference Include="AinaVT-LethalConfig" Version="1.4.3" Publicize="true" />
     <Reference Include="FSharpx.Async">

@@ -10,6 +10,7 @@ open System
 open System.IO
 open Newtonsoft.Json
 open Mirage.PluginInfo
+open Mirage.Compatibility
 
 type Settings =
     {   /// Volume used for voice play-back on monsters mimicking the local player. Must be a value between 0.0f-1.0f
@@ -50,27 +51,13 @@ let initSettings filePath =
                 else
                     result defaultSettings
         settings <- previousSettings
-        ModMenu.RegisterMod(ModMenu.ModSettingsConfig(
-            Name = pluginName,
-            Id = pluginId,
-            Version = pluginVersion,
-            Description = "The preferences below only affect yourself. These values are not synced from the host.",
-            MenuComponents =
-                [|  SliderComponent(
-                        Value = settings.localPlayerVolume * 100.0f,
-                        MinValue = 0.0f,
-                        MaxValue = 100.0f,
-                        Text = "Volume when a monster is mimicking your own voice:",
-                        OnValueChanged = fun _ value -> saveSettings { settings with localPlayerVolume = value / 100.0f }
-                    )
-                    ToggleComponent(
-                        Text = "Never delete recordings",
-                        Value = settings.neverDeleteRecordings,
-                        OnValueChanged = fun _ value -> saveSettings { settings with neverDeleteRecordings = value }
-                    )
-                |]
-        ),
-        true, // allowedInMainMenu
-        true  // allowedInGame
-        )
+        initLethalSettings
+            {   pluginId = pluginId
+                pluginVersion = pluginVersion
+                pluginName = pluginName
+                getLocalPlayerVolume = fun () -> settings.localPlayerVolume * 100.0f
+                setLocalPlayerVolume = fun value -> saveSettings { settings with localPlayerVolume = value / 100.0f }
+                getNeverDeleteRecordings = fun () -> settings.neverDeleteRecordings
+                setNeverDeleteRecordings = fun value -> saveSettings { settings with neverDeleteRecordings = value }
+            }
     }

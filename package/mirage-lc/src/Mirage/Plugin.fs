@@ -23,7 +23,7 @@ open Mirage.Hook.Dissonance
 open Mirage.Hook.MaskedPlayerEnemy
 
 [<BepInPlugin(pluginId, pluginName, pluginVersion)>]
-[<BepInDependency("com.willis.lc.lethalsettings", BepInDependency.DependencyFlags.HardDependency)>]
+[<BepInDependency(LethalSettings.GeneratedPluginInfo.Identifier, BepInDependency.DependencyFlags.SoftDependency)>]
 [<BepInDependency(LobbyCompatibility.PluginInfo.PLUGIN_GUID, BepInDependency.DependencyFlags.SoftDependency)>]
 [<BepInDependency(LethalConfig.PluginInfo.Guid, BepInDependency.DependencyFlags.SoftDependency)>]
 type Plugin() =
