@@ -1,6 +1,6 @@
 {
     "name": "MirageRevive",
-    "version_number": "1.1.1",
+    "version_number": "1.1.2",
     "website_url": "https://github.com/qwbarch/lc-mirage",
     "description": "On player death, revive the player as a Masked. Configurable spawn chance.",
     "dependencies": [

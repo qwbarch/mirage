@@ -160,7 +160,7 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
             150
             <| ConfigDescription(description, tags = zero)
 
-let localConfig = LocalConfig(loadConfig "General", loadConfig "Enemies")
+let internal localConfig = LocalConfig(loadConfig "General", loadConfig "Enemies")
 
 /// <summary>
 /// Network synchronized configuration values. This is taken from the wiki:
@@ -219,8 +219,6 @@ let getConfig () =
         logWarning "syncedConfig has not been initialized yet."
     syncedConfig.Value
 
-let internal getLocalConfig () = localConfig
-
 /// An action for synchronizing the <b>SyncedConfig</b>.
 type internal SyncAction = RequestSync | ReceiveSync
 
@@ -269,7 +267,6 @@ let internal requestSync () =
 
 let private onRequestSync clientId _ =
     if isHost() then
-        syncedConfig <- Some <| toSyncedConfig()
         let bytes = serializeToBytes <| getConfig()
         let bytesLength = bytes.Length
         use writer = new FastBufferWriter(bytesLength + sizeof<int32>, Allocator.Temp)
@@ -300,6 +297,8 @@ let internal registerHandler action =
     let register handler = messageManager().RegisterNamedMessageHandler(message, handler)
     let callback =
         match action with
-            | RequestSync -> onRequestSync
+            | RequestSync -> 
+                syncedConfig <- Some <| toSyncedConfig()
+                onRequestSync
             | ReceiveSync -> onReceiveSync
     register callback

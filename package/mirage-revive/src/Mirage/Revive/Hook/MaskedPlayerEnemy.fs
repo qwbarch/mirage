@@ -69,7 +69,7 @@ let revivePlayersOnDeath () =
         for prefab in self.GetComponent<NetworkManager>().NetworkConfig.Prefabs.m_Prefabs do
             let maskedEnemy = prefab.Prefab.gameObject.GetComponent<MaskedPlayerEnemy>()
             // enemyName must be matched to avoid mods that extend from MaskedPlayerEnemy.
-            if not <| isNull maskedEnemy && maskedEnemy.enemyType.enemyName = "MaskedPlayerEnemy" then
+            if not <| isNull maskedEnemy && maskedEnemy.enemyType.enemyName = "Masked" then
                 maskedEnemyPrefab <- maskedEnemy.gameObject
         if isNull maskedEnemyPrefab then
             logWarning "HauntedMaskItem prefab is missing. Another mod is messing with this prefab when they shouldn't be."

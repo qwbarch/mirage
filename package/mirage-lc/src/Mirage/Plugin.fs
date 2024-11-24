@@ -44,11 +44,11 @@ type Plugin() =
         for category in Seq.cast<LogCategory> <| Enum.GetValues typeof<LogCategory> do
             Logs.SetLogLevel(category, LogLevel.Error)
 
-        //initNetcodePatcher()
         initLobbyCompatibility()
         initLethalConfig()
         initRecordingManager recordingDirectory
         initSettings <| Path.Join(mirageDirectory, "settings.json")
+        initNetcodePatcher()
         Async.StartImmediate deleteRecordings
         Application.add_quitting(fun _ -> Async.StartImmediate deleteRecordings)
 
