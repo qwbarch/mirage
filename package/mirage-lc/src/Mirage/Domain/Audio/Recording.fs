@@ -70,8 +70,8 @@ let rec internal getRecording =
             // In the case where the currently held recordings is reloaded and the pulled recording happens to be
             // the same as the last recording, a new recording is pulled to avoid playing the same recording twice in a row.
             else if Some recording = recordingManager.lastRecording then
-                recordingManager.lastRecording <- Some recording
                 return! getRecording
             else
+                recordingManager.lastRecording <- Some recording
                 return Some recording
     }

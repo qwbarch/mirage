@@ -4,8 +4,6 @@ module Mirage.Domain.Setting
 
 open FSharpPlus
 open FSharpx.Control
-open LethalSettings.UI
-open LethalSettings.UI.Components
 open System
 open System.IO
 open Newtonsoft.Json
