@@ -70,7 +70,7 @@ type AudioStream() as self =
                     self.SendFrameClientRpc frameData
                 self.InitializeAudioReceiver pcmHeader
                 self.InitializeAudioReceiverClientRpc pcmHeader
-                audioSender <- Some <| AudioSender onFrameRead mp3Reader
+                audioSender <- Some <| AudioSender onFrameRead mp3Reader self.destroyCancellationToken
                 sendAudio audioSender.Value
             with | error -> logError $"Exception found while running streamAudioHost: {error}"
             do! Async.Sleep(int mp3Reader.reader.TotalTime.TotalMilliseconds)
@@ -85,7 +85,7 @@ type AudioStream() as self =
                 let serverRpcParams = ServerRpcParams()
                 let sendFrame frameData = self.SendFrameServerRpc(frameData, serverRpcParams)
                 self.InitializeAudioReceiverServerRpc(pcmHeader, serverRpcParams)
-                audioSender <- Some <| AudioSender sendFrame mp3Reader
+                audioSender <- Some <| AudioSender sendFrame mp3Reader self.destroyCancellationToken
                 sendAudio audioSender.Value
             with | error -> logError $"Exception found while running streamAudioClient: {error}"
             do! Async.Sleep(int mp3Reader.reader.TotalTime.TotalMilliseconds)
@@ -121,7 +121,7 @@ type AudioStream() as self =
     /// Initialize the audio receiver to playback audio when audio frames are received.
     member this.InitializeAudioReceiver(pcmHeader) =
         iter dispose audioReceiver
-        audioReceiver <- Some <| AudioReceiver this.AudioSource pcmHeader onFrameDecompressed
+        audioReceiver <- Some <| AudioReceiver this.AudioSource pcmHeader onFrameDecompressed this.destroyCancellationToken
 
     [<ServerRpc(RequireOwnership = false)>]
     member this.InitializeAudioReceiverServerRpc(pcmHeader, serverRpcParams) =

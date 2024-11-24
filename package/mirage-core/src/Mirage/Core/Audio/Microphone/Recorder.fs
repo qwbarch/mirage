@@ -57,7 +57,7 @@ let Recorder minAudioDurationMs directory (onRecording: RecordAction -> Async<Un
                         }
                 | DetectEnd payload ->
                     if payload.audioDurationMs >= minAudioDurationMs then
-                        use! mp3Writer = createMp3Writer directory payload.fullAudio.original.format LAMEPreset.STANDARD
+                        use! mp3Writer = createMp3Writer directory payload.fullAudio.original.format LAMEPreset.STANDARD_FAST
                         do! writeMp3File mp3Writer payload.fullAudio.original.samples
                         do! onRecording << RecordEnd <|
                             {   mp3Writer = mp3Writer

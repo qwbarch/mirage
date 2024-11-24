@@ -1,7 +1,10 @@
 module Mirage.Domain.Audio.Receiver
 
+#nowarn "40"
+
 open System
 open FSharpPlus
+open FSharpx.Control
 open UnityEngine
 open NAudio.Wave
 open Mirage.PluginInfo
@@ -16,6 +19,8 @@ type AudioReceiver =
             decompressor: IMp3FrameDecompressor
             // int represents the sampleIndex
             onFrameDecompressed: Samples -> int -> Unit
+            decompressChannel: BlockingQueueAgent<FrameData>
+            playbackChannel: BlockingQueueAgent<ValueTuple<Samples, int>>
             mutable disposed: bool
         }
     
@@ -26,16 +31,17 @@ type AudioReceiver =
                     this.disposed <- true
                     this.audioSource.Stop()
                     dispose this.decompressor
+                    dispose this.decompressChannel
+                    dispose this.playbackChannel
             finally
                 UnityEngine.Object.Destroy this.audioSource.clip
                 this.audioSource.clip <- null
-
 
 /// Start receiving audio data from the server, and playing it back live.
 /// 
 /// Note: This will not stop the <b>AudioSource</b> if it's currently playing.
 /// You will need to handle that yourself at the callsite.
-let AudioReceiver (audioSource: AudioSource) pcmHeader onFrameDecompressed =
+let AudioReceiver (audioSource: AudioSource) pcmHeader onFrameDecompressed cancellationToken =
     audioSource.clip <-
         AudioClip.Create(
             pluginId,
@@ -52,21 +58,42 @@ let AudioReceiver (audioSource: AudioSource) pcmHeader onFrameDecompressed =
             pcmHeader.blockSize,
             pcmHeader.bitRate
         )
+
+    let playbackChannel = new BlockingQueueAgent<ValueTuple<Samples, int>>(Int32.MaxValue)
+    let rec playbackThread =
+        async {
+            let! struct (samples, sampleIndex) = playbackChannel.AsyncGet()
+            if samples.Length > 0 then
+                ignore <| audioSource.clip.SetData(samples, sampleIndex)
+                onFrameDecompressed samples sampleIndex
+            if not audioSource.isPlaying then
+                audioSource.Play()
+            do! playbackThread
+        }
+    Async.StartImmediate(playbackThread, cancellationToken)
+
+    let decompressor = new AcmMp3FrameDecompressor(waveFormat)
+    let decompressChannel = new BlockingQueueAgent<FrameData>(Int32.MaxValue)
+    let rec decompressThread =
+        async {
+            let! frameData = decompressChannel.AsyncGet()
+            let samples = decompressFrame decompressor frameData.rawData
+            do! playbackChannel.AsyncAdd <| struct (samples, frameData.sampleIndex)
+            do! decompressThread
+        }
+    Async.Start(decompressThread, cancellationToken)
+
     {   audioSource = audioSource
         pcmHeader = pcmHeader
-        decompressor = new AcmMp3FrameDecompressor(waveFormat)
+        decompressor = decompressor
         disposed = false
+        decompressChannel = decompressChannel
+        playbackChannel = playbackChannel
         onFrameDecompressed = onFrameDecompressed
     }
 
 /// Set the audio receiver frame data, and play it if the audio source hasn't started yet.
 let onReceiveFrame frameData = function
     | None -> ()
-    | Some receiver ->
-        if not (isNull receiver.audioSource) && not (isNull receiver.audioSource.clip) then
-            let samples = decompressFrame receiver.decompressor frameData.rawData
-            if samples.Length > 0 then
-                ignore <| receiver.audioSource.clip.SetData(samples, frameData.sampleIndex)
-                receiver.onFrameDecompressed samples frameData.sampleIndex
-            if not receiver.audioSource.isPlaying then
-                receiver.audioSource.Play()
+    | Some (receiver: AudioReceiver) ->
+        Async.StartImmediate <| receiver.decompressChannel.AsyncAdd frameData

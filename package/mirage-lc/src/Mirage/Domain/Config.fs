@@ -4,6 +4,8 @@ open BepInEx
 open FSharpPlus
 open System
 open System.IO
+open System.Reflection
+open System.Collections.Generic
 open System.Runtime.Serialization
 open BepInEx.Configuration
 open Unity.Netcode
@@ -11,8 +13,6 @@ open Unity.Collections
 open Mirage.Prelude
 open Mirage.PluginInfo
 open Mirage.Domain.Logger
-open System.Reflection
-open System.Collections.Generic
 
 let private loadConfig configName = ConfigFile(Path.Combine(Paths.ConfigPath, $"Mirage.{configName}.cfg"), true)
 
@@ -214,7 +214,12 @@ let private toSyncedConfig () =
     }
 
 /// Get the currently synchronized config. This should only be used while in-game (not inside the menu).
-let getConfig () = Option.defaultWith (konst <| toSyncedConfig()) syncedConfig
+let getConfig () =
+    if syncedConfig.IsNone then
+        logWarning "syncedConfig has not been initialized yet."
+    syncedConfig.Value
+
+let internal getLocalConfig () = localConfig
 
 /// An action for synchronizing the <b>SyncedConfig</b>.
 type internal SyncAction = RequestSync | ReceiveSync
@@ -264,6 +269,7 @@ let internal requestSync () =
 
 let private onRequestSync clientId _ =
     if isHost() then
+        syncedConfig <- Some <| toSyncedConfig()
         let bytes = serializeToBytes <| getConfig()
         let bytesLength = bytes.Length
         use writer = new FastBufferWriter(bytesLength + sizeof<int32>, Allocator.Temp)
@@ -294,8 +300,6 @@ let internal registerHandler action =
     let register handler = messageManager().RegisterNamedMessageHandler(message, handler)
     let callback =
         match action with
-            | RequestSync ->
-                syncedConfig <- Some <| toSyncedConfig()
-                onRequestSync
+            | RequestSync -> onRequestSync
             | ReceiveSync -> onReceiveSync
     register callback

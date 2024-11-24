@@ -14,15 +14,13 @@ type AudioSender =
         {   sendFrame: FrameData -> unit
             mp3Reader: Mp3Reader
             channel: BlockingQueueAgent<Option<FrameData>>
-            canceller: CancellationTokenSource
+            cancellationToken: CancellationToken
             mutable disposed: bool
         }
     interface IDisposable with
         member this.Dispose() =
             if not this.disposed then
                 this.disposed <- true
-                this.canceller.Cancel()
-                dispose this.canceller
                 dispose this.mp3Reader
                 dispose this.channel
 
@@ -35,12 +33,12 @@ type AudioSender =
 /// <param name="filePath">
 /// Source audio to stream from, supporting only <b>.wav</b> audio files.
 /// </param>
-let AudioSender sendFrame waveReader =
+let AudioSender sendFrame waveReader cancellationToken =
     let sender =
         {   sendFrame = sendFrame
             mp3Reader = waveReader
             channel = new BlockingQueueAgent<Option<FrameData>>(Int32.MaxValue)
-            canceller = new CancellationTokenSource()
+            cancellationToken = cancellationToken
             disposed = false
         }
     sender
@@ -63,7 +61,7 @@ let sendAudio sender =
         }
 
     // Start the producer on a separate thread.
-    Async.Start(producer, sender.canceller.Token)
+    Async.Start(producer, sender.cancellationToken)
 
     // Start the consumer in the current thread.
-    Async.StartImmediate(consumer, sender.canceller.Token)
+    Async.StartImmediate(consumer, sender.cancellationToken)
