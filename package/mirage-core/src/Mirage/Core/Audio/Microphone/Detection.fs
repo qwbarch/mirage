@@ -69,7 +69,7 @@ type VoiceDetector<'State> =
 
 /// Initialize a vad detector by providing a vad algorithm, an action to
 /// perform when speech is detected, as well as a source to read samples from.
-let VoiceDetector<'State> minSilenceDurationMs (forceProbability: 'State -> Option<float32>) (detectSpeech: DetectVoice) (onVoiceDetected: DetectAction -> Async<Unit>) =
+let VoiceDetector<'State> minSilenceDurationMs (forceProbability: 'State -> Option<float32>) (detectSpeech: DetectVoice) (onVoiceDetectedWithState: 'State -> DetectAction -> Async<Unit>) =
     let minSilenceSamples = float32 SamplingRate * float32 minSilenceDurationMs / 1000f
     let agent = new BlockingQueueAgent<ValueTuple<'State, ResampledAudio>>(Int32.MaxValue)
     let samples =
@@ -83,6 +83,7 @@ let VoiceDetector<'State> minSilenceDurationMs (forceProbability: 'State -> Opti
     let rec consumer =
         async {
             let! struct (state, currentAudio) = agent.AsyncGet()
+            let onVoiceDetected = onVoiceDetectedWithState state
             &currentIndex += currentAudio.original.samples.Length
             samples.original.AddRange currentAudio.original.samples
             samples.resampled.AddRange currentAudio.resampled.samples

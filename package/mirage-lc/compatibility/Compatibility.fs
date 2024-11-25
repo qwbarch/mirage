@@ -45,6 +45,8 @@ type LethalSettingsArgs =
         setLocalPlayerVolume: float32 -> unit
         getNeverDeleteRecordings: unit -> bool
         setNeverDeleteRecordings: bool -> unit
+        getAllowRecordVoice: unit -> bool
+        setAllowRecordVoice: bool -> unit
     }
 
 let initLethalSettings settings =
@@ -67,6 +69,11 @@ let initLethalSettings settings =
                             Text = "Never delete recordings",
                             Value = settings.getNeverDeleteRecordings(),
                             OnValueChanged = fun _ value -> settings.setNeverDeleteRecordings value
+                        )
+                        ToggleComponent(
+                            Text = "Allow record voice",
+                            Value = settings.getAllowRecordVoice(),
+                            OnValueChanged = fun _ value -> settings.setAllowRecordVoice value
                         )
                     |]
             ),

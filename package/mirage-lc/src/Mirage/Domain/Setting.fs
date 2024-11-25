@@ -15,11 +15,14 @@ type Settings =
         localPlayerVolume: float32
         /// If set to false, recordings are deleted when closing the game by default.
         neverDeleteRecordings: bool
+        /// If set to false, recordings will not be created.
+        allowRecordVoice: bool
     }
 
 let defaultSettings =
-    {   localPlayerVolume = 1.0f
+    {   localPlayerVolume = 0.5f
         neverDeleteRecordings = false
+        allowRecordVoice = true
     }
 
 let mutable private settings = defaultSettings
@@ -57,5 +60,7 @@ let initSettings filePath =
                 setLocalPlayerVolume = fun value -> saveSettings { settings with localPlayerVolume = value / 100.0f }
                 getNeverDeleteRecordings = fun () -> settings.neverDeleteRecordings
                 setNeverDeleteRecordings = fun value -> saveSettings { settings with neverDeleteRecordings = value }
+                getAllowRecordVoice = fun () -> settings.allowRecordVoice
+                setAllowRecordVoice = fun value -> saveSettings { settings with allowRecordVoice = value }
             }
     }

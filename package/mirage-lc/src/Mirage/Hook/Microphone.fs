@@ -14,6 +14,7 @@ open Mirage.Core.Audio.Microphone.Resampler
 open Mirage.Core.Audio.Microphone.Detection
 open Mirage.Core.Audio.Microphone.Recorder
 open Mirage.Domain.Config
+open Mirage.Domain.Setting
 
 let [<Literal>] SamplesPerWindow = 1024
 
@@ -25,6 +26,13 @@ type RecordState =
         isPlayerDead: bool
         pushToTalkEnabled: bool
         isMuted: bool
+        allowRecordVoice: bool
+    }
+
+[<Struct>]
+type ProcessingState =
+    {   forcedProbability: Option<float32>
+        allowRecordVoice: bool
     }
 
 let private channel = new BlockingQueueAgent<RecordState>(Int32.MaxValue)
@@ -42,13 +50,14 @@ type MicrophoneSubscriber() =
                             isPlayerDead = StartOfRound.Instance.localPlayerController.isPlayerDead
                             pushToTalkEnabled = IngamePlayerSettings.Instance.settings.pushToTalk
                             isMuted = getDissonance().IsMuted
+                            allowRecordVoice = getSettings().allowRecordVoice
                         }
         member _.Reset() = ()
 
 let readMicrophone recordingDirectory =
     let silero = SileroVAD SamplesPerWindow
-    let recorder = Recorder localConfig.MinAudioDurationMs.Value recordingDirectory << konst <| result  ()
-    let voiceDetector = VoiceDetector localConfig.MinSilenceDurationMs.Value id (result << detectSpeech silero) (writeRecorder recorder)
+    let recorder = Recorder localConfig.MinAudioDurationMs.Value recordingDirectory _.allowRecordVoice << konst <| result  ()
+    let voiceDetector = VoiceDetector localConfig.MinSilenceDurationMs.Value _.forcedProbability (result << detectSpeech silero) (writeRecorder recorder)
     let resampler = Resampler (writeDetector voiceDetector)
     let rec consumer =
         async {
@@ -58,11 +67,14 @@ let readMicrophone recordingDirectory =
                     {   samples = state.samples
                         format = state.format
                     }
-                let probability =
-                    if state.isMuted then Some 0f
-                    else if state.pushToTalkEnabled then Some 1f
-                    else None
-                Async.StartImmediate <| writeResampler resampler (probability, frame)
+                let processingState =
+                    {   forcedProbability =
+                            if state.isMuted then Some 0f
+                            else if state.pushToTalkEnabled then Some 1f
+                            else None
+                        allowRecordVoice = getSettings().allowRecordVoice
+                    }
+                Async.StartImmediate <| writeResampler resampler (processingState, frame)
             do! consumer
         }
     Async.Start consumer

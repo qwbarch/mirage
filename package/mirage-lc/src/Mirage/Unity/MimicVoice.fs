@@ -15,6 +15,7 @@ open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicPlayer
 open Mirage.Domain.Config
 open Mirage.Domain.Setting
+open System.Diagnostics
 
 let private random = Random()
 
@@ -27,26 +28,39 @@ type MimicVoice() as self =
     let mutable enemyAI: EnemyAI = null
 
     let startVoiceMimic () =
-        let mimicVoice =
+        let mimicVoice debug =
             map ignore << OptionT.run <| monad {
                 try
                     if not (isNull enemyAI)
                        && not (isNull mimicPlayer.MimickingPlayer)
                        && mimicPlayer.MimickingPlayer = StartOfRound.Instance.localPlayerController
                     then
+                        debug "Before getRecording."
                         let! recording = OptionT getRecording
-                        do! lift <| audioStream.StreamAudioFromFile recording
+                        debug $"Found recording: {recording}"
+                        do! lift <| audioStream.StreamAudioFromFile(recording, debug)
                 with | error -> logError $"Error occurred while mimicking voice: {error}"
             }
         let rec runMimicLoop =
             async {
+                let guid = Guid.NewGuid()
+                let sw = Stopwatch.StartNew()
+                let debug message =
+                    if not (isNull enemyAI) && not (isNull mimicPlayer) && not (isNull mimicPlayer.MimickingPlayer) then
+                        let s = sw.Elapsed.TotalMilliseconds.ToString("F2")
+                        logInfo $"{enemyAI.enemyType.enemyName} - {guid} - Elapsed: {s} - {message}"
                 let delay =
                     if enemyAI :? MaskedPlayerEnemy then
                         random.Next(getConfig().minimumDelayMasked, getConfig().maximumDelayMasked + 1)
                     else
                         random.Next(getConfig().minimumDelayNonMasked, getConfig().maximumDelayNonMasked + 1)
-                do! mimicVoice
+                debug "Before mimicVoice"
+                do! mimicVoice debug
+                debug $"After mimicVoice. Sleeping for {float delay / 1000.0} seconds."
+                let sw2 = Stopwatch.StartNew()
                 do! Async.Sleep delay
+                let s = sw2.Elapsed.TotalMilliseconds.ToString("F2")
+                debug $"Finished sleeping. Waited for {s} seconds."
                 do! runMimicLoop
             }
         Async.StartImmediate(runMimicLoop, self.destroyCancellationToken)

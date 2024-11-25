@@ -39,16 +39,17 @@ type RecordAction
     | RecordEnd of RecordEnd
 
 /// Records audio from a live microphone feed.
-type Recorder =
-    private { agent: BlockingQueueAgent<DetectAction> }
+type Recorder<'State> =
+    private { agent: BlockingQueueAgent<ValueTuple<'State, DetectAction>> }
     interface IDisposable with
         member this.Dispose() = dispose this.agent
 
-let Recorder minAudioDurationMs directory (onRecording: RecordAction -> Async<Unit>) =
-    let agent = new BlockingQueueAgent<DetectAction>(Int32.MaxValue)
+let Recorder<'State> minAudioDurationMs directory (allowRecordVoice: 'State -> bool) (onRecordingWithState: 'State -> RecordAction -> Async<Unit>) =
+    let agent = new BlockingQueueAgent<ValueTuple<'State, DetectAction>>(Int32.MaxValue)
     let rec consumer =
         async {
-            let! action = agent.AsyncGet() 
+            let! struct (state, action) = agent.AsyncGet() 
+            let onRecording = onRecordingWithState state
             match action with
                 | DetectStart payload ->
                     do! onRecording << RecordStart <|
@@ -56,7 +57,7 @@ let Recorder minAudioDurationMs directory (onRecording: RecordAction -> Async<Un
                             resampledFormat = payload.resampledFormat
                         }
                 | DetectEnd payload ->
-                    if payload.audioDurationMs >= minAudioDurationMs then
+                    if payload.audioDurationMs >= minAudioDurationMs && allowRecordVoice state then
                         use! mp3Writer = createMp3Writer directory payload.fullAudio.original.format LAMEPreset.STANDARD_FAST
                         do! writeMp3File mp3Writer payload.fullAudio.original.samples
                         do! onRecording << RecordEnd <|

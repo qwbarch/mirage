@@ -106,13 +106,15 @@ type AudioStream() as self =
         iter dispose audioReceiver
 
     /// Stream audio from the player (can be host or non-host) to all other players.
-    member this.StreamAudioFromFile(filePath) =
+    member this.StreamAudioFromFile(filePath, debug) =
         async {
             let localId = StartOfRound.Instance.localPlayerController.actualClientId
             if Some localId <> this.AllowedSenderId then
                 invalidOp $"StreamAudioFromFile cannot be run from this client. LocalId: {localId}. AllowedId: {this.AllowedSenderId}."
             else
+                debug "Before loading mp3 file."
                 let! mp3Reader = readMp3File filePath
+                debug $"Loaded mp3 file. Audio duration (seconds): {mp3Reader.reader.TotalTime.TotalSeconds}"
                 if this.IsHost then
                     do! streamAudioHost mp3Reader
                 else 
