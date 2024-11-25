@@ -40,15 +40,15 @@ type RecordAction
 
 /// Records audio from a live microphone feed.
 type Recorder<'State> =
-    private { agent: BlockingQueueAgent<ValueTuple<'State, DetectAction>> }
+    private { agent: BlockingQueueAgent<Tuple<'State, DetectAction>> }
     interface IDisposable with
         member this.Dispose() = dispose this.agent
 
 let Recorder<'State> minAudioDurationMs directory (allowRecordVoice: 'State -> bool) (onRecordingWithState: 'State -> RecordAction -> Async<Unit>) =
-    let agent = new BlockingQueueAgent<ValueTuple<'State, DetectAction>>(Int32.MaxValue)
+    let agent = new BlockingQueueAgent<Tuple<'State, DetectAction>>(Int32.MaxValue)
     let rec consumer =
         async {
-            let! struct (state, action) = agent.AsyncGet() 
+            let! (state, action) = agent.AsyncGet() 
             let onRecording = onRecordingWithState state
             match action with
                 | DetectStart payload ->

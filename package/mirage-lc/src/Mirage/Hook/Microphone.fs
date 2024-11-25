@@ -56,8 +56,8 @@ type MicrophoneSubscriber() =
 
 let readMicrophone recordingDirectory =
     let silero = SileroVAD SamplesPerWindow
-    let recorder = Recorder localConfig.MinAudioDurationMs.Value recordingDirectory _.allowRecordVoice << konst <| result  ()
-    let voiceDetector = VoiceDetector localConfig.MinSilenceDurationMs.Value _.forcedProbability (result << detectSpeech silero) (writeRecorder recorder)
+    let recorder = Recorder localConfig.MinAudioDurationMs.Value recordingDirectory _.allowRecordVoice << konst << konst <| result ()
+    let voiceDetector = VoiceDetector localConfig.MinSilenceDurationMs.Value _.forcedProbability (result << detectSpeech silero) (curry <| writeRecorder recorder)
     let resampler = Resampler (writeDetector voiceDetector)
     let rec consumer =
         async {
