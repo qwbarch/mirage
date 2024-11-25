@@ -10,6 +10,19 @@ open Newtonsoft.Json
 open Mirage.PluginInfo
 open Mirage.Compatibility
 
+/// Mirrors __Settings__ to represent the serializable format. Fields are nullable to make acting new fields seamless.
+type SavedSettings =
+    {   localPlayerVolume: Nullable<float32>
+        neverDeleteRecordings: Nullable<bool>
+        allowRecordVoice: Nullable<bool>
+    }
+
+let private defaultSettings =
+    {   localPlayerVolume = Nullable 0.5f
+        neverDeleteRecordings = Nullable false
+        allowRecordVoice = Nullable true
+    }
+
 type Settings =
     {   /// Volume used for voice play-back on monsters mimicking the local player. Must be a value between 0.0f-1.0f
         localPlayerVolume: float32
@@ -19,17 +32,19 @@ type Settings =
         allowRecordVoice: bool
     }
 
-let defaultSettings =
-    {   localPlayerVolume = 0.5f
-        neverDeleteRecordings = false
-        allowRecordVoice = true
+let private fromSavedSettings savedSettings =
+    let getValue (getField: SavedSettings -> Nullable<'A>) =
+        Option.defaultValue ((getField defaultSettings).Value) <| Option.ofNullable (getField savedSettings)
+    {   localPlayerVolume = getValue _.localPlayerVolume
+        neverDeleteRecordings = getValue _.neverDeleteRecordings
+        allowRecordVoice = getValue _.allowRecordVoice
     }
 
-let mutable private settings = defaultSettings
+let mutable private settings = fromSavedSettings defaultSettings
 
 let getSettings () = settings
 
-let initSettings filePath =
+let internal initSettings filePath =
     let channel =
         let agent = new BlockingQueueAgent<Settings>(Int32.MaxValue)
         let rec consumer =
@@ -45,13 +60,13 @@ let initSettings filePath =
         settings <- updatedSettings
         channel.Add updatedSettings
     Async.StartImmediate <| async {
-        let! previousSettings =
+        let! savedSettings =
             Async.AwaitTask <|
                 if File.Exists filePath then
-                    JsonConvert.DeserializeObject<Settings> <!> File.ReadAllTextAsync filePath
+                    JsonConvert.DeserializeObject<SavedSettings> <!> File.ReadAllTextAsync filePath
                 else
                     result defaultSettings
-        settings <- previousSettings
+        settings <- fromSavedSettings savedSettings
         initLethalSettings
             {   pluginId = pluginId
                 pluginVersion = pluginVersion

@@ -53,6 +53,7 @@
     <Compile Include="Mirage/PluginInfo.fs" />
     <Compile Include="Mirage/Domain/Netcode.fs" />
     <Compile Include="Mirage/Domain/Logger.fs" />
+    <Compile Include="Mirage/Domain/Directory.fs" />
     <Compile Include="Mirage/Domain/Audio/Frame.fs" />
     <Compile Include="Mirage/Domain/Audio/Receiver.fs" />
     <Compile Include="Mirage/Domain/Audio/Stream.fs" />

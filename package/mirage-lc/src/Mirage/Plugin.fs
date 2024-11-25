@@ -21,6 +21,7 @@ open Mirage.Hook.Config
 open Mirage.Hook.Microphone
 open Mirage.Hook.Dissonance
 open Mirage.Hook.MaskedPlayerEnemy
+open Mirage.Domain.Directory
 
 [<BepInPlugin(pluginId, pluginName, pluginVersion)>]
 [<BepInDependency(LethalSettings.GeneratedPluginInfo.Identifier, BepInDependency.DependencyFlags.SoftDependency)>]
@@ -33,9 +34,6 @@ type Plugin() =
         let assembly = Assembly.GetExecutingAssembly()
         let lameDllPath = Path.GetDirectoryName this.Info.Location
         let lameLoaded = LameDLL.LoadNativeDLL [|lameDllPath|]
-        let baseDirectory = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName)
-        let mirageDirectory = Path.Join(baseDirectory, "Mirage")
-        let recordingDirectory = Path.Join(mirageDirectory, "Recording")
         ignore <| Directory.CreateDirectory mirageDirectory
         if not lameLoaded then
             logError <|
@@ -49,7 +47,6 @@ type Plugin() =
 
         initLethalConfig assembly localConfig.General
         initLobbyCompatibility pluginName pluginVersion
-        initRecordingManager recordingDirectory
         initSettings <| Path.Join(mirageDirectory, "settings.json")
         initNetcodePatcher()
         Async.StartImmediate deleteRecordings

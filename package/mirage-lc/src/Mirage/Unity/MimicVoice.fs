@@ -22,6 +22,7 @@ let private random = Random()
 type MimicVoice() as self =
     inherit NetworkBehaviour()
 
+    let recordingManager = RecordingManager()
     let mutable voicePlayback: GameObject = null
     let mutable audioStream: AudioStream = null
     let mutable mimicPlayer: MimicPlayer = null
@@ -36,7 +37,7 @@ type MimicVoice() as self =
                        && mimicPlayer.MimickingPlayer = StartOfRound.Instance.localPlayerController
                     then
                         debug "Before getRecording."
-                        let! recording = OptionT getRecording
+                        let! recording = OptionT <| getRecording recordingManager
                         debug $"Found recording: {recording}"
                         do! lift <| audioStream.StreamAudioFromFile(recording, debug)
                 with | error -> logError $"Error occurred while mimicking voice: {error}"
