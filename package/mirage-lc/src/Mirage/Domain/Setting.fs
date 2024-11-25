@@ -18,7 +18,7 @@ type SavedSettings =
     }
 
 let private defaultSettings =
-    {   localPlayerVolume = Nullable 0.5f
+    {   localPlayerVolume = Nullable 0.8f
         neverDeleteRecordings = Nullable false
         allowRecordVoice = Nullable true
     }
