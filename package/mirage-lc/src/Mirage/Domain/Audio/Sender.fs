@@ -57,7 +57,12 @@ let sendAudio sender =
                     | None ->
                         running <- false
                         dispose sender
-                    | Some frame -> sender.sendFrame frame
+                    | Some frame ->
+                        try
+                            sender.sendFrame frame
+                        with
+                            // This can happen when returning to the main menu, due to the "sender" argument being null at runtime.
+                            | :? NullReferenceException -> ()
         }
 
     // Start the producer on a separate thread.

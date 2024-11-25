@@ -41,51 +41,71 @@ type ResampledAudio =
         resampled: AudioFrame
     }
 
+[<Struct>]
+type ResamplerInput<'State>
+    = ResamplerInput of ValueTuple<'State, AudioFrame>
+    | Reset
+
+[<Struct>]
+type ResamplerOutput<'State>
+    = ResamplerOutput of ValueTuple<'State, ResampledAudio>
+    | Reset
+
 /// A live resampler for a microphone's input.
 type Resampler<'State> =
-    private { agent: BlockingQueueAgent<ValueTuple<'State, AudioFrame>> }
+    private { agent: BlockingQueueAgent<ResamplerInput<'State>> }
     interface IDisposable with
         member this.Dispose() = dispose this.agent
 
-let Resampler<'State> (onResampled: ValueTuple<'State, ResampledAudio> -> Async<Unit>) =
+let Resampler<'State> (onResampled: ResamplerOutput<'State> -> Async<Unit>) =
     let resampler = WdlResampler()
     resampler.SetMode(true, 2, false)
     resampler.SetFilterParms()
     resampler.SetFeedMode true
-    let agent = new BlockingQueueAgent<ValueTuple<'State, AudioFrame>>(Int32.MaxValue)    
+    let agent = new BlockingQueueAgent<ResamplerInput<'State>>(Int32.MaxValue)    
     let originalSamples = new List<float32>()
     let resampledSamples = new List<float32>()
     let rec consumer =
         async {
-            let! struct (state, frame) = agent.AsyncGet()
-            originalSamples.AddRange frame.samples
-            resampledSamples.AddRange <|
-                if frame.format.SampleRate <> SampleRate then
-                    resampler.SetRates(frame.format.SampleRate, SampleRate)
-                    resample resampler frame.samples
-                else
-                    frame.samples
-            if resampledSamples.Count >= SamplesPerWindow then
-                let original =
-                    let sampleSize = int <| WindowDuration * float frame.format.SampleRate
-                    let samples = originalSamples.GetRange(0, sampleSize)
-                    originalSamples.RemoveRange(0, sampleSize)
-                    samples.ToArray()
-                let resampled =
-                    let samples = resampledSamples.GetRange(0, SamplesPerWindow)
-                    resampledSamples.RemoveRange(0, SamplesPerWindow)
-                    samples.ToArray()
-                let resampledAudio =
-                    {   original =
-                            {   samples = original
-                                format = frame.format
-                            }
-                        resampled =
-                            {   samples = resampled
-                                format = WriterFormat
-                            }
+            do! agent.AsyncGet() >>= function
+                | ResamplerInput.Reset ->
+                    async {
+                        originalSamples.Clear()
+                        resampledSamples.Clear()
+                        do! onResampled Reset
                     }
-                do! onResampled <| struct (state, resampledAudio)
+                | ResamplerInput struct (state, frame) ->
+                    async {
+                        originalSamples.AddRange frame.samples
+                        resampledSamples.AddRange <|
+                            if frame.format.SampleRate <> SampleRate then
+                                resampler.SetRates(frame.format.SampleRate, SampleRate)
+                                resample resampler frame.samples
+                            else
+                                frame.samples
+                        if resampledSamples.Count >= SamplesPerWindow then
+                            let original =
+                                let sampleSize = int <| WindowDuration * float frame.format.SampleRate
+                                let samples = originalSamples.GetRange(0, sampleSize)
+                                originalSamples.RemoveRange(0, sampleSize)
+                                samples.ToArray()
+                            let resampled =
+                                let samples = resampledSamples.GetRange(0, SamplesPerWindow)
+                                resampledSamples.RemoveRange(0, SamplesPerWindow)
+                                samples.ToArray()
+                            let resampledAudio =
+                                {   original =
+                                        {   samples = original
+                                            format = frame.format
+                                        }
+                                    resampled =
+                                        {   samples = resampled
+                                            format = WriterFormat
+                                        }
+                                }
+                            do! onResampled << ResamplerOutput <| struct (state, resampledAudio)
+                        do! consumer
+                    }
             do! consumer
         }
     Async.Start consumer

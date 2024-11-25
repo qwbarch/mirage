@@ -44,12 +44,23 @@ type Recorder<'State> =
     interface IDisposable with
         member this.Dispose() = dispose this.agent
 
-let Recorder<'State> minAudioDurationMs directory (allowRecordVoice: 'State -> bool) (onRecordingWithState: 'State -> RecordAction -> Async<Unit>) =
+type RecorderArgs<'State> =
+    {   /// Minimum amount of audio duration that a recording should contain. If the minimum isn't met, the recording is not written to disk.
+        minAudioDurationMs: int
+        /// Directory to write recordings to.
+        directory: string
+        /// Whether recordings should be created or not, based on the current state.
+        allowRecordVoice: 'State -> bool
+        /// Function that gets called every time a recording is in the process of being created.
+        onRecording: 'State -> RecordAction -> Async<Unit>
+    }
+
+let Recorder<'State> args =
     let agent = new BlockingQueueAgent<Tuple<'State, DetectAction>>(Int32.MaxValue)
     let rec consumer =
         async {
             let! (state, action) = agent.AsyncGet() 
-            let onRecording = onRecordingWithState state
+            let onRecording = args.onRecording state
             match action with
                 | DetectStart payload ->
                     do! onRecording << RecordStart <|
@@ -57,8 +68,8 @@ let Recorder<'State> minAudioDurationMs directory (allowRecordVoice: 'State -> b
                             resampledFormat = payload.resampledFormat
                         }
                 | DetectEnd payload ->
-                    if payload.audioDurationMs >= minAudioDurationMs && allowRecordVoice state then
-                        use! mp3Writer = createMp3Writer directory payload.fullAudio.original.format LAMEPreset.STANDARD_FAST
+                    if payload.audioDurationMs >= args.minAudioDurationMs && args.allowRecordVoice state then
+                        use! mp3Writer = createMp3Writer args.directory payload.fullAudio.original.format LAMEPreset.STANDARD_FAST
                         do! writeMp3File mp3Writer payload.fullAudio.original.samples
                         do! onRecording << RecordEnd <|
                             {   mp3Writer = mp3Writer

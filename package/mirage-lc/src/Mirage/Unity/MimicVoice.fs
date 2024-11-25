@@ -47,7 +47,8 @@ type MimicVoice() as self =
                 let guid = Guid.NewGuid()
                 let sw = Stopwatch.StartNew()
                 let debug message =
-                    if not (isNull enemyAI) && not (isNull mimicPlayer) && not (isNull mimicPlayer.MimickingPlayer) then
+                    if false then
+                    //if not (isNull enemyAI) && not (isNull mimicPlayer) && not (isNull mimicPlayer.MimickingPlayer) then
                         let s = sw.Elapsed.TotalMilliseconds.ToString("F2")
                         logInfo $"{enemyAI.enemyType.enemyName} - {guid} - Elapsed: {s} - {message}"
                 let delay =

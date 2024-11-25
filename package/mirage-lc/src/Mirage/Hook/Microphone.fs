@@ -15,6 +15,7 @@ open Mirage.Core.Audio.Microphone.Detection
 open Mirage.Core.Audio.Microphone.Recorder
 open Mirage.Domain.Config
 open Mirage.Domain.Setting
+open Mirage.Domain.Logger
 
 let [<Literal>] SamplesPerWindow = 1024
 
@@ -35,7 +36,7 @@ type ProcessingState =
         allowRecordVoice: bool
     }
 
-let private channel = new BlockingQueueAgent<RecordState>(Int32.MaxValue)
+let private channel = new BlockingQueueAgent<ValueOption<RecordState>>(Int32.MaxValue)
 let mutable private isReady = false
 
 type MicrophoneSubscriber() =
@@ -43,7 +44,7 @@ type MicrophoneSubscriber() =
         member _.ReceiveMicrophoneData(buffer, format) =
             if not <| isNull StartOfRound.Instance then
                 Async.StartImmediate <<
-                    channel.AsyncAdd <|
+                    channel.AsyncAdd << ValueSome <|
                         {   samples = buffer.ToArray()
                             format= WaveFormat(format.SampleRate, format.Channels)
                             isReady = isReady
@@ -52,29 +53,46 @@ type MicrophoneSubscriber() =
                             isMuted = getDissonance().IsMuted
                             allowRecordVoice = getSettings().allowRecordVoice
                         }
-        member _.Reset() = ()
+        member _.Reset() =
+            logWarning "microphone reset"
+            Async.StartImmediate <| channel.AsyncAdd ValueNone
 
 let readMicrophone recordingDirectory =
     let silero = SileroVAD SamplesPerWindow
-    let recorder = Recorder localConfig.MinAudioDurationMs.Value recordingDirectory _.allowRecordVoice << konst << konst <| result ()
-    let voiceDetector = VoiceDetector localConfig.MinSilenceDurationMs.Value _.forcedProbability (result << detectSpeech silero) (curry <| writeRecorder recorder)
+    let recorder =
+        Recorder
+            {   minAudioDurationMs = localConfig.MinAudioDurationMs.Value
+                directory = recordingDirectory
+                allowRecordVoice = _.allowRecordVoice
+                onRecording = konst << konst <| result ()
+            }
+    let voiceDetector =
+        VoiceDetector
+            {   minSilenceDurationMs = localConfig.MinSilenceDurationMs.Value
+                forcedProbability = _.forcedProbability
+                detectSpeech = result << detectSpeech silero
+                onVoiceDetected = curry <| writeRecorder recorder
+            }
     let resampler = Resampler (writeDetector voiceDetector)
+    let resample = Async.StartImmediate << writeResampler resampler
     let rec consumer =
         async {
-            let! state = channel.AsyncGet()
-            if state.isReady && (getConfig().enableRecordVoiceWhileDead || not state.isPlayerDead) then
-                let frame =
-                    {   samples = state.samples
-                        format = state.format
-                    }
-                let processingState =
-                    {   forcedProbability =
-                            if state.isMuted then Some 0f
-                            else if state.pushToTalkEnabled then Some 1f
-                            else None
-                        allowRecordVoice = getSettings().allowRecordVoice
-                    }
-                Async.StartImmediate <| writeResampler resampler (processingState, frame)
+            do! channel.AsyncGet() |>> function
+                | ValueNone -> resample ResamplerInput.Reset
+                | ValueSome state ->
+                    if state.isReady && (getConfig().enableRecordVoiceWhileDead || not state.isPlayerDead) then
+                        let frame =
+                            {   samples = state.samples
+                                format = state.format
+                            }
+                        let processingState =
+                            {   forcedProbability =
+                                    if state.isMuted then Some 0f
+                                    else if state.pushToTalkEnabled then Some 1f
+                                    else None
+                                allowRecordVoice = getSettings().allowRecordVoice
+                            }
+                        resample <| ResamplerInput (processingState, frame)
             do! consumer
         }
     Async.Start consumer

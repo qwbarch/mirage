@@ -46,11 +46,11 @@ let createMp3Writer (directory: string) inputFormat (preset: LAMEPreset) =
                     | Dispose ->
                         if not disposed then
                             disposed <- true
-                            do! Async.AwaitTask(writer.FlushAsync())
+                            writer.Flush()
                             dispose writer
                             dispose channel
             }
-        Async.Start consumer
+        Async.StartImmediate <| forkReturn consumer
         return {
             channel = channel
             writer = writer
