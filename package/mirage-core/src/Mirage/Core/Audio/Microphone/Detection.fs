@@ -95,14 +95,11 @@ let VoiceDetector<'State> args =
             do! channel.AsyncGet() >>= function
                 | Reset ->
                     async {
-                        // voiceDetected is not reset purposefully.
-                        // If the user is still speaking when a reset happens,
-                        // we do not want to trigger any detect actions until
-                        // they finish talking.
                         samples.original.Clear()
                         samples.resampled.Clear()
                         vadFrames <- []
                         endIndex <- 0
+                        voiceDetected <- false
                     }
                 | ResamplerOutput struct (state, currentAudio) ->
                     async {

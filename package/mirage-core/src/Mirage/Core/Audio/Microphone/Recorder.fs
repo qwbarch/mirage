@@ -69,7 +69,7 @@ let Recorder<'State> args =
                         }
                 | DetectEnd payload ->
                     if payload.audioDurationMs >= args.minAudioDurationMs && args.allowRecordVoice state then
-                        use! mp3Writer = createMp3Writer args.directory payload.fullAudio.original.format LAMEPreset.STANDARD_FAST
+                        use! mp3Writer = createMp3Writer args.directory payload.fullAudio.original.format LAMEPreset.STANDARD
                         do! writeMp3File mp3Writer payload.fullAudio.original.samples
                         do! onRecording << RecordEnd <|
                             {   mp3Writer = mp3Writer

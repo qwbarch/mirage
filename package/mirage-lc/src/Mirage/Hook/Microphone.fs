@@ -45,7 +45,6 @@ let private processingChannel = new BlockingQueueAgent<ValueOption<ProcessingInp
 /// A pool of sample buffers, to avoid creating instances of an array every time.
 let mutable private bufferSize = 0
 
-[<Struct>]
 type BufferInput =
     {   samples: Samples
         sampleRate: int
@@ -62,19 +61,23 @@ let private bufferChannel =
     let agent = new BlockingQueueAgent<BufferInput>(Int32.MaxValue)
     let rec consumer =
         async {
-            let! input = agent.AsyncGet()
-            let samples = Array.zeroCreate<float32> input.samples.Length
-            Array.Copy(input.samples, 0, samples, 0, input.samples.Length)
-            bufferPool.Enqueue input.samples
-            Async.StartImmediate << processingChannel.AsyncAdd << ValueSome <|
-                    {   samples = samples
-                        format = WaveFormat(input.sampleRate, input.channels)
-                        isReady = isReady
-                        isPlayerDead = StartOfRound.Instance.localPlayerController.isPlayerDead
-                        pushToTalkEnabled = IngamePlayerSettings.Instance.settings.pushToTalk
-                        isMuted = getDissonance().IsMuted
-                        allowRecordVoice = getSettings().allowRecordVoice
-                    }
+            try
+                let! input = agent.AsyncGet()
+                let samples = Array.zeroCreate<float32> input.samples.Length
+                //logInfo $"buffer size: {bufferPool.Count}"
+                Array.Copy(input.samples, 0, samples, 0, input.samples.Length)
+                bufferPool.Enqueue input.samples
+                if not (isNull StartOfRound.Instance) then
+                    Async.StartImmediate << processingChannel.AsyncAdd << ValueSome <|
+                            {   samples = samples
+                                format = WaveFormat(input.sampleRate, input.channels)
+                                isReady = isReady
+                                isPlayerDead = StartOfRound.Instance.localPlayerController.isPlayerDead
+                                pushToTalkEnabled = IngamePlayerSettings.Instance.settings.pushToTalk
+                                isMuted = getDissonance().IsMuted
+                                allowRecordVoice = getSettings().allowRecordVoice
+                            }
+            with | ex -> logError $"exception in bufferChannel {ex}"
             do! consumer
         }
     Async.Start consumer
@@ -84,20 +87,23 @@ type MicrophoneSubscriber() =
     interface IMicrophoneSubscriber with
         member _.ReceiveMicrophoneData(buffer, format) =
             if bufferSize <> buffer.Count then
+                logInfo $"buffer size changed: {buffer.Count}"
                 bufferSize <- buffer.Count
                 bufferPool.Clear()
                 for _ in 0..20 do
                     bufferPool.Enqueue(Array.zeroCreate<float32> buffer.Count)
             let mutable samples = null
-            if not (isNull StartOfRound.Instance) && bufferPool.TryDequeue(&samples) then
+            if bufferPool.TryDequeue(&samples) then
                 Array.Copy(buffer.Array, buffer.Offset, samples, 0, buffer.Count)
                 bufferChannel.Add <|
                     {   samples = samples
                         sampleRate = format.SampleRate
                         channels = format.Channels
                     }
+            else
+                logWarning "bufferPool is empty. Please report this issue on GitHub."
         member _.Reset() =
-            logWarning "microphone reset"
+            //logWarning "microphone reset"
             processingChannel.Add ValueNone
 
 let readMicrophone recordingDirectory =

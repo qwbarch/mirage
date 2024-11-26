@@ -9,6 +9,7 @@ open NAudio.Lame
 open Mirage.Core.Audio.PCM
 open System.IO
 open Mirage.Core.Async.Fork
+open NAudio.Wave
 
 type private Mp3Action
     = WriteSamples of float32[]
@@ -35,6 +36,9 @@ let createMp3Writer (directory: string) inputFormat (preset: LAMEPreset) =
         let writer = new LameMP3FileWriter(filePath, inputFormat, preset)
         let channel = new BlockingQueueAgent<Mp3Action>(Int32.MaxValue)
         let mutable disposed = false
+
+        //let waveWriter = new WaveFileWriter(Path.Join(directory, $"{fileId}.wav"), inputFormat)
+
         let rec consumer =
             async {
                 let! action = channel.AsyncGet()
@@ -42,11 +46,18 @@ let createMp3Writer (directory: string) inputFormat (preset: LAMEPreset) =
                     | WriteSamples samples ->
                         if not disposed then
                             do! writer.AsyncWrite <| toPCMBytes samples
+
+                            //waveWriter.WriteSamples(samples, 0, samples.Length)
+
                             do! consumer
                     | Dispose ->
                         if not disposed then
                             disposed <- true
                             do! Async.AwaitTask(writer.FlushAsync())
+
+                            //waveWriter.Flush()
+                            //dispose waveWriter
+
                             dispose writer
                             dispose channel
             }
