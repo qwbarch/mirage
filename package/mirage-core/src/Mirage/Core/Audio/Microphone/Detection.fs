@@ -90,9 +90,6 @@ let VoiceDetector<'State> args =
     let mutable endIndex = 0
     let mutable voiceDetected = false
 
-    // Keep track of whether a reset just happened or not.
-    // If a reset just happened and the user is still talking, we do not want their voice to be detected until they stop speaking.
-    let mutable resetted = false
     let rec consumer =
         async {
             do! channel.AsyncGet() >>= function
@@ -106,15 +103,10 @@ let VoiceDetector<'State> args =
                         samples.resampled.Clear()
                         vadFrames <- []
                         endIndex <- 0
-                        resetted <- true
                     }
                 | ResamplerOutput struct (state, currentAudio) ->
                     async {
-                        let onVoiceDetected action =
-                            async {
-                                if not resetted then
-                                    do! args.onVoiceDetected state action
-                            }
+                        let onVoiceDetected = args.onVoiceDetected state
                         &currentIndex += currentAudio.original.samples.Length
                         samples.original.AddRange currentAudio.original.samples
                         samples.resampled.AddRange currentAudio.resampled.samples
@@ -175,11 +167,9 @@ let VoiceDetector<'State> args =
                                 vadFrames <- []
                                 samples.original.Clear()
                                 samples.resampled.Clear()
-                                resetted <- false
                         else if not voiceDetected then
                             samples.original.Clear()
                             samples.resampled.Clear()
-                            resetted <- false
                         do! consumer
                     }
             do! consumer

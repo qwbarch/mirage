@@ -41,12 +41,12 @@ let createMp3Writer (directory: string) inputFormat (preset: LAMEPreset) =
                 match action with
                     | WriteSamples samples ->
                         if not disposed then
-                            writer.Write(toPCMBytes samples)
+                            do! writer.AsyncWrite <| toPCMBytes samples
                             do! consumer
                     | Dispose ->
                         if not disposed then
                             disposed <- true
-                            writer.Flush()
+                            do! Async.AwaitTask(writer.FlushAsync())
                             dispose writer
                             dispose channel
             }

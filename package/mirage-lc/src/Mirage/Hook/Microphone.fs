@@ -5,6 +5,7 @@ module Mirage.Hook.Microphone
 open Dissonance
 open Dissonance.Audio.Capture
 open System
+open System.Collections.Concurrent
 open Silero.API
 open FSharpPlus
 open FSharpx.Control
@@ -20,7 +21,7 @@ open Mirage.Domain.Logger
 let [<Literal>] SamplesPerWindow = 1024
 
 [<Struct>]
-type RecordState =
+type ProcessingInput =
     {   samples: Samples
         format: WaveFormat
         isReady: bool
@@ -36,26 +37,68 @@ type ProcessingState =
         allowRecordVoice: bool
     }
 
-let private channel = new BlockingQueueAgent<ValueOption<RecordState>>(Int32.MaxValue)
 let mutable private isReady = false
+
+/// A channel for pulling microphone data from __bufferChannel__ into a background thread to process.
+let private processingChannel = new BlockingQueueAgent<ValueOption<ProcessingInput>>(Int32.MaxValue)
+
+/// A pool of sample buffers, to avoid creating instances of an array every time.
+let mutable private bufferSize = 0
+
+[<Struct>]
+type BufferInput =
+    {   samples: Samples
+        sampleRate: int
+        channels: int
+    }
+
+let private bufferPool = new ConcurrentQueue<Samples>()
+
+/// A channel for pulling microphone data from the dissonance thread.
+/// The given audio samples points to an array that belongs to the buffer pool, but we cannot hold this reference for long.
+/// A deep copy of the audio samples is done, and then the input audio samples is returned to the buffer pool.
+/// Audio data is then sent to __processingChannel__, where the audio samples are safe to use and will not be mutated.
+let private bufferChannel =
+    let agent = new BlockingQueueAgent<BufferInput>(Int32.MaxValue)
+    let rec consumer =
+        async {
+            let! input = agent.AsyncGet()
+            let samples = Array.zeroCreate<float32> input.samples.Length
+            Array.Copy(input.samples, 0, samples, 0, input.samples.Length)
+            bufferPool.Enqueue input.samples
+            Async.StartImmediate << processingChannel.AsyncAdd << ValueSome <|
+                    {   samples = samples
+                        format = WaveFormat(input.sampleRate, input.channels)
+                        isReady = isReady
+                        isPlayerDead = StartOfRound.Instance.localPlayerController.isPlayerDead
+                        pushToTalkEnabled = IngamePlayerSettings.Instance.settings.pushToTalk
+                        isMuted = getDissonance().IsMuted
+                        allowRecordVoice = getSettings().allowRecordVoice
+                    }
+            do! consumer
+        }
+    Async.Start consumer
+    agent
 
 type MicrophoneSubscriber() =
     interface IMicrophoneSubscriber with
         member _.ReceiveMicrophoneData(buffer, format) =
-            if not <| isNull StartOfRound.Instance then
-                Async.StartImmediate <<
-                    channel.AsyncAdd << ValueSome <|
-                        {   samples = buffer.ToArray()
-                            format= WaveFormat(format.SampleRate, format.Channels)
-                            isReady = isReady
-                            isPlayerDead = StartOfRound.Instance.localPlayerController.isPlayerDead
-                            pushToTalkEnabled = IngamePlayerSettings.Instance.settings.pushToTalk
-                            isMuted = getDissonance().IsMuted
-                            allowRecordVoice = getSettings().allowRecordVoice
-                        }
+            if bufferSize <> buffer.Count then
+                bufferSize <- buffer.Count
+                bufferPool.Clear()
+                for _ in 0..20 do
+                    bufferPool.Enqueue(Array.zeroCreate<float32> buffer.Count)
+            let mutable samples = null
+            if not (isNull StartOfRound.Instance) && bufferPool.TryDequeue(&samples) then
+                Array.Copy(buffer.Array, buffer.Offset, samples, 0, buffer.Count)
+                bufferChannel.Add <|
+                    {   samples = samples
+                        sampleRate = format.SampleRate
+                        channels = format.Channels
+                    }
         member _.Reset() =
             logWarning "microphone reset"
-            Async.StartImmediate <| channel.AsyncAdd ValueNone
+            processingChannel.Add ValueNone
 
 let readMicrophone recordingDirectory =
     let silero = SileroVAD SamplesPerWindow
@@ -77,7 +120,7 @@ let readMicrophone recordingDirectory =
     let resample = Async.StartImmediate << writeResampler resampler
     let rec consumer =
         async {
-            do! channel.AsyncGet() |>> function
+            do! processingChannel.AsyncGet() |>> function
                 | ValueNone -> resample ResamplerInput.Reset
                 | ValueSome state ->
                     if state.isReady && (getConfig().enableRecordVoiceWhileDead || not state.isPlayerDead) then
@@ -117,4 +160,9 @@ let readMicrophone recordingDirectory =
     On.StartOfRound.add_ReviveDeadPlayers(fun orig self ->
         isReady <- false
         orig.Invoke self
+    )
+
+    On.MenuManager.add_Awake(fun orig self ->
+        orig.Invoke self
+        processingChannel.Add ValueNone
     )

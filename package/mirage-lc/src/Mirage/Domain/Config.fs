@@ -148,7 +148,7 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
                 + "Note: This config option is for advanced users only. If you don't know what you're doing, don't touch this option. This only affects voice activity users."
         bindAdvanced
             "Minimum silence duration (in milliseconds)"
-            2000
+            600
             <| ConfigDescription(description, tags = zero)
     
     member val MinAudioDurationMs =

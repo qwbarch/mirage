@@ -1,5 +1,9 @@
 ## Changelog
 
+### 1.2.0
+
+- Added a missing check that I had in the original Mirage.
+
 ### 1.1.2
 
 - Fixed using the wrong MaskedPlayerEnemy prefab.

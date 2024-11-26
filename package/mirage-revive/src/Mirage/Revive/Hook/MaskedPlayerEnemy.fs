@@ -84,11 +84,13 @@ let revivePlayersOnDeath () =
     // Spawn a masked enemy on player death.
     On.GameNetcodeStuff.PlayerControllerB.add_KillPlayerServerRpc(fun orig self playerId spawnBody bodyVelocity causeOfDeath deathAnimation positionOffset ->
         orig.Invoke(self, playerId, spawnBody, bodyVelocity, causeOfDeath, deathAnimation, positionOffset)
-        spawnMaskedEnemy self causeOfDeath deathAnimation spawnBody bodyVelocity
+        if self.IsHost && self <> StartOfRound.Instance.localPlayerController then
+            spawnMaskedEnemy self causeOfDeath deathAnimation spawnBody bodyVelocity
     )
     On.GameNetcodeStuff.PlayerControllerB.add_KillPlayer(fun orig self bodyVelocity spawnBody causeOfDeath deathAnimation positionOffset ->
         orig.Invoke(self, bodyVelocity, spawnBody, causeOfDeath, deathAnimation, positionOffset)
-        spawnMaskedEnemy self (int causeOfDeath) deathAnimation spawnBody bodyVelocity
+        if self.IsHost && self = StartOfRound.Instance.localPlayerController then
+            spawnMaskedEnemy self (int causeOfDeath) deathAnimation spawnBody bodyVelocity
     )
 
     // After a round is over, the player's dead body is still set.
