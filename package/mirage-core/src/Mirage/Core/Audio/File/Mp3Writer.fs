@@ -3,16 +3,16 @@ module Mirage.Core.Audio.File.Mp3Writer
 #nowarn "40"
 
 open System
+open System.IO
 open FSharpPlus
 open FSharpx.Control
 open NAudio.Lame
-open Mirage.Core.Audio.PCM
-open System.IO
-open Mirage.Core.Async.Fork
 open NAudio.Wave
+open Mirage.Core.Audio.PCM
+open Mirage.Core.Async.Fork
 
 type private Mp3Action
-    = WriteSamples of float32[]
+    = WriteSamples of ValueTuple<float32[], float32[]>
     | Dispose
 
 type Mp3Writer =
@@ -25,7 +25,7 @@ type Mp3Writer =
     interface IDisposable with
         member this.Dispose() = this.channel.Add Dispose
 
-let createMp3Writer (directory: string) inputFormat (preset: LAMEPreset) =
+let createMp3Writer (directory: string) inputFormat resampledInputFormat (preset: LAMEPreset) =
     async {
         // Create the directory on a background thread.
         do! forkReturn <| async {
@@ -37,17 +37,21 @@ let createMp3Writer (directory: string) inputFormat (preset: LAMEPreset) =
         let channel = new BlockingQueueAgent<Mp3Action>(Int32.MaxValue)
         let mutable disposed = false
 
-        //let waveWriter = new WaveFileWriter(Path.Join(directory, $"{fileId}.wav"), inputFormat)
+        let waveWriter = new WaveFileWriter(Path.Join(directory, $"{fileId}.wav"), inputFormat)
+        //let resampledWriter = new WaveFileWriter(Path.Join(directory, $"{fileId}.resampled.wav"), resampledInputFormat)
+
+        //https://github.com/lostromb/concentus/blob/master/CSharp/ConcentusDemo/ConcentusCodec.cs
 
         let rec consumer =
             async {
                 let! action = channel.AsyncGet()
                 match action with
-                    | WriteSamples samples ->
+                    | WriteSamples (samples, resampledSamples) ->
                         if not disposed then
                             do! writer.AsyncWrite <| toPCMBytes samples
 
-                            //waveWriter.WriteSamples(samples, 0, samples.Length)
+                            waveWriter.WriteSamples(samples, 0, samples.Length)
+                            //resampledWriter.WriteSamples(resampledSamples, 0, resampledSamples.Length)
 
                             do! consumer
                     | Dispose ->
@@ -55,13 +59,16 @@ let createMp3Writer (directory: string) inputFormat (preset: LAMEPreset) =
                             disposed <- true
                             do! Async.AwaitTask(writer.FlushAsync())
 
-                            //waveWriter.Flush()
-                            //dispose waveWriter
+                            waveWriter.Flush()
+                            dispose waveWriter
+
+                            //resampledWriter.Flush()
+                            //dispose resampledWriter
 
                             dispose writer
                             dispose channel
             }
-        Async.StartImmediate <| forkReturn consumer
+        Async.Start consumer
         return {
             channel = channel
             writer = writer

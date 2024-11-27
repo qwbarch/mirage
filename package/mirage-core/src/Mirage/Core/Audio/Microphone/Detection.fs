@@ -11,8 +11,6 @@ open Mirage.Prelude
 open Mirage.Core.Audio.PCM
 open Mirage.Core.Audio.Microphone.Resampler
 
-let [<Literal>] private StartThreshold = 0.7f
-let [<Literal>] private EndThreshold = 0.45f
 let [<Literal>] private SamplingRate = 16000
 
 [<Struct>]
@@ -65,6 +63,10 @@ type VoiceDetectorArgs<'State> =
         /// Uses the forced probability instead of using __detectSpeech__ for the probability,
         /// if the value is __Some probability__.
         forcedProbability: 'State -> Option<float32>
+        /// Minimum probability required to count as voice detection started.
+        startThreshold: float32
+        /// Maximum probability required to count as voice detection ended.
+        endThreshold: float32
         /// A function that detects if speech is found.<br />
         /// Assumes the given data is 16khz sample rate, and contains 30ms of audio.
         ///
@@ -98,6 +100,7 @@ let VoiceDetector<'State> args =
                         samples.original.Clear()
                         samples.resampled.Clear()
                         vadFrames <- []
+                        currentIndex <- 0
                         endIndex <- 0
                         voiceDetected <- false
                     }
@@ -132,7 +135,7 @@ let VoiceDetector<'State> args =
                                     currentAudio = currentAudio
                                     fullAudio = fullAudio
                                 }
-                        if probability >= StartThreshold then
+                        if probability >= args.startThreshold then
                             if endIndex <> 0 then
                                 endIndex <- 0
                             if not voiceDetected then
@@ -145,7 +148,7 @@ let VoiceDetector<'State> args =
                             else
                                 vadFrames <- vadFrame :: vadFrames
                             do! onVoiceDetected detectFound
-                        else if probability < EndThreshold && voiceDetected then
+                        else if probability < args.endThreshold && voiceDetected then
                             if endIndex = 0 then
                                 endIndex <- currentIndex
                             if float32 (currentIndex - endIndex) < minSilenceSamples then

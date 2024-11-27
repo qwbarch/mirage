@@ -11,6 +11,7 @@
     <DebugType>embedded</DebugType>
     <Optimize>true</Optimize>
     <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=.</PathMap>
+    <Platform>x64</Platform>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../compatibility/Compatibility.fsproj" />

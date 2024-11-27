@@ -18,7 +18,9 @@ open Mirage.Domain.Config
 open Mirage.Domain.Setting
 open Mirage.Domain.Logger
 
-let [<Literal>] SamplesPerWindow = 1024
+let [<Literal>] SamplesPerWindow = 2048
+let [<Literal>] StartThreshold = 0.4f
+let [<Literal>] EndThreshold = 0.2f
 
 [<Struct>]
 type ProcessingInput =
@@ -45,6 +47,7 @@ let private processingChannel = new BlockingQueueAgent<ValueOption<ProcessingInp
 /// A pool of sample buffers, to avoid creating instances of an array every time.
 let mutable private bufferSize = 0
 
+[<Struct>]
 type BufferInput =
     {   samples: Samples
         sampleRate: int
@@ -65,18 +68,18 @@ let private bufferChannel =
                 let! input = agent.AsyncGet()
                 let samples = Array.zeroCreate<float32> input.samples.Length
                 //logInfo $"buffer size: {bufferPool.Count}"
-                Array.Copy(input.samples, 0, samples, 0, input.samples.Length)
+                Buffer.BlockCopy(input.samples, 0, samples, 0, input.samples.Length * sizeof<float32>)
                 bufferPool.Enqueue input.samples
                 if not (isNull StartOfRound.Instance) then
                     Async.StartImmediate << processingChannel.AsyncAdd << ValueSome <|
-                            {   samples = samples
-                                format = WaveFormat(input.sampleRate, input.channels)
-                                isReady = isReady
-                                isPlayerDead = StartOfRound.Instance.localPlayerController.isPlayerDead
-                                pushToTalkEnabled = IngamePlayerSettings.Instance.settings.pushToTalk
-                                isMuted = getDissonance().IsMuted
-                                allowRecordVoice = getSettings().allowRecordVoice
-                            }
+                        {   samples = samples
+                            format = WaveFormat(input.sampleRate, input.channels)
+                            isReady = isReady
+                            isPlayerDead = StartOfRound.Instance.localPlayerController.isPlayerDead
+                            pushToTalkEnabled = IngamePlayerSettings.Instance.settings.pushToTalk
+                            isMuted = getDissonance().IsMuted
+                            allowRecordVoice = getSettings().allowRecordVoice
+                        }
             with | ex -> logError $"exception in bufferChannel {ex}"
             do! consumer
         }
@@ -94,7 +97,7 @@ type MicrophoneSubscriber() =
                     bufferPool.Enqueue(Array.zeroCreate<float32> buffer.Count)
             let mutable samples = null
             if bufferPool.TryDequeue(&samples) then
-                Array.Copy(buffer.Array, buffer.Offset, samples, 0, buffer.Count)
+                Buffer.BlockCopy(buffer.Array, buffer.Offset, samples, 0, buffer.Count * sizeof<float32>)
                 bufferChannel.Add <|
                     {   samples = samples
                         sampleRate = format.SampleRate
@@ -119,10 +122,12 @@ let readMicrophone recordingDirectory =
         VoiceDetector
             {   minSilenceDurationMs = localConfig.MinSilenceDurationMs.Value
                 forcedProbability = _.forcedProbability
+                startThreshold = StartThreshold 
+                endThreshold = EndThreshold
                 detectSpeech = result << detectSpeech silero
                 onVoiceDetected = curry <| writeRecorder recorder
             }
-    let resampler = Resampler (writeDetector voiceDetector)
+    let resampler = Resampler SamplesPerWindow (writeDetector voiceDetector)
     let resample = Async.StartImmediate << writeResampler resampler
     let rec consumer =
         async {

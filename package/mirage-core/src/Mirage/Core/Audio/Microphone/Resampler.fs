@@ -11,8 +11,6 @@ open NAudio.Wave
 open Mirage.Core.Audio.PCM
 
 let [<Literal>] private SampleRate = 16000
-let [<Literal>] private SamplesPerWindow = 1024
-let private WindowDuration = float SamplesPerWindow / float SampleRate
 let private WriterFormat = WaveFormat(SampleRate, 1)
 
 /// Resamples the given audio samples using the resampler's configured in/out sample rates.<br />
@@ -57,7 +55,8 @@ type Resampler<'State> =
     interface IDisposable with
         member this.Dispose() = dispose this.agent
 
-let Resampler<'State> (onResampled: ResamplerOutput<'State> -> Async<Unit>) =
+let Resampler<'State> samplesPerWindow (onResampled: ResamplerOutput<'State> -> Async<Unit>) =
+    let windowDuration = float samplesPerWindow / float SampleRate
     let resampler = WdlResampler()
     resampler.SetMode(true, 2, false)
     resampler.SetFilterParms()
@@ -83,15 +82,15 @@ let Resampler<'State> (onResampled: ResamplerOutput<'State> -> Async<Unit>) =
                                 resample resampler frame.samples
                             else
                                 frame.samples
-                        if resampledSamples.Count >= SamplesPerWindow then
+                        if resampledSamples.Count >= samplesPerWindow then
                             let original =
-                                let sampleSize = int <| WindowDuration * float frame.format.SampleRate
+                                let sampleSize = int <| windowDuration * float frame.format.SampleRate
                                 let samples = originalSamples.GetRange(0, sampleSize)
                                 originalSamples.RemoveRange(0, sampleSize)
                                 samples.ToArray()
                             let resampled =
-                                let samples = resampledSamples.GetRange(0, SamplesPerWindow)
-                                resampledSamples.RemoveRange(0, SamplesPerWindow)
+                                let samples = resampledSamples.GetRange(0, samplesPerWindow)
+                                resampledSamples.RemoveRange(0, samplesPerWindow)
                                 samples.ToArray()
                             let resampledAudio =
                                 {   original =
