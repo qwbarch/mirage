@@ -6,9 +6,6 @@ open UnityEngine
 open Unity.Netcode
 open Mirage.Core.Audio.PCM
 open Mirage.Domain.Logger
-open Mirage.Domain.Audio.Sender
-open Mirage.Domain.Audio.Receiver
-open Mirage.Domain.Audio.Frame
 
 [<Struct>]
 type AudioStartEvent =
@@ -44,9 +41,6 @@ type AudioStreamEventArgs(eventData: AudioStreamEvent) =
 type AudioStream() as self =
     inherit NetworkBehaviour()
 
-    let mutable audioSender: Option<AudioSender> = None
-    let mutable audioReceiver: Option<AudioReceiver> = None
-
     let event = Event<EventHandler<_>, _>()
     let onFrameDecompressed (samples: Samples) sampleIndex =
         let eventData =
@@ -62,38 +56,6 @@ type AudioStream() as self =
         if this.IsHost && this.NetworkManager.ConnectedClients.ContainsKey clientId && Some clientId = self.AllowedSenderId then
             callback()
 
-    /// Load the mp3 file and play it locally, while sending the audio to play on all other clients.
-    let streamAudioHost mp3Reader =
-        async {
-            try
-                iter dispose audioSender
-                let pcmHeader = PcmHeader mp3Reader
-                let onFrameRead frameData =
-                    onReceiveFrame frameData audioReceiver
-                    self.SendFrameClientRpc frameData
-                self.InitializeAudioReceiver pcmHeader
-                self.InitializeAudioReceiverClientRpc pcmHeader
-                audioSender <- Some <| AudioSender onFrameRead mp3Reader self.destroyCancellationToken
-                sendAudio audioSender.Value
-            with | error -> logError $"Exception found while running streamAudioHost: {error}"
-            //do! Async.Sleep(int mp3Reader.reader.TotalTime.TotalMilliseconds)
-        }
-
-    /// Load the mp3 file, and then send it to the server to broadcast to all other clients.
-    let streamAudioClient mp3Reader =
-        async {
-            try
-                iter dispose audioSender
-                let pcmHeader = PcmHeader mp3Reader
-                let serverRpcParams = ServerRpcParams()
-                let sendFrame frameData = self.SendFrameServerRpc(frameData, serverRpcParams)
-                self.InitializeAudioReceiverServerRpc(pcmHeader, serverRpcParams)
-                audioSender <- Some <| AudioSender sendFrame mp3Reader self.destroyCancellationToken
-                sendAudio audioSender.Value
-            with | error -> logError $"Exception found while running streamAudioClient: {error}"
-            //do! Async.Sleep(int mp3Reader.reader.TotalTime.TotalMilliseconds)
-        }
-
     /// An event that triggers when a new audio clip begins.
     [<CLIEvent>]
     member _.OnAudioStream =  event.Publish
@@ -105,59 +67,8 @@ type AudioStream() as self =
 
     override _.OnDestroy() =
         base.OnDestroy()
-        iter dispose audioSender
-        iter dispose audioReceiver
+        //iter dispose audioSender
+        //iter dispose audioReceiver
 
     /// Stream audio from the player (can be host or non-host) to all other players.
-    member this.StreamAudioFromFile(filePath, debug) =
-        async {
-            let localId = StartOfRound.Instance.localPlayerController.actualClientId
-            if Some localId <> this.AllowedSenderId then
-                invalidOp $"StreamAudioFromFile cannot be run from this client. LocalId: {localId}. AllowedId: {this.AllowedSenderId}."
-            else
-                debug "Before loading mp3 file."
-                //let! mp3Reader = readMp3File filePath
-                //debug $"Loaded mp3 file. Audio duration (seconds): {mp3Reader.reader.TotalTime.TotalSeconds}"
-                if this.IsHost then
-                    //do! streamAudioHost mp3Reader
-                    ()
-                else 
-                    //do! streamAudioClient mp3Reader
-                    ()
-        }
-
-    /// Initialize the audio receiver to playback audio when audio frames are received.
-    member this.InitializeAudioReceiver(pcmHeader) =
-        iter dispose audioReceiver
-        audioReceiver <- Some <| AudioReceiver this.AudioSource pcmHeader onFrameDecompressed this.destroyCancellationToken
-
-    [<ServerRpc(RequireOwnership = false)>]
-    member this.InitializeAudioReceiverServerRpc(pcmHeader, serverRpcParams) =
-        onValidSender this serverRpcParams <| fun () ->
-            this.InitializeAudioReceiver pcmHeader
-            this.InitializeAudioReceiverClientRpc pcmHeader
-
-    [<ClientRpc>]
-    member this.InitializeAudioReceiverClientRpc(pcmHeader) =
-        if not this.IsHost then
-            this.InitializeAudioReceiver pcmHeader
-        let eventData =
-            AudioStartEvent
-                {   lengthSamples = pcmHeader.samples
-                    channels = pcmHeader.channels
-                    frequency = pcmHeader.frequency
-                }
-        event.Trigger(this, AudioStreamEventArgs(eventData))
-
-    /// Send the current frame data to the host, to eventually broadcast to all other clients.
-    [<ServerRpc(RequireOwnership = false)>]
-    member this.SendFrameServerRpc(frameData, serverRpcParams) =
-        onValidSender this serverRpcParams <| fun () ->
-            onReceiveFrame frameData audioReceiver
-            this.SendFrameClientRpc frameData
-
-    /// Send the current frame data to each client.
-    [<ClientRpc(Delivery = RpcDelivery.Unreliable)>]
-    member this.SendFrameClientRpc(frameData) =
-        if not this.IsHost then
-            onReceiveFrame frameData audioReceiver
+    member this.StreamAudioFromFile(filePath) = ()

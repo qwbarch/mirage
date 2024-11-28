@@ -8,7 +8,6 @@ open Mirage.PluginInfo
 open Mirage.Compatibility
 open Mirage.Domain.Netcode
 open Mirage.Domain.Setting
-open Mirage.Domain.Audio.Recording
 open Mirage.Domain.Config
 open Mirage.Hook.AudioSpatializer
 open Mirage.Hook.Prefab
@@ -37,8 +36,8 @@ type Plugin() =
         initLobbyCompatibility pluginName pluginVersion
         initSettings <| Path.Join(mirageDirectory, "settings.json")
         initNetcodePatcher()
-        Async.StartImmediate deleteRecordings
-        Application.add_quitting(fun _ -> Async.StartImmediate deleteRecordings)
+        //Async.StartImmediate deleteRecordings
+        //Application.add_quitting(fun _ -> Async.StartImmediate deleteRecordings)
 
         // Hooks.
         cacheDissonance()
