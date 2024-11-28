@@ -46,9 +46,6 @@
     <Reference Include="NAudio.WinMM" Publicize="true">
       <HintPath>../../../lib/NAudio/NAudio.WinMM.dll</HintPath>
     </Reference>
-	  <Reference Include="NAudio.Lame" Publicize="true">
-      <HintPath>../../../lib/NAudio.Lame/NAudio.Lame.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Mirage/PluginInfo.fs" />

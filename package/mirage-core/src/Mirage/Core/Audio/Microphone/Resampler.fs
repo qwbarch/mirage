@@ -6,9 +6,9 @@ open System
 open System.Collections.Generic
 open FSharpPlus
 open FSharpx.Control
-open NAudio.Dsp
-open NAudio.Wave
 open Mirage.Core.Audio.PCM
+open NAudio.Wave
+open NAudio.Dsp
 
 let [<Literal>] private SampleRate = 16000
 let private WriterFormat = WaveFormat(SampleRate, 1)

@@ -5,12 +5,12 @@ open FSharpPlus
 open UnityEngine
 open Unity.Netcode
 open Mirage.Core.Audio.PCM
-open Mirage.Core.Audio.File.Mp3Reader
 open Mirage.Domain.Logger
 open Mirage.Domain.Audio.Sender
 open Mirage.Domain.Audio.Receiver
 open Mirage.Domain.Audio.Frame
 
+[<Struct>]
 type AudioStartEvent =
     {   /// Number of sample frames.
         lengthSamples: int
@@ -20,6 +20,8 @@ type AudioStartEvent =
         frequency: int
     }
 
+
+[<Struct>]
 type AudioReceivedEvent =
     {   /// Audio signal containing a single decompressed mp3 frame.
         samples: Samples
@@ -27,11 +29,12 @@ type AudioReceivedEvent =
         sampleIndex: int
     }
 
+[<Struct>]
 type AudioStreamEvent
     /// Event that is trigered when a new audio clip begins.
-    = AudioStartEvent of AudioStartEvent
+    = AudioStartEvent of audioStartEvent: AudioStartEvent
     /// Event that is trigered when audio samples are received.
-    | AudioReceivedEvent of AudioReceivedEvent
+    | AudioReceivedEvent of audioReceivedEvent: AudioReceivedEvent
 
 type AudioStreamEventArgs(eventData: AudioStreamEvent) =
     inherit EventArgs()
@@ -73,7 +76,7 @@ type AudioStream() as self =
                 audioSender <- Some <| AudioSender onFrameRead mp3Reader self.destroyCancellationToken
                 sendAudio audioSender.Value
             with | error -> logError $"Exception found while running streamAudioHost: {error}"
-            do! Async.Sleep(int mp3Reader.reader.TotalTime.TotalMilliseconds)
+            //do! Async.Sleep(int mp3Reader.reader.TotalTime.TotalMilliseconds)
         }
 
     /// Load the mp3 file, and then send it to the server to broadcast to all other clients.
@@ -88,7 +91,7 @@ type AudioStream() as self =
                 audioSender <- Some <| AudioSender sendFrame mp3Reader self.destroyCancellationToken
                 sendAudio audioSender.Value
             with | error -> logError $"Exception found while running streamAudioClient: {error}"
-            do! Async.Sleep(int mp3Reader.reader.TotalTime.TotalMilliseconds)
+            //do! Async.Sleep(int mp3Reader.reader.TotalTime.TotalMilliseconds)
         }
 
     /// An event that triggers when a new audio clip begins.
@@ -113,12 +116,14 @@ type AudioStream() as self =
                 invalidOp $"StreamAudioFromFile cannot be run from this client. LocalId: {localId}. AllowedId: {this.AllowedSenderId}."
             else
                 debug "Before loading mp3 file."
-                let! mp3Reader = readMp3File filePath
-                debug $"Loaded mp3 file. Audio duration (seconds): {mp3Reader.reader.TotalTime.TotalSeconds}"
+                //let! mp3Reader = readMp3File filePath
+                //debug $"Loaded mp3 file. Audio duration (seconds): {mp3Reader.reader.TotalTime.TotalSeconds}"
                 if this.IsHost then
-                    do! streamAudioHost mp3Reader
+                    //do! streamAudioHost mp3Reader
+                    ()
                 else 
-                    do! streamAudioClient mp3Reader
+                    //do! streamAudioClient mp3Reader
+                    ()
         }
 
     /// Initialize the audio receiver to playback audio when audio frames are received.
