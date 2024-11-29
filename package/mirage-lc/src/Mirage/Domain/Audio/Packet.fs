@@ -1,7 +1,7 @@
 module Mirage.Domain.Audio.Packet
 
 open Unity.Netcode
-open Mirage.Core.Audio.File.OpusReader
+open Mirage.Core.Audio.Opus.Reader
 
 [<Struct>]
 type OpusPacket =

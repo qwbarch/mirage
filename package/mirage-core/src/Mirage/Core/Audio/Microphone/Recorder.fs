@@ -8,7 +8,7 @@ open FSharpx.Control
 open NAudio.Wave
 open Mirage.Core.Audio.Microphone.Detection
 open Mirage.Core.Audio.Microphone.Resampler
-open Mirage.Core.Audio.File.OpusWriter
+open Mirage.Core.Audio.Opus.Writer
 open System.IO
 
 type RecordStart =

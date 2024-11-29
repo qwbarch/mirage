@@ -1,4 +1,4 @@
-module Mirage.Core.Audio.File.OpusWriter
+module Mirage.Core.Audio.Opus.Writer
 
 #nowarn "40"
 
@@ -7,11 +7,10 @@ open System.IO
 open System.Collections.Generic
 open FSharpPlus
 open FSharpx.Control
-open Concentus
-open Concentus.Enums
 open Concentus.Oggfile
 open NAudio.Wave
 open Mirage.Core.Audio.PCM
+open Mirage.Core.Audio.Opus.Codec
 
 type private WriteAction
     = WriteSamples of Samples
@@ -38,7 +37,7 @@ let OpusWriter args =
                         async {
                             closed <- true
                             use fileStream = new FileStream(args.filePath, FileMode.Create, FileAccess.Write)
-                            use encoder = OpusCodecFactory.CreateEncoder(48_000, 1, OpusApplication.OPUS_APPLICATION_AUDIO)
+                            use encoder = OpusEncoder()
                             encoder.Bitrate <- 522_240
                             encoder.UseVBR <- true
                             encoder.UseConstrainedVBR <- true

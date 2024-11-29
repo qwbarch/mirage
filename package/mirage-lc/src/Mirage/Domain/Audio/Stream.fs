@@ -4,7 +4,7 @@ open System
 open System.Diagnostics
 open System.Collections.Generic
 open Mirage.Prelude
-open Mirage.Core.Audio.File.OpusReader
+open Mirage.Core.Audio.Opus.Reader
 open Mirage.Domain.Audio.Packet
 open Concentus.Structs
 
