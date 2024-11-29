@@ -13,15 +13,6 @@ open Concentus.Oggfile
 open NAudio.Wave
 open Mirage.Core.Audio.PCM
 
-/// Supported sample rates for the opus encoder.
-let private sampleRates =
-    [|  8000
-        12_000
-        16_000
-        24_000
-        48_000
-    |]
-
 type private WriteAction
     = WriteSamples of Samples
     | Close
@@ -46,9 +37,8 @@ let OpusWriter args =
                     | Close ->
                         async {
                             closed <- true
-                            let sampleRate = Array.minBy (fun x -> abs (x - args.format.SampleRate)) sampleRates
                             use fileStream = new FileStream(args.filePath, FileMode.Create, FileAccess.Write)
-                            use encoder = OpusCodecFactory.CreateEncoder(sampleRate, args.format.Channels, OpusApplication.OPUS_APPLICATION_AUDIO)
+                            use encoder = OpusCodecFactory.CreateEncoder(48_000, 1, OpusApplication.OPUS_APPLICATION_AUDIO)
                             encoder.Bitrate <- 522_240
                             encoder.UseVBR <- true
                             encoder.UseConstrainedVBR <- true

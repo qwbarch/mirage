@@ -1,0 +1,56 @@
+module Mirage.Domain.Audio.Stream
+
+open System
+open System.Diagnostics
+open System.Collections.Generic
+open Mirage.Prelude
+open Mirage.Core.Audio.File.OpusReader
+open Mirage.Domain.Audio.Packet
+open Concentus.Structs
+
+let private maximumBuffer = float Stopwatch.Frequency * 1.0 // 1 seconds (of audio duration) buffered.
+let private frequency = float Stopwatch.Frequency / 1000.0
+
+/// <summary>
+/// Streams audio using the given <b>sendPacket</b> function, internally handling the timing between payloads.
+/// Note: This function implicitly disposes the <b>OpusReader</b> when it finishes processing frames.
+/// </summary>
+/// <param name="opusReader">
+/// Source audio to read from. Since <b>streamAudio</b> disposes the opus reader when finished, you should not be using any of its methods after the stream starts.
+/// </param>
+/// <param name="sendPacket">
+/// Function to run whenever a packet is available. A value of <b>None</b> is passed when the stream is over.
+/// </param>
+let streamAudio (opusReader: OpusReader) (sendPacket: Option<OpusPacket> -> Async<Unit>) : Async<Unit> =
+    async {
+        let mutable sampleIndex = 0
+        let mutable previousTime = 0.0
+        let mutable currentBuffer = 0.0
+        let mutable packet = opusReader.reader.ReadNextRawPacket()
+        let delayBuffer = new LinkedList<float>()
+        while not <| isNull packet do
+            let currentTime = opusReader.reader.CurrentTime.TotalMilliseconds * frequency
+            let delay = currentTime - previousTime
+            ignore <| delayBuffer.AddLast delay
+            previousTime <- currentTime
+            &currentBuffer += delay
+            if currentBuffer >= maximumBuffer then
+                let bufferedTime = delayBuffer.First.Value
+                delayBuffer.RemoveFirst()
+                let startTime = Stopwatch.GetTimestamp()
+                let mutable delayedTime = 0.0
+                while delayedTime < bufferedTime do
+                    do! Async.Sleep 100
+                    delayedTime <- float <| Stopwatch.GetTimestamp() - startTime
+                // Async.sleep isn't accurate and can sleep less/more than what we wanted.
+                // If it slept more than expected, we'll need to reduce the buffer a bit.
+                let multiplier = if delayedTime > bufferedTime then 2.0 else 1.0
+                &currentBuffer -= (delayedTime - bufferedTime * multiplier)
+            do! sendPacket << Some <|
+                {   opusData = packet
+                    sampleIndex = sampleIndex
+                }
+            &sampleIndex += OpusPacketInfo.GetNumSamples(packet.AsSpan(), opusReader.decoder.SampleRate)
+            packet <- opusReader.reader.ReadNextRawPacket()
+        do! sendPacket None
+    }
