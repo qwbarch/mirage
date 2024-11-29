@@ -54,6 +54,7 @@
     <Compile Include="Mirage/Domain/Directory.fs" />
     <Compile Include="Mirage/Domain/Setting.fs" />
     <Compile Include="Mirage/Domain/Config.fs" />
+    <Compile Include="Mirage/Domain/Audio/Recording.fs" />
     <Compile Include="Mirage/Domain/Audio/Packet.fs" />
     <Compile Include="Mirage/Domain/Audio/Stream.fs" />
     <Compile Include="Mirage/Domain/Audio/Sender.fs" />

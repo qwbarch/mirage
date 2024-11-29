@@ -52,12 +52,12 @@ type AudioReceiver =
                 this.audioSource.clip <- null
 
 /// The inverse of __AudioSender__. Receives packets sent by the AudioSender, decodes the opus packet, and then plays it back live.
-let AudioReceiver args =
-    {   audioSource = args.audioSource
-        pcmHeader = args.pcmHeader
+let AudioReceiver audioSource pcmHeader onPacketDecoded cancellationToken =
+    {   audioSource = audioSource
+        pcmHeader = pcmHeader
         decoder = OpusDecoder()
-        onPacketDecoded = args.onPacketDecoded
-        cancellationToken = args.cancellationToken
+        onPacketDecoded = onPacketDecoded
+        cancellationToken = cancellationToken
         decoderChannel = new BlockingQueueAgent<OpusPacket>(Int32.MaxValue)
         playbackChannel = new BlockingQueueAgent<DecodedPacket>(Int32.MaxValue)
         disposed = false
@@ -91,12 +91,20 @@ let startAudioReceiver receiver =
         }
     let rec playbackThread =
         async {
-            let! decodedPacket = receiver.playbackChannel.AsyncGet()
-            if decodedPacket.samples.Length > 0 then
-                ignore <| receiver.audioSource.clip.SetData(decodedPacket.samples, decodedPacket.sampleIndex)
-            if not receiver.audioSource.isPlaying then
-                receiver.audioSource.Play()
-            do! playbackThread
+            if not receiver.disposed then
+                let! decodedPacket = receiver.playbackChannel.AsyncGet()
+                if decodedPacket.samples.Length > 0 then
+                    ignore <| receiver.audioSource.clip.SetData(decodedPacket.samples, decodedPacket.sampleIndex)
+                    receiver.onPacketDecoded decodedPacket
+                if not receiver.audioSource.isPlaying then
+                    receiver.audioSource.Play()
+                do! playbackThread
         }
     Async.Start(decoderThread, receiver.cancellationToken)
     Async.StartImmediate(playbackThread, receiver.cancellationToken)
+
+/// This should be called when an opus packet is received. It will be internally decoded and played back via the audio source.
+let onReceivePacket opusPacket = function
+    | None -> ()
+    | Some receiver ->
+        Async.StartImmediate <| receiver.decoderChannel.AsyncAdd opusPacket
