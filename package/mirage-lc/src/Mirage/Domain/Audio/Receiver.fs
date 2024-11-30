@@ -2,17 +2,17 @@ module Mirage.Domain.Audio.Receiver
 
 #nowarn "40"
 
-open Concentus
-open Concentus.Structs
 open FSharpPlus
 open FSharpx.Control
 open UnityEngine
 open System
 open System.Threading
+open OpusDotNet
 open Mirage.Core.Audio.PCM
 open Mirage.Core.Audio.Opus.Codec
 open Mirage.PluginInfo
 open Mirage.Domain.Audio.Packet
+open Mirage.Domain.Logger
 
 [<Struct>]
 type DecodedPacket =
@@ -20,18 +20,11 @@ type DecodedPacket =
         sampleIndex: int
     }
 
-type AudioReceiverArgs =
-    {   audioSource: AudioSource
-        pcmHeader: PcmHeader
-        onPacketDecoded: DecodedPacket -> Unit
-        cancellationToken: CancellationToken
-    }
-
 type AudioReceiver =
     private
         {   audioSource: AudioSource
-            pcmHeader: PcmHeader
-            decoder: IOpusDecoder
+            totalSamples: int
+            decoder: OpusDecoder
             onPacketDecoded: DecodedPacket -> Unit
             cancellationToken: CancellationToken
             decoderChannel: BlockingQueueAgent<OpusPacket>
@@ -52,9 +45,9 @@ type AudioReceiver =
                 this.audioSource.clip <- null
 
 /// The inverse of __AudioSender__. Receives packets sent by the AudioSender, decodes the opus packet, and then plays it back live.
-let AudioReceiver audioSource pcmHeader onPacketDecoded cancellationToken =
+let AudioReceiver audioSource totalSamples onPacketDecoded cancellationToken =
     {   audioSource = audioSource
-        pcmHeader = pcmHeader
+        totalSamples = totalSamples
         decoder = OpusDecoder()
         onPacketDecoded = onPacketDecoded
         cancellationToken = cancellationToken
@@ -68,36 +61,38 @@ let AudioReceiver audioSource pcmHeader onPacketDecoded cancellationToken =
 /// Note: This will not stop the <b>AudioSource</b> if it's currently playing.
 /// You will need to handle that yourself at the callsite.
 let startAudioReceiver receiver =
+    logInfo $"total samples: {receiver.totalSamples}"
     receiver.audioSource.clip <-
         AudioClip.Create(
             pluginId,
-            receiver.pcmHeader.totalSamples,
-            receiver.pcmHeader.channels,
-            receiver.pcmHeader.sampleRate,
+            receiver.totalSamples,
+            OpusChannels,
+            OpusSampleRate,
             false
         )
     let rec decoderThread =
         async {
-            let! opusPacket = receiver.decoderChannel.AsyncGet()
-            let packet = opusPacket.opusData.AsSpan()
-            let frameSize = OpusPacketInfo.GetNumSamples(packet, OpusSampleRate)
-            let samples = Array.zeroCreate<float32> frameSize
-            ignore <| receiver.decoder.Decode(packet, samples, frameSize)
-            do! receiver.playbackChannel.AsyncAdd <|
-                {   samples = samples
-                    sampleIndex = opusPacket.sampleIndex
-                }
+            try
+                let! opusPacket = receiver.decoderChannel.AsyncGet()
+                let samples = Array.zeroCreate<float32> <| OpusSampleRate * OpusChannels
+                //ignore <| receiver.decoder.Decode(opusPacket.opusData, samples, samples.Length)
+                do! receiver.playbackChannel.AsyncAdd <|
+                    {   samples = samples
+                        sampleIndex = opusPacket.sampleIndex
+                    }
+            with | ex -> logError $"decoderThread: {ex}"
             do! decoderThread
         }
     let rec playbackThread =
         async {
             if not receiver.disposed then
                 let! decodedPacket = receiver.playbackChannel.AsyncGet()
-                if decodedPacket.samples.Length > 0 then
-                    ignore <| receiver.audioSource.clip.SetData(decodedPacket.samples, decodedPacket.sampleIndex)
-                    receiver.onPacketDecoded decodedPacket
-                if not receiver.audioSource.isPlaying then
-                    receiver.audioSource.Play()
+                //if decodedPacket.samples.Length > 0 then
+                //    if decodedPacket.samples.Length + decodedPacket.sampleIndex < receiver.audioSource.clip.samples then
+                //        ignore <| receiver.audioSource.clip.SetData(decodedPacket.samples, decodedPacket.sampleIndex)
+                //    receiver.onPacketDecoded decodedPacket
+                //if not receiver.audioSource.isPlaying then
+                //    receiver.audioSource.Play()
                 do! playbackThread
         }
     Async.Start(decoderThread, receiver.cancellationToken)

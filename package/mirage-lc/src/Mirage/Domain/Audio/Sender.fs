@@ -28,9 +28,7 @@ type AudioSender =
                 this.disposed <- true
             }
             if not disposed then
-                dispose this.opusReader
                 dispose this.channel
-                dispose this.lock
 
 /// Responsible for sending opus audio packets, to be received by a __AudioReceiver__.
 let AudioSender sendPacket opusReader cancellationToken =
@@ -57,12 +55,15 @@ let startAudioSender sender =
             }
     let rec consumer =
         async {
-            let! disposed = isDisposed
-            if not disposed then
-                do! sender.channel.AsyncGet() |>> function
-                    | None -> dispose sender
-                    | Some packet -> sender.sendPacket packet
-                do! consumer
+            do! sender.channel.AsyncGet() >>= function
+                | None -> result <| dispose sender
+                | Some packet ->
+                    async {
+                        let! disposed = isDisposed
+                        if not disposed then
+                            sender.sendPacket packet
+                            do! consumer
+                    }
         }
     Async.Start(producer, sender.cancellationToken)
     Async.StartImmediate(consumer, sender.cancellationToken)

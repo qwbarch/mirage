@@ -3,7 +3,6 @@ namespace Mirage
 open BepInEx
 open System.IO
 open System.Reflection
-open UnityEngine
 open Mirage.PluginInfo
 open Mirage.Compatibility
 open Mirage.Domain.Netcode
@@ -17,6 +16,44 @@ open Mirage.Hook.Dissonance
 open Mirage.Hook.MaskedPlayerEnemy
 open Mirage.Domain.Directory
 
+open Mirage.Core.Audio.Opus.Reader
+open Mirage.Core.Audio.Opus.Codec
+
+module Baz =
+    let foobar () =
+        Async.RunSynchronously <| async {
+            let filePath = "C:/hello.opus"
+            let! opusReader = readOpusFile "C:/hello.opus"
+            printfn $"samples per packet: {SamplesPerPacket}"
+            printfn $"done. samples: {opusReader.totalSamples}"
+
+
+            let decoder = OpusDecoder()
+            while opusReader.reader.HasNextPacket do 
+                let packet = opusReader.reader.ReadNextRawPacket()
+                if not <| isNull packet then
+                    let pcmData = Array.zeroCreate<byte> <| PacketPcmLength
+                    let decodedLength = decoder.Decode(packet, packet.Length, pcmData, PacketPcmLength)
+                    printfn $"pcm length: {pcmData.Length} decodedLength: {decodedLength}"
+                    ()
+
+
+            //let frames = List<byte>()
+            //let mutable frame = opusReader.reader.ReadNextRawPacket()
+
+            //printfn $"total samples: {opusReader.totalSamples}" 
+            //let decoder = OpusDecoder()
+            
+            //while not <| isNull frame do
+            //    //let samples = Array.zeroCreate<float32> <| OpusSampleRate * OpusChannels
+            //    let samples = Array.zeroCreate<float32> 100000000
+            //    let decodedLength = decoder.Decode(frame, samples, samples.Length)
+            //    if decodedLength <= 0 then
+            //        printfn $"decodedLength: {decodedLength}"
+            //    
+            //    frame <- opusReader.reader.ReadNextRawPacket()
+        }
+
 [<BepInPlugin(pluginId, pluginName, pluginVersion)>]
 [<BepInDependency(LethalSettings.GeneratedPluginInfo.Identifier, BepInDependency.DependencyFlags.SoftDependency)>]
 [<BepInDependency(LobbyCompatibility.PluginInfo.PLUGIN_GUID, BepInDependency.DependencyFlags.SoftDependency)>]
@@ -25,6 +62,8 @@ type Plugin() =
     inherit BaseUnityPlugin()
 
     member _.Awake() =
+        Baz.foobar()
+
         let assembly = Assembly.GetExecutingAssembly()
         ignore <| Directory.CreateDirectory mirageDirectory
 

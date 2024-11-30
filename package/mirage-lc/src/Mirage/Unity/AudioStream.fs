@@ -4,12 +4,13 @@ open System
 open FSharpPlus
 open UnityEngine
 open Unity.Netcode
-open Mirage.Core.Audio.PCM
-open Mirage.Core.Audio.Opus.Reader
 open Mirage.Domain.Audio.Sender
 open Mirage.Domain.Audio.Receiver
 open Mirage.Domain.Audio.Packet
 open Mirage.Domain.Logger
+open Mirage.Core.Audio.PCM
+open Mirage.Core.Audio.Opus.Reader
+open Mirage.Core.Audio.Opus.Codec
 
 [<Struct>]
 type AudioStartEvent =
@@ -67,13 +68,10 @@ type AudioStream() as self =
     let streamAudioHost opusReader =
         async {
             try
-                let pcmHeader = PcmHeader opusReader
-                let sendPacket (opusPacket: OpusPacket) =
-                    onReceivePacket opusPacket audioReceiver
                 iter dispose audioSender
-                self.InitializeAudioReceiver pcmHeader
-                self.InitializeAudioReceiverClientRpc pcmHeader
-                audioSender <- Some <| AudioSender sendPacket opusReader self.destroyCancellationToken
+                self.InitializeAudioReceiver opusReader.totalSamples
+                self.InitializeAudioReceiverClientRpc opusReader.totalSamples
+                audioSender <- Some <| AudioSender (flip onReceivePacket audioReceiver) opusReader self.destroyCancellationToken
                 startAudioSender audioSender.Value
             with | error -> logError $"An exception occured while running streamAudioHost: {error}"
             do! Async.Sleep(int opusReader.reader.TotalTime.TotalMilliseconds)
@@ -83,10 +81,9 @@ type AudioStream() as self =
     let streamAudioClient opusReader =
         async {
             try
-                let pcmHeader = PcmHeader opusReader
                 let serverRpcParams = ServerRpcParams()
                 let sendPacket opusPacket = self.SendPacketServerRpc(opusPacket, serverRpcParams)
-                self.InitializeAudioReceiverServerRpc(pcmHeader, serverRpcParams)
+                self.InitializeAudioReceiverServerRpc(opusReader.totalSamples, serverRpcParams)
                 audioSender <- Some <| AudioSender sendPacket opusReader self.destroyCancellationToken
                 startAudioSender audioSender.Value
             with | error -> logError $"An exception occured while running streamAudioClient: {error}"
@@ -122,27 +119,28 @@ type AudioStream() as self =
         }
 
     /// Initialize the audio receiver to playback audio when opus packets are received.
-    member this.InitializeAudioReceiver(pcmHeader) =
+    member this.InitializeAudioReceiver(totalSamples) =
         iter dispose audioReceiver
-        audioReceiver <- Some <| AudioReceiver this.AudioSource pcmHeader triggerEvent this.destroyCancellationToken
+        audioReceiver <- Some <| AudioReceiver this.AudioSource totalSamples triggerEvent this.destroyCancellationToken
+        startAudioReceiver audioReceiver.Value
         let eventData =
             AudioStartEvent
-                {   lengthSamples = pcmHeader.totalSamples
-                    channels = pcmHeader.channels
-                    frequency = pcmHeader.sampleRate
+                {   lengthSamples = totalSamples
+                    channels = OpusChannels
+                    frequency = OpusSampleRate
                 }
         event.Trigger(this, AudioStreamEventArgs(eventData))
     
     [<ClientRpc>]
-    member this.InitializeAudioReceiverClientRpc(pcmHeader) =
+    member this.InitializeAudioReceiverClientRpc(totalSamples) =
         if not this.IsHost then
-            this.InitializeAudioReceiver pcmHeader
+            this.InitializeAudioReceiver totalSamples
 
     [<ServerRpc(RequireOwnership = false)>]
-    member this.InitializeAudioReceiverServerRpc(pcmHeader, serverRpcParams) =
+    member this.InitializeAudioReceiverServerRpc(totalSamples, serverRpcParams) =
         onValidSender this serverRpcParams <| fun () ->
-            this.InitializeAudioReceiver pcmHeader
-            this.InitializeAudioReceiverClientRpc pcmHeader
+            this.InitializeAudioReceiver totalSamples
+            this.InitializeAudioReceiverClientRpc totalSamples 
 
     /// Send the current frame data to each client.
     [<ClientRpc(Delivery = RpcDelivery.Unreliable)>]

@@ -48,8 +48,7 @@ let OpusWriter args =
                                 encoder,
                                 fileStream,
                                 null, // Opus tags.
-                                args.format.sampleRate,
-                                10 // Resampler quality.
+                                args.format.sampleRate
                             )
                             opusStream.WriteSamples(fullSamples.ToArray(), 0, fullSamples.Count)
                             opusStream.Finish()
