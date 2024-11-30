@@ -25,8 +25,6 @@
     <PackageReference Include="LethalSettings" Version="1.4.0" Publicize="true" />
     <PackageReference Include="TeamBMX.LobbyCompatibility" Version="1.2.0" />
     <PackageReference Include="AinaVT-LethalConfig" Version="1.4.3" Publicize="true" />
-    <PackageReference Include="Concentus" Version="2.2.1" />
-    <PackageReference Include="Concentus.Oggfile" Version="1.0.6" Publicize="true" />
     <PackageReference Include="OpusDotNet" Version="1.0.3" />
     <Reference Include="FSharpx.Async">
       <HintPath>../../../lib/FSharpx.Async/FSharpx.Async.dll</HintPath>

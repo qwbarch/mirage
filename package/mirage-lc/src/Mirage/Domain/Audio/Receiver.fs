@@ -74,10 +74,10 @@ let startAudioReceiver receiver =
         async {
             try
                 let! opusPacket = receiver.decoderChannel.AsyncGet()
-                let samples = Array.zeroCreate<float32> <| OpusSampleRate * OpusChannels
-                //ignore <| receiver.decoder.Decode(opusPacket.opusData, samples, samples.Length)
+                let pcmData = Array.zeroCreate<byte> <| PacketPcmLength
+                ignore <| receiver.decoder.Decode(opusPacket.opusData, opusPacket.opusData.Length, pcmData, PacketPcmLength)
                 do! receiver.playbackChannel.AsyncAdd <|
-                    {   samples = samples
+                    {   samples = fromPCMBytes pcmData
                         sampleIndex = opusPacket.sampleIndex
                     }
             with | ex -> logError $"decoderThread: {ex}"
@@ -87,12 +87,11 @@ let startAudioReceiver receiver =
         async {
             if not receiver.disposed then
                 let! decodedPacket = receiver.playbackChannel.AsyncGet()
-                //if decodedPacket.samples.Length > 0 then
-                //    if decodedPacket.samples.Length + decodedPacket.sampleIndex < receiver.audioSource.clip.samples then
-                //        ignore <| receiver.audioSource.clip.SetData(decodedPacket.samples, decodedPacket.sampleIndex)
-                //    receiver.onPacketDecoded decodedPacket
-                //if not receiver.audioSource.isPlaying then
-                //    receiver.audioSource.Play()
+                if decodedPacket.samples.Length > 0 then
+                    ignore <| receiver.audioSource.clip.SetData(decodedPacket.samples, decodedPacket.sampleIndex)
+                    receiver.onPacketDecoded decodedPacket
+                if not receiver.audioSource.isPlaying then
+                    receiver.audioSource.Play()
                 do! playbackThread
         }
     Async.Start(decoderThread, receiver.cancellationToken)

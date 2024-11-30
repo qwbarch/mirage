@@ -22,8 +22,7 @@ open Mirage.Core.Audio.Opus.Codec
 module Baz =
     let foobar () =
         Async.RunSynchronously <| async {
-            let filePath = "C:/hello.opus"
-            let! opusReader = readOpusFile "C:/hello.opus"
+            let! opusReader = readOpusFile "D:/hello.opus"
             printfn $"samples per packet: {SamplesPerPacket}"
             printfn $"done. samples: {opusReader.totalSamples}"
 

@@ -1,6 +1,5 @@
 module Mirage.Domain.Audio.Stream
 
-open Concentus.Structs
 open System.Diagnostics
 open System.Collections.Generic
 open Mirage.Prelude
@@ -29,7 +28,7 @@ let streamAudio (opusReader: OpusReader) (sendPacket: Option<OpusPacket> -> Asyn
         let mutable packet = opusReader.reader.ReadNextRawPacket()
         let delayBuffer = new LinkedList<float>()
         while not <| isNull packet do
-            let currentTime = 0.0 //opusReader.reader.CurrentTime.TotalMilliseconds * frequency
+            let currentTime = opusReader.reader.CurrentTime.TotalMilliseconds * frequency
             let delay = currentTime - previousTime
             ignore <| delayBuffer.AddLast delay
             previousTime <- currentTime
@@ -50,7 +49,7 @@ let streamAudio (opusReader: OpusReader) (sendPacket: Option<OpusPacket> -> Asyn
                 {   opusData = packet
                     sampleIndex = sampleIndex
                 }
-            &sampleIndex += OpusPacketInfo.GetNumSamples(packet, OpusSampleRate)
+            &sampleIndex += SamplesPerPacket
             packet <- opusReader.reader.ReadNextRawPacket()
         do! sendPacket None
     }
