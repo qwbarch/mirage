@@ -10,6 +10,7 @@ open Mirage.Domain.Logger
 open Mirage.Core.Audio.PCM
 open Mirage.Core.Audio.Opus.Reader
 open Mirage.Core.Audio.Opus.Codec
+open NAudio.Wave
 
 [<Struct>]
 type AudioStartEvent =
