@@ -87,6 +87,7 @@ let startAudioReceiver receiver =
         async {
             if not receiver.disposed then
                 let! decodedPacket = receiver.playbackChannel.AsyncGet()
+                logInfo $"decodedPacket: {decodedPacket.samples.Length}"
                 if decodedPacket.samples.Length > 0 then
                     ignore <| receiver.audioSource.clip.SetData(decodedPacket.samples, decodedPacket.sampleIndex)
                     receiver.onPacketDecoded decodedPacket

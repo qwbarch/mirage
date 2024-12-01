@@ -13,7 +13,7 @@ open Mirage.Core.Audio.Opus.Codec
 
 [<Struct>]
 type AudioStartEvent =
-    {   /// Number of sample frames.
+    {   /// Number of samples in the audio clip.
         lengthSamples: int
         /// Number of channels per frame.
         channels: int

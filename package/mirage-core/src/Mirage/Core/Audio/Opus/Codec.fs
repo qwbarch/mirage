@@ -15,4 +15,12 @@ let [<Literal>] PacketPcmLength = SamplesPerPacket * 2
 let OpusDecoder () = new OpusDecoder(FrameSizeMs, OpusSampleRate, OpusChannels)
 
 /// Encoder with 48_000 sample rate and 1 channel, since ogg opus files only supports that.
-let OpusEncoder () = new Concentus.Structs.OpusEncoder(OpusSampleRate, OpusChannels, OpusApplication.OPUS_APPLICATION_AUDIO)
+let OpusEncoder () =
+    let encoder = new Concentus.Structs.OpusEncoder(OpusSampleRate, OpusChannels, OpusApplication.OPUS_APPLICATION_AUDIO)
+    encoder.UseVBR <- true
+    encoder.Bitrate <- 522_240
+    encoder.UseConstrainedVBR <- true
+    encoder.Complexity <- 10
+    encoder.PredictionDisabled <- true
+    encoder.UseDTX <- false
+    encoder

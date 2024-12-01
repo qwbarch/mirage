@@ -32,8 +32,9 @@ type MimicVoice() as self =
             map ignore << OptionT.run <| monad {
                 try
                     if not (isNull enemyAI)
-                       && not (isNull mimicPlayer.MimickingPlayer)
-                       && mimicPlayer.MimickingPlayer = StartOfRound.Instance.localPlayerController
+                        && not enemyAI.isEnemyDead
+                        && not (isNull mimicPlayer.MimickingPlayer)
+                        && mimicPlayer.MimickingPlayer = StartOfRound.Instance.localPlayerController
                     then
                         logInfo "getting a recording"
                         let! recording = OptionT <| getRecording recordingManager

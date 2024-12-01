@@ -38,12 +38,6 @@ let OpusWriter args =
                             closed <- true
                             use fileStream = new FileStream(args.filePath, FileMode.Create, FileAccess.Write)
                             use encoder = OpusEncoder()
-                            encoder.Bitrate <- 522_240
-                            encoder.UseVBR <- true
-                            encoder.UseConstrainedVBR <- true
-                            encoder.Complexity <- 10
-                            encoder.PredictionDisabled <- true
-                            encoder.UseDTX <- false
                             let opusStream = OpusOggWriteStream(
                                 encoder,
                                 fileStream,
