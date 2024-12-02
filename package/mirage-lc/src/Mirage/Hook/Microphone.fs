@@ -19,7 +19,7 @@ open Mirage.Domain.Setting
 open Mirage.Domain.Logger
 
 let [<Literal>] SamplesPerWindow = 2048
-let [<Literal>] StartThreshold = 0.6f
+let [<Literal>] StartThreshold = 0.5f
 let [<Literal>] EndThreshold = 0.2f
 
 [<Struct>]
