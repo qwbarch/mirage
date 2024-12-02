@@ -36,11 +36,8 @@ type MimicVoice() as self =
                         && not (isNull mimicPlayer.MimickingPlayer)
                         && mimicPlayer.MimickingPlayer = StartOfRound.Instance.localPlayerController
                     then
-                        logInfo "getting a recording"
                         let! recording = OptionT <| getRecording recordingManager
-                        logInfo "found a recording. streaming."
                         do! lift <| audioStream.StreamOpusFromFile recording
-                        logInfo "streaming opus from file"
                 with | error -> logError $"Error occurred while mimicking voice: {error}"
             }
         let rec runMimicLoop =

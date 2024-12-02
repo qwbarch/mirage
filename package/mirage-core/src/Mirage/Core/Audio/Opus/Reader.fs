@@ -17,14 +17,10 @@ let readOpusFile filePath =
         let! bytes = Async.AwaitTask <| File.ReadAllBytesAsync filePath
         let memoryStream = new MemoryStream(bytes)
         let totalSamples =
-            let opusReader =
-                {
-                    reader = OpusOggReadStream(null, memoryStream)
-                    totalSamples = 0
-                }
+            let reader = OpusOggReadStream(null, memoryStream)
             let mutable packets = 0
-            while opusReader.reader.HasNextPacket do
-                let packet = opusReader.reader.ReadNextRawPacket()
+            while reader.HasNextPacket do
+                let packet = reader.ReadNextRawPacket()
                 if not <| isNull packet then
                     &packets += 1
             packets * SamplesPerPacket
