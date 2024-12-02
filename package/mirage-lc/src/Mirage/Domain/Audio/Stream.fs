@@ -7,7 +7,9 @@ open Mirage.Core.Audio.Opus.Reader
 open Mirage.Domain.Audio.Packet
 open Mirage.Core.Audio.Opus.Codec
 
-let private maximumBuffer = float Stopwatch.Frequency * 1.0 // 1 seconds (of audio duration) buffered.
+let [<Literal>] MinimumBufferedAudioMs = 1000
+
+let private maximumBuffer = float Stopwatch.Frequency * float MinimumBufferedAudioMs / 1000.0
 let private frequency = float Stopwatch.Frequency / 1000.0
 
 /// <summary>

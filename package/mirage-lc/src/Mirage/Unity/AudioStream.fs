@@ -21,7 +21,6 @@ type AudioStartEvent =
         frequency: int
     }
 
-
 [<Struct>]
 type AudioReceivedEvent =
     {   /// Audio signal containing a single decompressed mp3 frame.
@@ -67,34 +66,34 @@ type AudioStream() as self =
     let streamAudioHost opusReader =
         async {
             iter dispose audioSender
-            //self.InitializeAudioReceiver opusReader.totalSamples
-            //self.InitializeAudioReceiverClientRpc opusReader.totalSamples
-            //audioSender <- Some <| AudioSender (flip onReceivePacket audioReceiver) opusReader self.destroyCancellationToken
-            //startAudioSender audioSender.Value
+            self.InitializeAudioReceiver opusReader.totalSamples
+            self.InitializeAudioReceiverClientRpc opusReader.totalSamples
+            audioSender <- Some <| AudioSender (flip onReceivePacket audioReceiver) opusReader self.destroyCancellationToken
+            startAudioSender audioSender.Value
 
-            let mutable packet = opusReader.reader.ReadNextRawPacket()
-            let packets = System.Collections.Generic.List<byte[]>()
-            while not (isNull packet) do
-                packets.Add packet
-                packet <- opusReader.reader.ReadNextRawPacket()
+            //let mutable packet = opusReader.reader.ReadNextRawPacket()
+            //let packets = System.Collections.Generic.List<byte[]>()
+            //while not (isNull packet) do
+            //    packets.Add packet
+            //    packet <- opusReader.reader.ReadNextRawPacket()
             
-            let samples = System.Collections.Generic.List<float32>()
-            let decoder = OpusDecoder()
-            for packet in packets do
-                let pcmData = Array.zeroCreate<byte> PacketPcmLength
-                let _ = decoder.Decode(packet, packet.Length, pcmData, PacketPcmLength)
-                samples.AddRange(fromPCMBytes pcmData)
+            //let samples = System.Collections.Generic.List<float32>()
+            //let decoder = OpusDecoder()
+            //for packet in packets do
+            //    let pcmData = Array.zeroCreate<byte> PacketPcmLength
+            //    let _ = decoder.Decode(packet, packet.Length, pcmData, PacketPcmLength)
+            //    samples.AddRange(fromPCMBytes pcmData)
             
-            self.AudioSource.Stop()
-            self.AudioSource.clip <- AudioClip.Create(
-                "foobar",
-                opusReader.totalSamples,
-                OpusChannels,
-                OpusSampleRate,
-                false
-            )
-            ignore <| self.AudioSource.clip.SetData(samples.ToArray(), 0)
-            self.AudioSource.Play()
+            //self.AudioSource.Stop()
+            //self.AudioSource.clip <- AudioClip.Create(
+            //    "foobar",
+            //    opusReader.totalSamples,
+            //    OpusChannels,
+            //    OpusSampleRate,
+            //    false
+            //)
+            //ignore <| self.AudioSource.clip.SetData(samples.ToArray(), 0)
+            //self.AudioSource.Play()
         }
     
     /// Load the opus file, and then send the packets to the host. The host then relays it to all clients.
@@ -167,12 +166,12 @@ type AudioStream() as self =
             this.InitializeAudioReceiverClientRpc totalSamples 
 
     /// Send the current frame data to each client.
-    [<ClientRpc(Delivery = RpcDelivery.Unreliable)>]
+    [<ClientRpc>]
     member this.SendPacketClientRpc(opusPacket) =
         if not this.IsHost then
             onReceivePacket opusPacket audioReceiver
     
-    [<ServerRpc(RequireOwnership = false, Delivery = RpcDelivery.Unreliable)>]
+    [<ServerRpc(RequireOwnership = false)>]
     member this.SendPacketServerRpc(opusPacket, serverRpcParams) =
         onValidSender this serverRpcParams <| fun () ->
             onReceivePacket opusPacket audioReceiver

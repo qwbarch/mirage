@@ -11,8 +11,9 @@ open OpusDotNet
 open Mirage.Core.Audio.PCM
 open Mirage.Core.Audio.Opus.Codec
 open Mirage.PluginInfo
+open Mirage.Prelude
 open Mirage.Domain.Audio.Packet
-open Mirage.Domain.Logger
+open Mirage.Domain.Audio.Stream
 
 [<Struct>]
 type DecodedPacket =
@@ -29,6 +30,8 @@ type AudioReceiver =
             cancellationToken: CancellationToken
             decoderChannel: BlockingQueueAgent<OpusPacket>
             playbackChannel: BlockingQueueAgent<DecodedPacket>
+            minimumBufferedPackets: int
+            mutable bufferedPackets: int
             mutable disposed: bool
         }
     interface IDisposable with
@@ -53,6 +56,12 @@ let AudioReceiver audioSource totalSamples onPacketDecoded cancellationToken =
         cancellationToken = cancellationToken
         decoderChannel = new BlockingQueueAgent<OpusPacket>(Int32.MaxValue)
         playbackChannel = new BlockingQueueAgent<DecodedPacket>(Int32.MaxValue)
+        minimumBufferedPackets =
+            Math.Min(
+                MinimumBufferedAudioMs / FrameSizeMs,
+                int <| float totalSamples / (float OpusSampleRate * float FrameSizeMs / 1000.0)
+            )
+        bufferedPackets = 0
         disposed = false
     }
 
@@ -61,7 +70,6 @@ let AudioReceiver audioSource totalSamples onPacketDecoded cancellationToken =
 /// Note: This will not stop the <b>AudioSource</b> if it's currently playing.
 /// You will need to handle that yourself at the callsite.
 let startAudioReceiver receiver =
-    logInfo $"total samples: {receiver.totalSamples}"
     receiver.audioSource.clip <-
         AudioClip.Create(
             pluginId,
@@ -72,26 +80,24 @@ let startAudioReceiver receiver =
         )
     let rec decoderThread =
         async {
-            try
-                let! opusPacket = receiver.decoderChannel.AsyncGet()
-                let pcmData = Array.zeroCreate<byte> <| PacketPcmLength
-                ignore <| receiver.decoder.Decode(opusPacket.opusData, opusPacket.opusData.Length, pcmData, PacketPcmLength)
-                do! receiver.playbackChannel.AsyncAdd <|
-                    {   samples = fromPCMBytes pcmData
-                        sampleIndex = opusPacket.sampleIndex
-                    }
-            with | ex -> logError $"decoderThread: {ex}"
+            let! opusPacket = receiver.decoderChannel.AsyncGet()
+            let pcmData = Array.zeroCreate<byte> <| PacketPcmLength
+            ignore <| receiver.decoder.Decode(opusPacket.opusData, opusPacket.opusData.Length, pcmData, PacketPcmLength)
+            do! receiver.playbackChannel.AsyncAdd <|
+                {   samples = fromPCMBytes pcmData
+                    sampleIndex = opusPacket.sampleIndex
+                }
             do! decoderThread
         }
     let rec playbackThread =
         async {
             if not receiver.disposed then
                 let! decodedPacket = receiver.playbackChannel.AsyncGet()
-                logInfo $"decodedPacket: {decodedPacket.samples.Length}"
                 if decodedPacket.samples.Length > 0 then
+                    &receiver.bufferedPackets += 1
                     ignore <| receiver.audioSource.clip.SetData(decodedPacket.samples, decodedPacket.sampleIndex)
                     receiver.onPacketDecoded decodedPacket
-                if not receiver.audioSource.isPlaying then
+                if not receiver.audioSource.isPlaying && receiver.bufferedPackets >= receiver.minimumBufferedPackets then
                     receiver.audioSource.Play()
                 do! playbackThread
         }
