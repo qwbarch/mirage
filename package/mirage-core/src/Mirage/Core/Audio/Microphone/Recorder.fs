@@ -3,13 +3,13 @@ module Mirage.Core.Audio.Microphone.Recorder
 #nowarn "40"
 
 open System
+open System.IO
 open FSharpPlus
 open FSharpx.Control
 open NAudio.Wave
 open Mirage.Core.Audio.Microphone.Detection
 open Mirage.Core.Audio.Microphone.Resampler
-open Mirage.Core.Audio.Opus.Writer
-open System.IO
+open Mirage.Core.Audio.Wave.Writer
 
 type RecordStart =
     {   originalFormat: WaveFormat
@@ -24,7 +24,7 @@ type RecordFound =
 
 /// Note: After the callback finishes for this action, the mp3 writer is disposed.
 type RecordEnd =
-    {   opusWriter: OpusWriter
+    {   waveWriter: WaveWriter
         vadFrame: VADFrame
         vadTimings: list<VADFrame>
         fullAudio: ResampledAudio
@@ -69,15 +69,14 @@ let Recorder<'State> args =
                         }
                 | DetectEnd payload ->
                     if payload.audioDurationMs >= args.minAudioDurationMs && args.allowRecordVoice state then
-                        let opusWriter =
-                            OpusWriter 
-                                {   filePath = Path.Join(args.directory, $"{Guid.NewGuid()}.opus")
-                                    format = payload.fullAudio.original.format
-                                }
-                        do! writeOpusSamples opusWriter payload.fullAudio.original.samples
-                        do! closeOpusWriter opusWriter
+                        let waveWriter =
+                            WaveWriter
+                                (Path.Join(args.directory, $"{Guid.NewGuid()}.opus"))
+                                payload.fullAudio.original.format
+                        do! writeWaveSamples waveWriter payload.fullAudio.original.samples
+                        do! closeWaveWriter waveWriter
                         do! onRecording << RecordEnd <|
-                            {   opusWriter = opusWriter
+                            {   waveWriter = waveWriter
                                 vadFrame = payload.vadFrame
                                 vadTimings = payload.vadTimings
                                 fullAudio = payload.fullAudio

@@ -62,8 +62,8 @@ let rec getRecording recordingManager =
             let index = recordingManager.random.Next recordingManager.recordings.Count
             let recording = recordingManager.recordings[index]
             recordingManager.recordings.RemoveAt index
-            if not <| recording.EndsWith ".opus" then
-                logWarning $"Found an unsupported recording, make sure it's an opus file: {recording}"
+            if not <| recording.EndsWith ".wav" then
+                logWarning $"Found an unsupported recording, make sure it's a wav file: {recording}"
                 return None
             // In the case where the currently held recordings is reloaded and the pulled recording happens to be
             // the same as the last recording, a new recording is pulled to avoid playing the same recording twice in a row.

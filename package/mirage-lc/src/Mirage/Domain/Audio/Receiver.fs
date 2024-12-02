@@ -2,33 +2,19 @@ module Mirage.Domain.Audio.Receiver
 
 #nowarn "40"
 
-open FSharpPlus
-open FSharpx.Control
 open UnityEngine
 open System
 open System.Threading
-open OpusDotNet
-open Mirage.Core.Audio.PCM
-open Mirage.Core.Audio.Opus.Codec
 open Mirage.PluginInfo
 open Mirage.Domain.Audio.Packet
 open Mirage.Domain.Logger
-
-[<Struct>]
-type DecodedPacket =
-    {   samples: Samples
-        sampleIndex: int
-    }
+open Mirage.Core.Audio.PCM
 
 type AudioReceiver =
     private
         {   audioSource: AudioSource
-            totalSamples: int
-            decoder: OpusDecoder
-            onPacketDecoded: DecodedPacket -> Unit
             cancellationToken: CancellationToken
-            decoderChannel: BlockingQueueAgent<OpusPacket>
-            playbackChannel: BlockingQueueAgent<DecodedPacket>
+            waveHeader: WaveHeader
             mutable disposed: bool
         }
     interface IDisposable with
@@ -37,22 +23,15 @@ type AudioReceiver =
                 if not this.disposed then
                     this.disposed <- true
                     this.audioSource.Stop()
-                    dispose this.decoder
-                    dispose this.decoderChannel
-                    dispose this.playbackChannel
             finally
                 UnityEngine.Object.Destroy this.audioSource.clip
                 this.audioSource.clip <- null
 
 /// The inverse of __AudioSender__. Receives packets sent by the AudioSender, decodes the opus packet, and then plays it back live.
-let AudioReceiver audioSource totalSamples onPacketDecoded cancellationToken =
+let AudioReceiver audioSource waveHeader onPacketDecoded cancellationToken =
     {   audioSource = audioSource
-        totalSamples = totalSamples
-        decoder = OpusDecoder()
-        onPacketDecoded = onPacketDecoded
         cancellationToken = cancellationToken
-        decoderChannel = new BlockingQueueAgent<OpusPacket>(Int32.MaxValue)
-        playbackChannel = new BlockingQueueAgent<DecodedPacket>(Int32.MaxValue)
+        waveHeader = waveHeader
         disposed = false
     }
 
@@ -61,45 +40,23 @@ let AudioReceiver audioSource totalSamples onPacketDecoded cancellationToken =
 /// Note: This will not stop the <b>AudioSource</b> if it's currently playing.
 /// You will need to handle that yourself at the callsite.
 let startAudioReceiver receiver =
-    logInfo $"total samples: {receiver.totalSamples}"
     receiver.audioSource.clip <-
         AudioClip.Create(
             pluginId,
-            receiver.totalSamples,
-            OpusChannels,
-            OpusSampleRate,
+            receiver.waveHeader.lengthSamples,
+            receiver.waveHeader.channels,
+            receiver.waveHeader.frequency,
             false
         )
-    let rec decoderThread =
-        async {
-            try
-                let! opusPacket = receiver.decoderChannel.AsyncGet()
-                let pcmData = Array.zeroCreate<byte> <| PacketPcmLength
-                ignore <| receiver.decoder.Decode(opusPacket.opusData, opusPacket.opusData.Length, pcmData, PacketPcmLength)
-                do! receiver.playbackChannel.AsyncAdd <|
-                    {   samples = fromPCMBytes pcmData
-                        sampleIndex = opusPacket.sampleIndex
-                    }
-            with | ex -> logError $"decoderThread: {ex}"
-            do! decoderThread
-        }
-    let rec playbackThread =
-        async {
-            if not receiver.disposed then
-                let! decodedPacket = receiver.playbackChannel.AsyncGet()
-                logInfo $"decodedPacket: {decodedPacket.samples.Length}"
-                if decodedPacket.samples.Length > 0 then
-                    ignore <| receiver.audioSource.clip.SetData(decodedPacket.samples, decodedPacket.sampleIndex)
-                    receiver.onPacketDecoded decodedPacket
-                if not receiver.audioSource.isPlaying then
-                    receiver.audioSource.Play()
-                do! playbackThread
-        }
-    Async.Start(decoderThread, receiver.cancellationToken)
-    Async.StartImmediate(playbackThread, receiver.cancellationToken)
 
 /// This should be called when an opus packet is received. It will be internally decoded and played back via the audio source.
-let onReceivePacket opusPacket = function
+let onReceivePacket packet = function
     | None -> ()
     | Some receiver ->
-        Async.StartImmediate <| receiver.decoderChannel.AsyncAdd opusPacket
+        if not receiver.disposed then
+            if not (isNull packet.pcmData) && packet.pcmData.Length > 0 then
+                let samples = fromPCMBytes packet.pcmData
+                logInfo $"samples length: {packet.pcmData.Length} sampleIndex: {packet.sampleIndex}"
+                ignore <| receiver.audioSource.clip.SetData(samples, packet.sampleIndex)
+            if not receiver.audioSource.isPlaying then
+                receiver.audioSource.Play()

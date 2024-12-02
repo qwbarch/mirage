@@ -8,9 +8,8 @@ open Mirage.Domain.Audio.Sender
 open Mirage.Domain.Audio.Receiver
 open Mirage.Domain.Logger
 open Mirage.Core.Audio.PCM
-open Mirage.Core.Audio.Opus.Reader
-open Mirage.Core.Audio.Opus.Codec
-open NAudio.Wave
+open Mirage.Core.Audio.Wave.Reader
+open Mirage.Domain.Audio.Packet
 
 [<Struct>]
 type AudioStartEvent =
@@ -50,11 +49,11 @@ type AudioStream() as self =
     let mutable audioReceiver: Option<AudioReceiver> = None
 
     let event = Event<EventHandler<_>, _>()
-    let triggerEvent (decodedPacket: DecodedPacket) =
+    let triggerEvent samples sampleIndex =
         let eventData =
             AudioReceivedEvent
-                {   samples = decodedPacket.samples
-                    sampleIndex = decodedPacket.sampleIndex
+                {   samples = samples
+                    sampleIndex = sampleIndex
                 }
         event.Trigger(self, AudioStreamEventArgs(eventData))
 
@@ -65,22 +64,24 @@ type AudioStream() as self =
             callback()
     
     /// Load the opus file, play it locally, while streaming the packets to all other clients to play.
-    let streamAudioHost opusReader =
+    let streamAudioHost waveReader =
         async {
+            let waveHeader = WaveHeader waveReader
             iter dispose audioSender
-            self.InitializeAudioReceiver opusReader.totalSamples
-            self.InitializeAudioReceiverClientRpc opusReader.totalSamples
-            audioSender <- Some <| AudioSender (flip onReceivePacket audioReceiver) opusReader self.destroyCancellationToken
+            self.InitializeAudioReceiver waveHeader
+            self.InitializeAudioReceiverClientRpc waveHeader
+            audioSender <- Some <| AudioSender (flip onReceivePacket audioReceiver) waveReader self.destroyCancellationToken
             startAudioSender audioSender.Value
         }
     
     /// Load the opus file, and then send the packets to the host. The host then relays it to all clients.
-    let streamAudioClient opusReader =
+    let streamAudioClient waveReader =
         async {
+            let waveHeader = WaveHeader waveReader
             let serverRpcParams = ServerRpcParams()
             let sendPacket opusPacket = self.SendPacketServerRpc(opusPacket, serverRpcParams)
-            self.InitializeAudioReceiverServerRpc(opusReader.totalSamples, serverRpcParams)
-            audioSender <- Some <| AudioSender sendPacket opusReader self.destroyCancellationToken
+            self.InitializeAudioReceiverServerRpc(waveHeader, serverRpcParams)
+            audioSender <- Some <| AudioSender sendPacket waveReader self.destroyCancellationToken
             startAudioSender audioSender.Value
         }
 
@@ -105,52 +106,52 @@ type AudioStream() as self =
             if Some localId <> this.AllowedSenderId then
                 invalidOp $"StreamAudioFromFile cannot be run from this client. LocalId: {localId}. AllowedId: {this.AllowedSenderId}."
             else
-                let! opusReader = readOpusFile filePath
-                // opusReader could be disposed by the time Async.Sleep is called.
+                let! waveReader = readWavFile filePath
+                // waveReader could be disposed by the time Async.Sleep is called.
                 // This is cached to avoid failing to grab the amount of milliseconds to wait.
-                let totalTime = int opusReader.reader.TotalTime.TotalMilliseconds
+                let totalTime = int waveReader.reader.TotalTime.TotalMilliseconds
                 try
                     if this.IsHost then
-                        do! streamAudioHost opusReader
+                        do! streamAudioHost waveReader
                     else
-                        do! streamAudioClient opusReader
+                        do! streamAudioClient waveReader
                 with | error ->
                     logError $"An exception occured while streaming audio: {error}"
                 do! Async.Sleep totalTime
         }
 
     /// Initialize the audio receiver to playback audio when opus packets are received.
-    member this.InitializeAudioReceiver(totalSamples) =
+    member this.InitializeAudioReceiver(waveHeader) =
         iter dispose audioReceiver
-        audioReceiver <- Some <| AudioReceiver this.AudioSource totalSamples triggerEvent this.destroyCancellationToken
+        audioReceiver <- Some <| AudioReceiver this.AudioSource waveHeader triggerEvent this.destroyCancellationToken
         startAudioReceiver audioReceiver.Value
         let eventData =
             AudioStartEvent
-                {   lengthSamples = totalSamples
-                    channels = OpusChannels
-                    frequency = OpusSampleRate
+                {   lengthSamples = waveHeader.lengthSamples
+                    channels = waveHeader.channels
+                    frequency = waveHeader.frequency
                 }
         event.Trigger(this, AudioStreamEventArgs(eventData))
     
     [<ClientRpc>]
-    member this.InitializeAudioReceiverClientRpc(totalSamples) =
+    member this.InitializeAudioReceiverClientRpc(waveHeader) =
         if not this.IsHost then
-            this.InitializeAudioReceiver totalSamples
+            this.InitializeAudioReceiver waveHeader
 
     [<ServerRpc(RequireOwnership = false)>]
-    member this.InitializeAudioReceiverServerRpc(totalSamples, serverRpcParams) =
+    member this.InitializeAudioReceiverServerRpc(waveHeader, serverRpcParams) =
         onValidSender this serverRpcParams <| fun () ->
-            this.InitializeAudioReceiver totalSamples
-            this.InitializeAudioReceiverClientRpc totalSamples 
+            this.InitializeAudioReceiver waveHeader
+            this.InitializeAudioReceiverClientRpc waveHeader
 
     /// Send the current frame data to each client.
     [<ClientRpc(Delivery = RpcDelivery.Unreliable)>]
-    member this.SendPacketClientRpc(opusPacket) =
+    member this.SendPacketClientRpc(packet) =
         if not this.IsHost then
-            onReceivePacket opusPacket audioReceiver
+            onReceivePacket packet audioReceiver
     
     [<ServerRpc(RequireOwnership = false, Delivery = RpcDelivery.Unreliable)>]
-    member this.SendPacketServerRpc(opusPacket, serverRpcParams) =
+    member this.SendPacketServerRpc(packet, serverRpcParams) =
         onValidSender this serverRpcParams <| fun () ->
-            onReceivePacket opusPacket audioReceiver
-            this.SendPacketClientRpc opusPacket
+            onReceivePacket packet audioReceiver
+            this.SendPacketClientRpc packet

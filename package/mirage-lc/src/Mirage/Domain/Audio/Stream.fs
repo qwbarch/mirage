@@ -1,11 +1,14 @@
 module Mirage.Domain.Audio.Stream
 
+open System
 open System.Diagnostics
 open System.Collections.Generic
 open Mirage.Prelude
-open Mirage.Core.Audio.Opus.Reader
+open Mirage.Core.Audio.Wave.Reader
 open Mirage.Domain.Audio.Packet
-open Mirage.Core.Audio.Opus.Codec
+open Mirage.Domain.Logger
+
+let [<Literal>] private FrameSizeMs = 20
 
 let private maximumBuffer = float Stopwatch.Frequency * 1.0 // 1 seconds (of audio duration) buffered.
 let private frequency = float Stopwatch.Frequency / 1000.0
@@ -14,21 +17,34 @@ let private frequency = float Stopwatch.Frequency / 1000.0
 /// Streams audio using the given <b>sendPacket</b> function, internally handling the timing between payloads.
 /// Note: This function implicitly disposes the <b>OpusReader</b> when it finishes processing frames.
 /// </summary>
-/// <param name="opusReader">
-/// Source audio to read from. Since <b>streamAudio</b> disposes the opus reader when finished, you should not be using any of its methods after the stream starts.
+/// <param name="waveReader">
+/// Source audio to read from. Since <b>streamAudio</b> disposes the wave reader when finished, you should not be using any of its methods after the stream starts.
 /// </param>
 /// <param name="sendPacket">
 /// Function to run whenever a packet is available. A value of <b>None</b> is passed when the stream is over.
 /// </param>
-let streamAudio (opusReader: OpusReader) (sendPacket: Option<OpusPacket> -> Async<Unit>) : Async<Unit> =
+let streamAudio waveReader (sendPacket: ValueOption<WavePacket> -> Async<Unit>) : Async<Unit> =
     async {
         let mutable sampleIndex = 0
         let mutable previousTime = 0.0
         let mutable currentBuffer = 0.0
-        let mutable packet = opusReader.reader.ReadNextRawPacket()
         let delayBuffer = new LinkedList<float>()
-        while not <| isNull packet do
-            let currentTime = opusReader.reader.CurrentTime.TotalMilliseconds * frequency
+        let format = waveReader.reader.WaveFormat
+        let bytesPerSample = format.BitsPerSample / 8
+        let frameSamples = FrameSizeMs * format.SampleRate / 1000
+        let frameSize = frameSamples * format.Channels * bytesPerSample
+        while sampleIndex < int waveReader.reader.SampleCount do
+            let pcmData =
+                let buffer = Array.zeroCreate<byte> frameSize
+                let bytesRead = waveReader.reader.Read(buffer, 0, frameSize)
+                if buffer.Length = bytesRead then
+                    buffer
+                else
+                    let bytes = Array.zeroCreate<byte> bytesRead
+                    Buffer.BlockCopy(buffer, 0, bytes, 0, bytesRead)
+                    bytes
+
+            let currentTime = waveReader.reader.CurrentTime.TotalMilliseconds * frequency
             let delay = currentTime - previousTime
             ignore <| delayBuffer.AddLast delay
             previousTime <- currentTime
@@ -45,11 +61,12 @@ let streamAudio (opusReader: OpusReader) (sendPacket: Option<OpusPacket> -> Asyn
                 // If it slept more than expected, we'll need to reduce the buffer a bit.
                 let multiplier = if delayedTime > bufferedTime then 2.0 else 1.0
                 &currentBuffer -= (delayedTime - bufferedTime * multiplier)
-            do! sendPacket << Some <|
-                {   opusData = packet
+
+            do! sendPacket << ValueSome <|
+                {   pcmData = pcmData
                     sampleIndex = sampleIndex
                 }
-            &sampleIndex += SamplesPerPacket
-            packet <- opusReader.reader.ReadNextRawPacket()
-        do! sendPacket None
+            &sampleIndex += frameSamples
+
+        do! sendPacket ValueNone
     }

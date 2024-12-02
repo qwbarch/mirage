@@ -5,17 +5,17 @@ module Mirage.Domain.Audio.Sender
 open System
 open System.Threading
 open FSharpPlus
-open FSharpx.Control
-open Mirage.Core.Audio.Opus.Reader
-open Mirage.Domain.Audio.Packet
 open Mirage.Domain.Audio.Stream
 open Mirage.Core.Async.Lock
+open Mirage.Core.Audio.Wave.Reader
+open Mirage.Domain.Audio.Packet
+open FSharpx.Control
 
 type AudioSender =
     private
-        {   opusReader: OpusReader
-            sendPacket: OpusPacket -> Unit
-            channel: BlockingQueueAgent<Option<OpusPacket>>
+        {   waveReader: WaveReader
+            sendPacket: WavePacket -> Unit
+            channel: BlockingQueueAgent<ValueOption<WavePacket>>
             cancellationToken: CancellationToken
             lock: Lock
             mutable disposed: bool
@@ -31,11 +31,11 @@ type AudioSender =
                 dispose this.channel
 
 /// Responsible for sending opus audio packets, to be received by a __AudioReceiver__.
-let AudioSender sendPacket opusReader cancellationToken =
-    {   opusReader = opusReader
+let AudioSender sendPacket waveReader cancellationToken =
+    {   waveReader = waveReader
         sendPacket = sendPacket
+        channel = new BlockingQueueAgent<ValueOption<WavePacket>>(Int32.MaxValue)
         cancellationToken = cancellationToken
-        channel = new BlockingQueueAgent<Option<OpusPacket>>(Int32.MaxValue)
         lock = createLock()
         disposed = false
     }
@@ -47,7 +47,7 @@ let startAudioSender sender =
             return sender.disposed
         }
     let producer =
-        streamAudio sender.opusReader <| fun packet ->
+        streamAudio sender.waveReader <| fun packet ->
             async {
                 let! disposed = isDisposed
                 if not disposed then
@@ -56,8 +56,8 @@ let startAudioSender sender =
     let rec consumer =
         async {
             do! sender.channel.AsyncGet() >>= function
-                | None -> result <| dispose sender
-                | Some packet ->
+                | ValueNone -> result <| dispose sender
+                | ValueSome packet ->
                     async {
                         let! disposed = isDisposed
                         if not disposed then
