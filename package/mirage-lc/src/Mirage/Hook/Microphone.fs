@@ -6,6 +6,9 @@ open Dissonance
 open Dissonance.Audio.Capture
 open System
 open System.Collections.Concurrent
+open System.Threading.Tasks
+open System.Buffers
+open System.Threading
 open Silero.API
 open FSharpPlus
 open FSharpx.Control
@@ -16,6 +19,7 @@ open Mirage.Core.Audio.Microphone.Detection
 open Mirage.Core.Audio.Microphone.Recorder
 open Mirage.Domain.Config
 open Mirage.Domain.Setting
+open System.Diagnostics
 open Mirage.Domain.Logger
 
 let [<Literal>] SamplesPerWindow = 2048
@@ -44,71 +48,90 @@ let mutable private isReady = false
 /// A channel for pulling microphone data from __bufferChannel__ into a background thread to process.
 let private processingChannel = new BlockingQueueAgent<ValueOption<ProcessingInput>>(Int32.MaxValue)
 
-/// A pool of sample buffers, to avoid creating instances of an array every time.
-let mutable private bufferSize = 0
-
 [<Struct>]
 type BufferInput =
     {   samples: Samples
         sampleRate: int
+        sampleCount: int
         channels: int
     }
 
-let private bufferPool = new ConcurrentQueue<Samples>()
+let private bufferPool: ArrayPool<float32> = ArrayPool.Create()
 
 /// A channel for pulling microphone data from the dissonance thread.
 /// The given audio samples points to an array that belongs to the buffer pool, but we cannot hold this reference for long.
 /// A deep copy of the audio samples is done, and then the input audio samples is returned to the buffer pool.
 /// Audio data is then sent to __processingChannel__, where the audio samples are safe to use and will not be mutated.
 let private bufferChannel =
-    let agent = new BlockingQueueAgent<BufferInput>(Int32.MaxValue)
-    let rec consumer =
-        async {
-            let! input = agent.AsyncGet()
-            let samples = Array.zeroCreate<float32> input.samples.Length
-            Buffer.BlockCopy(input.samples, 0, samples, 0, input.samples.Length * sizeof<float32>)
-            bufferPool.Enqueue input.samples
-            if not (isNull StartOfRound.Instance) then
-                Async.StartImmediate << processingChannel.AsyncAdd << ValueSome <|
-                    {   samples = samples
-                        format = WaveFormat(input.sampleRate, input.channels)
-                        isReady = isReady
-                        isPlayerDead = StartOfRound.Instance.localPlayerController.isPlayerDead
-                        pushToTalkEnabled = IngamePlayerSettings.Instance.settings.pushToTalk
-                        isMuted = getDissonance().IsMuted
-                        allowRecordVoice = getSettings().allowRecordVoice
-                    }
-            do! consumer
-        }
-    Async.Start consumer
-    agent
+    let channel = ConcurrentQueue<BufferInput>()
+    let rec consumer () =
+        let mutable input = Unchecked.defaultof<BufferInput>
+        while not <| channel.TryDequeue &input do
+            Thread.Sleep 0
+        let samples = Array.zeroCreate<float32> input.sampleCount
+        Buffer.BlockCopy(input.samples, 0, samples, 0, input.sampleCount * sizeof<float32>)
+        bufferPool.Return(input.samples, true)
+        if not (isNull StartOfRound.Instance) then
+            Async.StartImmediate << processingChannel.AsyncAdd << ValueSome <|
+                {   samples = samples
+                    format = WaveFormat(input.sampleRate, input.channels)
+                    isReady = isReady
+                    isPlayerDead = StartOfRound.Instance.localPlayerController.isPlayerDead
+                    pushToTalkEnabled = IngamePlayerSettings.Instance.settings.pushToTalk
+                    isMuted = getDissonance().IsMuted
+                    allowRecordVoice = getSettings().allowRecordVoice
+                }
+        consumer()
+    ignore <| Task.Run consumer
+    channel
 
 type MicrophoneSubscriber() =
     interface IMicrophoneSubscriber with
         member _.ReceiveMicrophoneData(buffer, format) =
-            if bufferSize <> buffer.Count then
-                bufferSize <- buffer.Count
-                bufferPool.Clear()
-                for _ in 0..20 do
-                    bufferPool.Enqueue(Array.zeroCreate<float32> buffer.Count)
-            let mutable samples = null
-            let rec dequeue () =
-                if bufferPool.TryDequeue(&samples) then
-                    // If buffer size changed, previous buffers can potentially be enqueued while bufferPool.Clear()
-                    // was run, requiring to toss the stale buffer if it's found.
-                    if bufferSize = samples.Length then
-                        Buffer.BlockCopy(buffer.Array, buffer.Offset, samples, 0, buffer.Count * sizeof<float32>)
-                        Async.StartImmediate <<
-                            bufferChannel.AsyncAdd <|
-                                {   samples = samples
-                                    sampleRate = format.SampleRate
-                                    channels = format.Channels
-                                }
-                    else
-                        dequeue()
-                else
-                    logWarning "bufferPool is empty. Please report this issue on https://github.com/qwbarch/mirage."
-            dequeue()
+            //let sw = new Stopwatch()
+
+            //sw.Start()
+
+            let samples = bufferPool.Rent buffer.Count
+
+            //sw.Stop()
+            //logInfo $"samples rent: {sw.Elapsed.TotalMilliseconds}"
+            //sw.Reset()
+
+
+            //sw.Start()
+
+            Buffer.BlockCopy(buffer.Array, buffer.Offset, samples, 0, buffer.Count * sizeof<float32>)
+
+            //sw.Stop()
+            //logInfo $"block copy: {sw.Elapsed.TotalMilliseconds}"
+            //sw.Reset()
+
+
+            //sw.Start()
+            //let input =
+            //    {   samples = samples
+            //        sampleRate = format.SampleRate
+            //        channels = format.Channels
+            //        sampleCount = buffer.Count
+            //    }
+            //sw.Stop()
+            //logInfo $"create struct: {sw.Elapsed.TotalMilliseconds}"
+            //sw.Reset()
+
+            bufferChannel.Enqueue
+                {   samples = samples
+                    sampleRate = format.SampleRate
+                    channels = format.Channels
+                    sampleCount = buffer.Count
+                }
+
+            //sw.Start()
+            //bufferChannel.Enqueue input
+            //sw.Stop()
+            //logInfo $"buffer channel enqueue: {sw.Elapsed.TotalMilliseconds}"
+            //sw.Reset()
+            ()
         member _.Reset() = processingChannel.Add ValueNone
 
 let readMicrophone recordingDirectory =
