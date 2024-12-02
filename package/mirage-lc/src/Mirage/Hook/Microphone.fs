@@ -86,6 +86,8 @@ let private bufferChannel =
     Async.Start consumer
     agent
 
+let foobar = Array.zeroCreate<float32> 1024
+
 type MicrophoneSubscriber() =
     interface IMicrophoneSubscriber with
         member _.ReceiveMicrophoneData(buffer, format) =
@@ -98,16 +100,15 @@ type MicrophoneSubscriber() =
             let mutable samples = null
             if bufferPool.TryDequeue(&samples) then
                 Buffer.BlockCopy(buffer.Array, buffer.Offset, samples, 0, buffer.Count * sizeof<float32>)
-                bufferChannel.Add <|
-                    {   samples = samples
-                        sampleRate = format.SampleRate
-                        channels = format.Channels
-                    }
+                Async.StartImmediate <<
+                    bufferChannel.AsyncAdd <|
+                        {   samples = samples
+                            sampleRate = format.SampleRate
+                            channels = format.Channels
+                        }
             else
                 logWarning "bufferPool is empty. Please report this issue on GitHub."
-        member _.Reset() =
-            //logWarning "microphone reset"
-            processingChannel.Add ValueNone
+        member _.Reset() = processingChannel.Add ValueNone
 
 let readMicrophone recordingDirectory =
     let silero = SileroVAD SamplesPerWindow
