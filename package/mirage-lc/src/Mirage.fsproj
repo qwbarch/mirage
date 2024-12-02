@@ -25,6 +25,9 @@
     <PackageReference Include="LethalSettings" Version="1.4.0" Publicize="true" />
     <PackageReference Include="TeamBMX.LobbyCompatibility" Version="1.2.0" />
     <PackageReference Include="AinaVT-LethalConfig" Version="1.4.3" Publicize="true" />
+    <PackageReference Include="Concentus" Version="2.2.2" />
+    <PackageReference Include="Concentus.Oggfile" Version="1.0.6" Publicize="true" />
+    <PackageReference Include="OpusDotNet" Version="1.0.3" />
     <Reference Include="FSharpx.Async">
       <HintPath>../../../lib/FSharpx.Async/FSharpx.Async.dll</HintPath>
     </Reference>
@@ -46,22 +49,19 @@
     <Reference Include="NAudio.WinMM" Publicize="true">
       <HintPath>../../../lib/NAudio/NAudio.WinMM.dll</HintPath>
     </Reference>
-	  <Reference Include="NAudio.Lame" Publicize="true">
-      <HintPath>../../../lib/NAudio.Lame/NAudio.Lame.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Mirage/PluginInfo.fs" />
     <Compile Include="Mirage/Domain/Netcode.fs" />
     <Compile Include="Mirage/Domain/Logger.fs" />
     <Compile Include="Mirage/Domain/Directory.fs" />
-    <Compile Include="Mirage/Domain/Audio/Frame.fs" />
-    <Compile Include="Mirage/Domain/Audio/Receiver.fs" />
+    <Compile Include="Mirage/Domain/Setting.fs" />
+    <Compile Include="Mirage/Domain/Config.fs" />
+    <Compile Include="Mirage/Domain/Audio/Recording.fs" />
+    <Compile Include="Mirage/Domain/Audio/Packet.fs" />
     <Compile Include="Mirage/Domain/Audio/Stream.fs" />
     <Compile Include="Mirage/Domain/Audio/Sender.fs" />
-    <Compile Include="Mirage/Domain/Setting.fs" />
-    <Compile Include="Mirage/Domain/Audio/Recording.fs" />
-    <Compile Include="Mirage/Domain/Config.fs" />
+    <Compile Include="Mirage/Domain/Audio/Receiver.fs" />
     <Compile Include="Mirage/Hook/Dissonance.fs" />
     <Compile Include="Mirage/Hook/AudioSpatializer.fs" />
     <Compile Include="Mirage/Hook/Config.fs" />

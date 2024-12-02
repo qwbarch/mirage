@@ -1,72 +1,69 @@
 module Mirage.Domain.Audio.Sender
 
+#nowarn "40"
+
 open System
 open System.Threading
 open FSharpPlus
 open FSharpx.Control
-open Mirage.Domain.Audio.Frame
+open Mirage.Core.Audio.Opus.Reader
+open Mirage.Domain.Audio.Packet
 open Mirage.Domain.Audio.Stream
-open Mirage.Core.Audio.File.Mp3Reader
+open Mirage.Core.Async.Lock
 
-/// Send audio to all <b>AudioReceiver</b>s.
 type AudioSender =
     private
-        {   sendFrame: FrameData -> unit
-            mp3Reader: Mp3Reader
-            channel: BlockingQueueAgent<Option<FrameData>>
+        {   opusReader: OpusReader
+            sendPacket: OpusPacket -> Unit
+            channel: BlockingQueueAgent<Option<OpusPacket>>
             cancellationToken: CancellationToken
+            lock: Lock
             mutable disposed: bool
         }
     interface IDisposable with
         member this.Dispose() =
-            if not this.disposed then
+            let mutable disposed = false
+            Async.StartImmediate << withLock' this.lock <| async {
+                disposed <- this.disposed
                 this.disposed <- true
-                dispose this.mp3Reader
+            }
+            if not disposed then
                 dispose this.channel
 
-/// <summary>
-/// Start the audio sender. This does not begin broadcasting audio.
-/// </summary>
-/// <param name="sendFrame">
-/// The RPC method for sending frame data to all clients.
-/// </param>
-/// <param name="filePath">
-/// Source audio to stream from, supporting only <b>.wav</b> audio files.
-/// </param>
-let AudioSender sendFrame waveReader cancellationToken =
-    let sender =
-        {   sendFrame = sendFrame
-            mp3Reader = waveReader
-            channel = new BlockingQueueAgent<Option<FrameData>>(Int32.MaxValue)
-            cancellationToken = cancellationToken
-            disposed = false
+/// Responsible for sending opus audio packets, to be received by a __AudioReceiver__.
+let AudioSender sendPacket opusReader cancellationToken =
+    {   opusReader = opusReader
+        sendPacket = sendPacket
+        cancellationToken = cancellationToken
+        channel = new BlockingQueueAgent<Option<OpusPacket>>(Int32.MaxValue)
+        lock = createLock()
+        disposed = false
+    }
+
+/// Start broadcasting the audio to all clients.
+let startAudioSender sender =
+    let isDisposed =
+        withLock' sender.lock <| async {
+            return sender.disposed
         }
-    sender
-
-let sendAudio sender =
-    // The "producer" processes the audio frames from a separate thread, and passes it onto the consumer.
-    let producer = streamAudio sender.mp3Reader sender.channel.AsyncAdd
-
-    // The "consumer" reads the processed audio frames and then runs the sendFrame function.
+    let producer =
+        streamAudio sender.opusReader <| fun packet ->
+            async {
+                let! disposed = isDisposed
+                if not disposed then
+                    do! sender.channel.AsyncAdd packet
+            }
     let rec consumer =
         async {
-            let mutable running = true
-            while running do
-                let! frameData = sender.channel.AsyncGet()
-                match frameData with
-                    | None ->
-                        running <- false
-                        dispose sender
-                    | Some frame ->
-                        try
-                            sender.sendFrame frame
-                        with
-                            // This can happen when returning to the main menu, due to the "sender" argument being null at runtime.
-                            | :? NullReferenceException -> ()
+            do! sender.channel.AsyncGet() >>= function
+                | None -> result <| dispose sender
+                | Some packet ->
+                    async {
+                        let! disposed = isDisposed
+                        if not disposed then
+                            sender.sendPacket packet
+                            do! consumer
+                    }
         }
-
-    // Start the producer on a separate thread.
     Async.Start(producer, sender.cancellationToken)
-
-    // Start the consumer in the current thread.
     Async.StartImmediate(consumer, sender.cancellationToken)

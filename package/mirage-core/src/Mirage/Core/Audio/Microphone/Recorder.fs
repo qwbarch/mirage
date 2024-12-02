@@ -5,11 +5,11 @@ module Mirage.Core.Audio.Microphone.Recorder
 open System
 open FSharpPlus
 open FSharpx.Control
-open NAudio.Lame
 open NAudio.Wave
-open Mirage.Core.Audio.File.Mp3Writer
 open Mirage.Core.Audio.Microphone.Detection
 open Mirage.Core.Audio.Microphone.Resampler
+open Mirage.Core.Audio.Opus.Writer
+open System.IO
 
 type RecordStart =
     {   originalFormat: WaveFormat
@@ -24,7 +24,7 @@ type RecordFound =
 
 /// Note: After the callback finishes for this action, the mp3 writer is disposed.
 type RecordEnd =
-    {   mp3Writer: Mp3Writer
+    {   opusWriter: OpusWriter
         vadFrame: VADFrame
         vadTimings: list<VADFrame>
         fullAudio: ResampledAudio
@@ -69,17 +69,21 @@ let Recorder<'State> args =
                         }
                 | DetectEnd payload ->
                     if payload.audioDurationMs >= args.minAudioDurationMs && args.allowRecordVoice state then
-                        use! mp3Writer = createMp3Writer args.directory payload.fullAudio.original.format payload.fullAudio.resampled.format LAMEPreset.VBR_100
-                        do! writeMp3File mp3Writer (payload.fullAudio.original.samples, payload.fullAudio.resampled.samples)
+                        let opusWriter =
+                            OpusWriter 
+                                {   filePath = Path.Join(args.directory, $"{Guid.NewGuid()}.opus")
+                                    format = payload.fullAudio.original.format
+                                }
+                        do! writeOpusSamples opusWriter payload.fullAudio.original.samples
+                        do! closeOpusWriter opusWriter
                         do! onRecording << RecordEnd <|
-                            {   mp3Writer = mp3Writer
+                            {   opusWriter = opusWriter
                                 vadFrame = payload.vadFrame
                                 vadTimings = payload.vadTimings
                                 fullAudio = payload.fullAudio
                                 currentAudio = payload.currentAudio
                                 audioDurationMs = payload.audioDurationMs
                             }
-                        do! closeMp3Writer mp3Writer
                 | DetectFound payload ->
                     do! onRecording << RecordFound <|
                         {   vadFrame = payload.vadFrame

@@ -9,13 +9,12 @@ open UnityEngine
 open Unity.Netcode
 open Dissonance.Audio.Playback
 open Mirage.Hook.Dissonance
-open Mirage.Domain.Audio.Recording
 open Mirage.Domain.Logger
 open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicPlayer
 open Mirage.Domain.Config
 open Mirage.Domain.Setting
-open System.Diagnostics
+open Mirage.Domain.Audio.Recording
 
 let private random = Random()
 
@@ -29,40 +28,30 @@ type MimicVoice() as self =
     let mutable enemyAI: EnemyAI = null
 
     let startVoiceMimic () =
-        let mimicVoice debug =
+        let mimicVoice =
             map ignore << OptionT.run <| monad {
                 try
                     if not (isNull enemyAI)
-                       && not (isNull mimicPlayer.MimickingPlayer)
-                       && mimicPlayer.MimickingPlayer = StartOfRound.Instance.localPlayerController
+                        && not enemyAI.isEnemyDead
+                        && not (isNull mimicPlayer.MimickingPlayer)
+                        && mimicPlayer.MimickingPlayer = StartOfRound.Instance.localPlayerController
                     then
-                        debug "Before getRecording."
+                        logInfo "getting a recording"
                         let! recording = OptionT <| getRecording recordingManager
-                        debug $"Found recording: {recording}"
-                        do! lift <| audioStream.StreamAudioFromFile(recording, debug)
+                        logInfo "found a recording. streaming."
+                        do! lift <| audioStream.StreamOpusFromFile recording
+                        logInfo "streaming opus from file"
                 with | error -> logError $"Error occurred while mimicking voice: {error}"
             }
         let rec runMimicLoop =
             async {
-                let guid = Guid.NewGuid()
-                let sw = Stopwatch.StartNew()
-                let debug message =
-                    if false then
-                    //if not (isNull enemyAI) && not (isNull mimicPlayer) && not (isNull mimicPlayer.MimickingPlayer) then
-                        let s = sw.Elapsed.TotalMilliseconds.ToString("F2")
-                        logInfo $"{enemyAI.enemyType.enemyName} - {guid} - Elapsed: {s} - {message}"
                 let delay =
                     if enemyAI :? MaskedPlayerEnemy then
                         random.Next(getConfig().minimumDelayMasked, getConfig().maximumDelayMasked + 1)
                     else
                         random.Next(getConfig().minimumDelayNonMasked, getConfig().maximumDelayNonMasked + 1)
-                debug "Before mimicVoice"
-                do! mimicVoice debug
-                debug $"After mimicVoice. Sleeping for {float delay / 1000.0} seconds."
-                let sw2 = Stopwatch.StartNew()
+                do! mimicVoice
                 do! Async.Sleep delay
-                let s = sw2.Elapsed.TotalMilliseconds.ToString("F2")
-                debug $"Finished sleeping. Waited for {s} seconds."
                 do! runMimicLoop
             }
         Async.StartImmediate(runMimicLoop, self.destroyCancellationToken)

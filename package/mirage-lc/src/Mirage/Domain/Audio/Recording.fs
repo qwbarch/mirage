@@ -18,12 +18,14 @@ type RecordingManager =
         {   random: Random
             /// Populated cache of recording file names, to avoid repeating the same recording.
             recordings: List<string>
+            mutable recordingCount: int
             mutable lastRecording: option<string>
         }
 
 let RecordingManager () =
     {   random = Random()
         recordings = zero
+        recordingCount = zero
         lastRecording = zero
     }
 
@@ -46,24 +48,26 @@ let private getRecordings =
     }
 
 /// Get a recording to be played by a voice mimic.  
+/// Not thread-safe. This function is expected to be called within the same thread when using the same __RecordingManager__.
 let rec getRecording recordingManager =
     async {
         if recordingManager.recordings.Count = 0 then
             let! recordings = getRecordings
             recordingManager.recordings.Clear()
             recordingManager.recordings.AddRange recordings
+            recordingManager.recordingCount <- recordings.Length
         // Recordings can still be empty.
         if recordingManager.recordings.Count = 0 then return None
         else
             let index = recordingManager.random.Next recordingManager.recordings.Count
             let recording = recordingManager.recordings[index]
             recordingManager.recordings.RemoveAt index
-            if not <| recording.EndsWith ".mp3" then
-                logWarning $"Found an unsupported recording, make sure it's an mp3 file: {recording}"
+            if not <| recording.EndsWith ".opus" then
+                logWarning $"Found an unsupported recording, make sure it's an opus file: {recording}"
                 return None
             // In the case where the currently held recordings is reloaded and the pulled recording happens to be
             // the same as the last recording, a new recording is pulled to avoid playing the same recording twice in a row.
-            else if Some recording = recordingManager.lastRecording then
+            else if Some recording = recordingManager.lastRecording && recordingManager.recordingCount > 1 then
                 return! getRecording recordingManager
             else
                 recordingManager.lastRecording <- Some recording

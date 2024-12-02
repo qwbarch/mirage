@@ -15,7 +15,6 @@
     <PackageReference Include="BepInEx.Core" Version="5.4.21" />
     <PackageReference Include="FSharp.Control.AsyncSeq" Version="3.2.1" />
     <PackageReference Include="FSharpPlus" Version="1.5.0" />
-    <PackageReference Include="OpusDotNet" Version="1.0.3" />
     <Reference Include="FSharpx.Async">
       <HintPath>../../../lib/FSharpx.Async/FSharpx.Async.dll</HintPath>
     </Reference>
@@ -25,9 +24,9 @@
     <Reference Include="NAudio.Core" Publicize="true">
       <HintPath>../../../lib/NAudio/NAudio.Core.dll</HintPath>
     </Reference>
-    <Reference Include="NAudio.Lame" Publicize="true">
-      <HintPath>../../../lib/NAudio.Lame/NAudio.Lame.dll</HintPath>
-    </Reference>
+    <PackageReference Include="Concentus" Version="2.2.2" />
+    <PackageReference Include="Concentus.Oggfile" Version="1.0.6" Publicize="true" />
+    <PackageReference Include="OpusDotNet" Version="1.0.3" Publicize="true" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Mirage/Prelude/Operator.fs" />
@@ -41,8 +40,9 @@
     <Compile Include="Mirage/Core/Async/Print.fs" />
     <Compile Include="Mirage/Core/Async/TVar.fs" />
     <Compile Include="Mirage/Core/Audio/PCM.fs" />
-    <Compile Include="Mirage/Core/Audio/File/Mp3Reader.fs" />
-    <Compile Include="Mirage/Core/Audio/File/Mp3Writer.fs" />
+    <Compile Include="Mirage/Core/Audio/Opus/Codec.fs" />
+    <Compile Include="Mirage/Core/Audio/Opus/Reader.fs" />
+    <Compile Include="Mirage/Core/Audio/Opus/Writer.fs" />
     <Compile Include="Mirage/Core/Audio/Microphone/Resampler.fs" />
     <Compile Include="Mirage/Core/Audio/Microphone/Detection.fs" />
     <Compile Include="Mirage/Core/Audio/Microphone/Recorder.fs" />
