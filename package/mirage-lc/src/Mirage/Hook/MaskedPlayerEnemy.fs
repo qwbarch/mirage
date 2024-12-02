@@ -9,6 +9,7 @@ open Mirage.Unity.MimicPlayer
 open Unity.Netcode
 open Mirage.Domain.Logger
 
+let [<Literal>] private MaskedEnemyName = "Masked"
 let mutable private maskedPrefab = null
 
 let hookMaskedEnemy () =
@@ -40,8 +41,11 @@ let hookMaskedEnemy () =
     On.GameNetworkManager.add_Start(fun orig self ->
         orig.Invoke self
         for prefab in NetworkManager.Singleton.NetworkConfig.Prefabs.m_Prefabs do
-            if not (isNull <| prefab.Prefab.GetComponent<MaskedPlayerEnemy>()) && isNull maskedPrefab then
-                maskedPrefab <- prefab.Prefab.GetComponent<MaskedPlayerEnemy>()
+            if not (isNull <| prefab.Prefab.GetComponent<MaskedPlayerEnemy>()) then
+                let maskedEnemy = prefab.Prefab.GetComponent<MaskedPlayerEnemy>()
+                // Keep only the vanilla masked enemy.
+                if maskedEnemy.enemyType.enemyName = MaskedEnemyName then
+                    maskedPrefab <- maskedEnemy
     )
 
     On.TimeOfDay.add_Start(fun orig self ->

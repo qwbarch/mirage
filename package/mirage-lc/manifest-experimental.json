@@ -1,9 +1,11 @@
 {
     "name": "MirageExperimental",
-    "version_number": "0.0.62",
+    "version_number": "0.0.63",
     "website_url": "https://github.com/qwbarch/lc-mirage",
     "description": "This is an experimental build. You probably don't want to be using this.",
     "dependencies": [
-        "qwbarch-MirageCore-1.0.1"
+        "qwbarch-MirageCore-1.0.1",
+        "qwbarch-Concentus-2.2.2",
+        "qwbarch-OpusDotNet-1.0.3"
     ]
 }
