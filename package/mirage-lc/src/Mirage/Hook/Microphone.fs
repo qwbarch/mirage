@@ -64,50 +64,51 @@ let private bufferChannel =
     let agent = new BlockingQueueAgent<BufferInput>(Int32.MaxValue)
     let rec consumer =
         async {
-            try
-                let! input = agent.AsyncGet()
-                let samples = Array.zeroCreate<float32> input.samples.Length
-                //logInfo $"buffer size: {bufferPool.Count}"
-                Buffer.BlockCopy(input.samples, 0, samples, 0, input.samples.Length * sizeof<float32>)
-                bufferPool.Enqueue input.samples
-                if not (isNull StartOfRound.Instance) then
-                    Async.StartImmediate << processingChannel.AsyncAdd << ValueSome <|
-                        {   samples = samples
-                            format = WaveFormat(input.sampleRate, input.channels)
-                            isReady = isReady
-                            isPlayerDead = StartOfRound.Instance.localPlayerController.isPlayerDead
-                            pushToTalkEnabled = IngamePlayerSettings.Instance.settings.pushToTalk
-                            isMuted = getDissonance().IsMuted
-                            allowRecordVoice = getSettings().allowRecordVoice
-                        }
-            with | ex -> logError $"exception in bufferChannel {ex}"
+            let! input = agent.AsyncGet()
+            let samples = Array.zeroCreate<float32> input.samples.Length
+            Buffer.BlockCopy(input.samples, 0, samples, 0, input.samples.Length * sizeof<float32>)
+            bufferPool.Enqueue input.samples
+            if not (isNull StartOfRound.Instance) then
+                Async.StartImmediate << processingChannel.AsyncAdd << ValueSome <|
+                    {   samples = samples
+                        format = WaveFormat(input.sampleRate, input.channels)
+                        isReady = isReady
+                        isPlayerDead = StartOfRound.Instance.localPlayerController.isPlayerDead
+                        pushToTalkEnabled = IngamePlayerSettings.Instance.settings.pushToTalk
+                        isMuted = getDissonance().IsMuted
+                        allowRecordVoice = getSettings().allowRecordVoice
+                    }
             do! consumer
         }
     Async.Start consumer
     agent
 
-let foobar = Array.zeroCreate<float32> 1024
-
 type MicrophoneSubscriber() =
     interface IMicrophoneSubscriber with
         member _.ReceiveMicrophoneData(buffer, format) =
             if bufferSize <> buffer.Count then
-                logInfo $"buffer size changed: {buffer.Count}"
                 bufferSize <- buffer.Count
                 bufferPool.Clear()
                 for _ in 0..20 do
                     bufferPool.Enqueue(Array.zeroCreate<float32> buffer.Count)
             let mutable samples = null
-            if bufferPool.TryDequeue(&samples) then
-                Buffer.BlockCopy(buffer.Array, buffer.Offset, samples, 0, buffer.Count * sizeof<float32>)
-                Async.StartImmediate <<
-                    bufferChannel.AsyncAdd <|
-                        {   samples = samples
-                            sampleRate = format.SampleRate
-                            channels = format.Channels
-                        }
-            else
-                logWarning "bufferPool is empty. Please report this issue on GitHub."
+            let rec dequeue () =
+                if bufferPool.TryDequeue(&samples) then
+                    // If buffer size changed, previous buffers can potentially be enqueued while bufferPool.Clear()
+                    // was run, requiring to toss the stale buffer if it's found.
+                    if bufferSize = samples.Length then
+                        Buffer.BlockCopy(buffer.Array, buffer.Offset, samples, 0, buffer.Count * sizeof<float32>)
+                        Async.StartImmediate <<
+                            bufferChannel.AsyncAdd <|
+                                {   samples = samples
+                                    sampleRate = format.SampleRate
+                                    channels = format.Channels
+                                }
+                    else
+                        dequeue()
+                else
+                    logWarning "bufferPool is empty. Please report this issue on https://github.com/qwbarch/mirage."
+            dequeue()
         member _.Reset() = processingChannel.Add ValueNone
 
 let readMicrophone recordingDirectory =

@@ -22,7 +22,7 @@ let private frequency = float Stopwatch.Frequency / 1000.0
 /// <param name="sendPacket">
 /// Function to run whenever a packet is available. A value of <b>None</b> is passed when the stream is over.
 /// </param>
-let streamAudio (opusReader: OpusReader) (sendPacket: Option<OpusPacket> -> Async<Unit>) : Async<Unit> =
+let streamAudio opusReader sendPacket =
     async {
         let mutable sampleIndex = 0
         let mutable previousTime = 0.0
