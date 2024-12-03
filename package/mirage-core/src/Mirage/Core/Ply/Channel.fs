@@ -26,11 +26,23 @@ let writeChannel channel element =
     ignore <| channel.semaphore.Release()
 
 /// Read a value from the channel, waiting if the channel is empty.
-let readChannel channel =
+let readChannel channel (cancellationToken: CancellationToken) =
+    uply {
+        do! channel.semaphore.WaitAsync cancellationToken
+        let mutable element = Unchecked.defaultof<_>
+        if not <| channel.queue.TryDequeue(&element) then
+            raise <| InvalidProgramException "Failed to dequeue during readChannel. This should not be possible."
+        return element
+    }
+
+/// Read a value from the channel, waiting if the channel is empty.        
+/// 
+/// __Note: This does not get cancelled via a cancellation token, so use this with caution.__
+let readChannel' channel =
     uply {
         do! channel.semaphore.WaitAsync()
         let mutable element = Unchecked.defaultof<_>
         if not <| channel.queue.TryDequeue(&element) then
-            raise <| InvalidProgramException ""
+            raise <| InvalidProgramException "Failed to dequeue during readChannel. This should not be possible."
         return element
     }

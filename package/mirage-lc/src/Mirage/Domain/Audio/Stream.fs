@@ -1,6 +1,8 @@
 module Mirage.Domain.Audio.Stream
 
+open FSharp.Control.Tasks.Affine.Unsafe
 open System.Diagnostics
+open System.Threading.Tasks
 open System.Collections.Generic
 open Mirage.Prelude
 open Mirage.Core.Audio.Opus.Reader
@@ -22,8 +24,8 @@ let private frequency = float Stopwatch.Frequency / 1000.0
 /// <param name="sendPacket">
 /// Function to run whenever a packet is available. A value of <b>None</b> is passed when the stream is over.
 /// </param>
-let streamAudio opusReader sendPacket =
-    async {
+let streamAudio opusReader cancellationToken sendPacket =
+    uply {
         let mutable sampleIndex = 0
         let mutable previousTime = 0.0
         let mutable currentBuffer = 0.0
@@ -41,17 +43,17 @@ let streamAudio opusReader sendPacket =
                 let startTime = Stopwatch.GetTimestamp()
                 let mutable delayedTime = 0.0
                 while delayedTime < bufferedTime do
-                    do! Async.Sleep 100
+                    do! Task.Delay(100, cancellationToken)
                     delayedTime <- float <| Stopwatch.GetTimestamp() - startTime
-                // Async.sleep isn't accurate and can sleep less/more than what we wanted.
+                // Task.Delay isn't accurate and can sleep less/more than what we wanted.
                 // If it slept more than expected, we'll need to reduce the buffer a bit.
                 let multiplier = if delayedTime > bufferedTime then 2.0 else 1.0
                 &currentBuffer -= (delayedTime - bufferedTime * multiplier)
-            do! sendPacket << Some <|
+            do! sendPacket << ValueSome <|
                 {   opusData = packet
                     sampleIndex = sampleIndex
                 }
             &sampleIndex += SamplesPerPacket
             packet <- opusReader.reader.ReadNextRawPacket()
-        do! sendPacket None
+        do! sendPacket ValueNone
     }

@@ -1,22 +1,20 @@
 module Mirage.Hook.Microphone
 
-#nowarn "40"
-
 open Dissonance
 open Dissonance.Audio.Capture
 open System
 open System.Collections.Concurrent
-open System.Threading.Tasks
 open System.Buffers
 open System.Threading
 open Silero.API
-open FSharpPlus
-open FSharpx.Control
+open FSharp.Control.Tasks.Affine.Unsafe
 open NAudio.Wave
 open Mirage.Core.Audio.PCM
 open Mirage.Core.Audio.Microphone.Resampler
 open Mirage.Core.Audio.Microphone.Detection
 open Mirage.Core.Audio.Microphone.Recorder
+open Mirage.Core.Ply.Channel
+open Mirage.Core.Ply.Fork
 open Mirage.Domain.Config
 open Mirage.Domain.Setting
 
@@ -37,14 +35,14 @@ type ProcessingInput =
 
 [<Struct>]
 type ProcessingState =
-    {   forcedProbability: Option<float32>
+    {   forcedProbability: ValueOption<float32>
         allowRecordVoice: bool
     }
 
 let mutable private isReady = false
 
 /// A channel for pulling microphone data from __bufferChannel__ into a background thread to process.
-let private processingChannel = new BlockingQueueAgent<ValueOption<ProcessingInput>>(Int32.MaxValue)
+let private processingChannel = Channel()
 
 [<Struct>]
 type BufferInput =
@@ -61,26 +59,26 @@ let private bufferPool: ArrayPool<float32> = ArrayPool.Create()
 /// A deep copy of the audio samples is done, and then the input audio samples is returned to the buffer pool.
 /// Audio data is then sent to __processingChannel__, where the audio samples are safe to use and will not be mutated.
 let private bufferChannel =
-    let channel = ConcurrentQueue<BufferInput>()
+    let channel = Channel()
     let rec consumer () =
-        let mutable input = Unchecked.defaultof<BufferInput>
-        while not <| channel.TryDequeue &input do
-            Thread.Sleep 0
-        let samples = Array.zeroCreate<float32> input.sampleCount
-        Buffer.BlockCopy(input.samples, 0, samples, 0, input.sampleCount * sizeof<float32>)
-        bufferPool.Return(input.samples, true)
-        if not (isNull StartOfRound.Instance) then
-            Async.StartImmediate << processingChannel.AsyncAdd << ValueSome <|
-                {   samples = samples
-                    format = WaveFormat(input.sampleRate, input.channels)
-                    isReady = isReady
-                    isPlayerDead = StartOfRound.Instance.localPlayerController.isPlayerDead
-                    pushToTalkEnabled = IngamePlayerSettings.Instance.settings.pushToTalk
-                    isMuted = getDissonance().IsMuted
-                    allowRecordVoice = getSettings().allowRecordVoice
-                }
-        consumer()
-    ignore <| Task.Run consumer
+        uply {
+            let! input = readChannel' channel
+            let samples = Array.zeroCreate<float32> input.sampleCount
+            Buffer.BlockCopy(input.samples, 0, samples, 0, input.sampleCount * sizeof<float32>)
+            bufferPool.Return(input.samples, true)
+            if not (isNull StartOfRound.Instance) then
+                writeChannel processingChannel << ValueSome <|
+                    {   samples = samples
+                        format = WaveFormat(input.sampleRate, input.channels)
+                        isReady = isReady
+                        isPlayerDead = StartOfRound.Instance.localPlayerController.isPlayerDead
+                        pushToTalkEnabled = IngamePlayerSettings.Instance.settings.pushToTalk
+                        isMuted = getDissonance().IsMuted
+                        allowRecordVoice = getSettings().allowRecordVoice
+                    }
+            do! consumer()
+        }
+    fork' consumer
     channel
 
 type MicrophoneSubscriber() =
@@ -88,13 +86,13 @@ type MicrophoneSubscriber() =
         member _.ReceiveMicrophoneData(buffer, format) =
             let samples = bufferPool.Rent buffer.Count
             Buffer.BlockCopy(buffer.Array, buffer.Offset, samples, 0, buffer.Count * sizeof<float32>)
-            bufferChannel.Enqueue
+            writeChannel bufferChannel
                 {   samples = samples
                     sampleRate = format.SampleRate
-                    channels = format.Channels
                     sampleCount = buffer.Count
+                    channels = format.Channels
                 }
-        member _.Reset() = processingChannel.Add ValueNone
+        member _.Reset() = writeChannel processingChannel ValueNone
 
 let readMicrophone recordingDirectory =
     let silero = SileroVAD SamplesPerWindow
@@ -103,7 +101,6 @@ let readMicrophone recordingDirectory =
             {   minAudioDurationMs = localConfig.MinAudioDurationMs.Value
                 directory = recordingDirectory
                 allowRecordVoice = _.allowRecordVoice
-                onRecording = konst << konst <| result ()
             }
     let voiceDetector =
         VoiceDetector
@@ -111,15 +108,15 @@ let readMicrophone recordingDirectory =
                 forcedProbability = _.forcedProbability
                 startThreshold = StartThreshold 
                 endThreshold = EndThreshold
-                detectSpeech = result << detectSpeech silero
-                onVoiceDetected = curry <| writeRecorder recorder
+                detectSpeech = detectSpeech silero
+                onVoiceDetected = fun state action -> writeRecorder recorder struct (state, action)
             }
     let resampler = Resampler SamplesPerWindow (writeDetector voiceDetector)
-    let resample = Async.StartImmediate << writeResampler resampler
-    let rec consumer =
-        async {
-            do! processingChannel.AsyncGet() |>> function
-                | ValueNone -> resample ResamplerInput.Reset
+    let rec consumer () =
+        uply {
+            let! value = readChannel' processingChannel
+            match value with
+                | ValueNone -> writeResampler resampler ResamplerInput.Reset
                 | ValueSome state ->
                     if state.isReady && (getConfig().enableRecordVoiceWhileDead || not state.isPlayerDead) then
                         let frame =
@@ -128,15 +125,15 @@ let readMicrophone recordingDirectory =
                             }
                         let processingState =
                             {   forcedProbability =
-                                    if state.isMuted then Some 0f
-                                    else if state.pushToTalkEnabled then Some 1f
-                                    else None
+                                    if state.isMuted then ValueSome 0f
+                                    else if state.pushToTalkEnabled then ValueSome 1f
+                                    else ValueNone
                                 allowRecordVoice = getSettings().allowRecordVoice
                             }
-                        resample <| ResamplerInput (processingState, frame)
-            do! consumer
+                        writeResampler resampler <| ResamplerInput struct (processingState, frame)
+            do! consumer()
         }
-    Async.Start consumer
+    fork' consumer
 
     On.Dissonance.DissonanceComms.add_Start(fun orig self ->
         orig.Invoke self
@@ -162,5 +159,5 @@ let readMicrophone recordingDirectory =
 
     On.MenuManager.add_Awake(fun orig self ->
         orig.Invoke self
-        processingChannel.Add ValueNone
+        writeChannel processingChannel ValueNone
     )

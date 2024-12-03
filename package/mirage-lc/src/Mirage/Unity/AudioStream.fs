@@ -1,7 +1,9 @@
 module Mirage.Unity.AudioStream
 
 open System
+open System.Threading.Tasks
 open FSharpPlus
+open FSharp.Control.Tasks.Affine.Unsafe
 open UnityEngine
 open Unity.Netcode
 open Mirage.Domain.Audio.Sender
@@ -64,23 +66,19 @@ type AudioStream() as self =
     
     /// Load the opus file, play it locally, while streaming the packets to all other clients to play.
     let streamAudioHost opusReader =
-        async {
-            iter dispose audioSender
-            self.InitializeAudioReceiver opusReader.totalSamples
-            self.InitializeAudioReceiverClientRpc opusReader.totalSamples
-            audioSender <- Some <| AudioSender (flip onReceivePacket audioReceiver) opusReader self.destroyCancellationToken
-            startAudioSender audioSender.Value
-        }
+        iter dispose audioSender
+        self.InitializeAudioReceiver opusReader.totalSamples
+        self.InitializeAudioReceiverClientRpc opusReader.totalSamples
+        audioSender <- Some <| AudioSender (onReceivePacket audioReceiver) opusReader self.destroyCancellationToken
+        startAudioSender audioSender.Value
     
     /// Load the opus file, and then send the packets to the host. The host then relays it to all clients.
     let streamAudioClient opusReader =
-        async {
-            let serverRpcParams = ServerRpcParams()
-            let sendPacket opusPacket = self.SendPacketServerRpc(opusPacket, serverRpcParams)
-            self.InitializeAudioReceiverServerRpc(opusReader.totalSamples, serverRpcParams)
-            audioSender <- Some <| AudioSender sendPacket opusReader self.destroyCancellationToken
-            startAudioSender audioSender.Value
-        }
+        let serverRpcParams = ServerRpcParams()
+        let sendPacket opusPacket = self.SendPacketServerRpc(opusPacket, serverRpcParams)
+        self.InitializeAudioReceiverServerRpc(opusReader.totalSamples, serverRpcParams)
+        audioSender <- Some <| AudioSender sendPacket opusReader self.destroyCancellationToken
+        startAudioSender audioSender.Value
 
     /// An event that triggers when a new audio clip begins.
     [<CLIEvent>]
@@ -98,7 +96,7 @@ type AudioStream() as self =
 
     /// Stream audio from the player (can be host or non-host) to all other players.
     member this.StreamOpusFromFile(filePath) =
-        async {
+        uply {
             let localId = StartOfRound.Instance.localPlayerController.actualClientId
             if Some localId <> this.AllowedSenderId then
                 invalidOp $"StreamAudioFromFile cannot be run from this client. LocalId: {localId}. AllowedId: {this.AllowedSenderId}."
@@ -109,12 +107,12 @@ type AudioStream() as self =
                 let totalTime = int opusReader.reader.TotalTime.TotalMilliseconds
                 try
                     if this.IsHost then
-                        do! streamAudioHost opusReader
+                        streamAudioHost opusReader
                     else
-                        do! streamAudioClient opusReader
+                        streamAudioClient opusReader
                 with | error ->
                     logError $"An exception occured while streaming audio: {error}"
-                do! Async.Sleep totalTime
+                do! Task.Delay(totalTime, this.destroyCancellationToken)
         }
 
     /// Initialize the audio receiver to playback audio when opus packets are received.
@@ -145,10 +143,10 @@ type AudioStream() as self =
     [<ClientRpc>]
     member this.SendPacketClientRpc(opusPacket) =
         if not this.IsHost then
-            onReceivePacket opusPacket audioReceiver
+            onReceivePacket audioReceiver opusPacket
     
     [<ServerRpc(RequireOwnership = false)>]
     member this.SendPacketServerRpc(opusPacket, serverRpcParams) =
         onValidSender this serverRpcParams <| fun () ->
-            onReceivePacket opusPacket audioReceiver
+            onReceivePacket audioReceiver opusPacket
             this.SendPacketClientRpc opusPacket

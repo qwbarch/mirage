@@ -1,21 +1,20 @@
 module Mirage.Domain.Logger
 
-#nowarn "40"
-
-open System
-open FSharpx.Control
+open FSharp.Control.Tasks.Affine.Unsafe
 open Mirage.PluginInfo
+open Mirage.Core.Ply.Fork
+open Mirage.Core.Ply.Channel
 
 type private LogType = LogInfo | LogDebug | LogWarning | LogError
 
 /// Logs messages in one thread to make it thread-safe.
 let private channel =
-    let self = new BlockingQueueAgent<ValueTuple<LogType, string>>(Int32.MaxValue)
-    Async.Start <| async {
+    let self = Channel()
+    fork' <| fun () ->
         let logger = BepInEx.Logging.Logger.CreateLogSource pluginId
-        let rec consumer =
-            async {
-                let! (logType, message) = self.AsyncGet()
+        let rec consumer () =
+            uply {
+                let! struct (logType, message) = readChannel' self
                 let logMessage =
                     match logType with
                         | LogInfo -> logger.LogInfo
@@ -23,14 +22,13 @@ let private channel =
                         | LogWarning -> logger.LogWarning
                         | LogError -> logger.LogError
                 logMessage message
-                do! consumer
+                do! consumer()
             }
-        Async.StartImmediate consumer
-    }
+        consumer()
     self
 
-let private logMessage logType message =
-    Async.StartImmediate << channel.AsyncAdd <| (logType, message)
+let private logMessage logType (message: string) =
+    writeChannel channel <| struct (logType, message)
 
 let internal logInfo = logMessage LogInfo
 let internal logDebug = logMessage LogDebug

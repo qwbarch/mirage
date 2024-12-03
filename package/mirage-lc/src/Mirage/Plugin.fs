@@ -39,8 +39,8 @@ type Plugin() =
         initLobbyCompatibility pluginName pluginVersion
         initSettings <| Path.Join(mirageDirectory, "settings.json")
         initNetcodePatcher()
-        Async.StartImmediate deleteRecordings
-        Application.add_quitting(fun _ -> Async.StartImmediate deleteRecordings)
+        ignore <| deleteRecordings()
+        Application.add_quitting(ignore << deleteRecordings)
 
         // Hooks.
         cacheDissonance()

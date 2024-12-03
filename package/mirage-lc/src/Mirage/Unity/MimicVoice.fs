@@ -1,10 +1,8 @@
 module Mirage.Unity.MirageVoice
 
-#nowarn "40"
-
 open FSharpPlus
-open FSharpPlus.Data
 open System
+open System.Threading.Tasks
 open UnityEngine
 open Unity.Netcode
 open Dissonance.Audio.Playback
@@ -15,7 +13,8 @@ open Mirage.Unity.MimicPlayer
 open Mirage.Domain.Config
 open Mirage.Domain.Setting
 open Mirage.Domain.Audio.Recording
-
+open FSharp.Control.Tasks.Affine.Unsafe
+open Mirage.Core.Ply.Fork
 let private random = Random()
 
 type MimicVoice() as self =
@@ -28,30 +27,28 @@ type MimicVoice() as self =
     let mutable enemyAI: EnemyAI = null
 
     let startVoiceMimic () =
-        let mimicVoice =
-            map ignore << OptionT.run <| monad {
+        let rec mimicVoice () =
+            uply {
                 try
                     if not (isNull enemyAI)
                         && not enemyAI.isEnemyDead
                         && not (isNull mimicPlayer.MimickingPlayer)
                         && mimicPlayer.MimickingPlayer = StartOfRound.Instance.localPlayerController
                     then
-                        let! recording = OptionT <| getRecording recordingManager
-                        do! lift <| audioStream.StreamOpusFromFile recording
+                        let! recording = getRecording recordingManager
+                        if recording.IsSome then
+                            do! audioStream.StreamOpusFromFile recording.Value
                 with | error -> logError $"Error occurred while mimicking voice: {error}"
-            }
-        let rec runMimicLoop =
-            async {
                 let delay =
                     if enemyAI :? MaskedPlayerEnemy then
                         random.Next(getConfig().minimumDelayMasked, getConfig().maximumDelayMasked + 1)
                     else
                         random.Next(getConfig().minimumDelayNonMasked, getConfig().maximumDelayNonMasked + 1)
-                do! mimicVoice
-                do! Async.Sleep delay
-                do! runMimicLoop
+
+                do! Task.Delay(delay, self.destroyCancellationToken)
+                do! mimicVoice()
             }
-        Async.StartImmediate(runMimicLoop, self.destroyCancellationToken)
+        fork mimicVoice self.destroyCancellationToken
     
     member this.Awake() =
         audioStream <- this.GetComponent<AudioStream>()
