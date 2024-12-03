@@ -141,23 +141,23 @@ let VoiceDetector args =
                         if not voiceDetected then
                             voiceDetected <- true
                             vadFrames <- [vadFrame]
-                            do! onVoiceDetected << DetectStart <|
+                            onVoiceDetected << DetectStart <|
                                 {   originalFormat = currentAudio.original.format
                                     resampledFormat = currentAudio.resampled.format
                                 }
                         else
                             vadFrames <- vadFrame :: vadFrames
-                        do! onVoiceDetected detectFound
+                        onVoiceDetected detectFound
                     else if probability < args.endThreshold && voiceDetected then
                         if endIndex = 0 then
                             endIndex <- currentIndex
                         if float32 (currentIndex - endIndex) < minSilenceSamples then
-                            do! onVoiceDetected detectFound
+                            onVoiceDetected detectFound
                         else
                             endIndex <- 0
                             voiceDetected <- false
-                            do! onVoiceDetected <| detectFound
-                            do! onVoiceDetected << DetectEnd <|
+                            onVoiceDetected <| detectFound
+                            onVoiceDetected << DetectEnd <|
                                 {   //vadFrame = vadFrame
                                     //vadTimings = rev vadFrames
                                     audioDurationMs = vadFrame.elapsedTime
