@@ -19,8 +19,6 @@ open Mirage.Core.Audio.Microphone.Detection
 open Mirage.Core.Audio.Microphone.Recorder
 open Mirage.Domain.Config
 open Mirage.Domain.Setting
-open System.Diagnostics
-open Mirage.Domain.Logger
 
 let [<Literal>] SamplesPerWindow = 2048
 let [<Literal>] StartThreshold = 0.5f
@@ -88,50 +86,14 @@ let private bufferChannel =
 type MicrophoneSubscriber() =
     interface IMicrophoneSubscriber with
         member _.ReceiveMicrophoneData(buffer, format) =
-            //let sw = new Stopwatch()
-
-            //sw.Start()
-
             let samples = bufferPool.Rent buffer.Count
-
-            //sw.Stop()
-            //logInfo $"samples rent: {sw.Elapsed.TotalMilliseconds}"
-            //sw.Reset()
-
-
-            //sw.Start()
-
             Buffer.BlockCopy(buffer.Array, buffer.Offset, samples, 0, buffer.Count * sizeof<float32>)
-
-            //sw.Stop()
-            //logInfo $"block copy: {sw.Elapsed.TotalMilliseconds}"
-            //sw.Reset()
-
-
-            //sw.Start()
-            //let input =
-            //    {   samples = samples
-            //        sampleRate = format.SampleRate
-            //        channels = format.Channels
-            //        sampleCount = buffer.Count
-            //    }
-            //sw.Stop()
-            //logInfo $"create struct: {sw.Elapsed.TotalMilliseconds}"
-            //sw.Reset()
-
             bufferChannel.Enqueue
                 {   samples = samples
                     sampleRate = format.SampleRate
                     channels = format.Channels
                     sampleCount = buffer.Count
                 }
-
-            //sw.Start()
-            //bufferChannel.Enqueue input
-            //sw.Stop()
-            //logInfo $"buffer channel enqueue: {sw.Elapsed.TotalMilliseconds}"
-            //sw.Reset()
-            ()
         member _.Reset() = processingChannel.Add ValueNone
 
 let readMicrophone recordingDirectory =

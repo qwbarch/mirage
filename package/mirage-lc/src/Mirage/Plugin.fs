@@ -32,8 +32,8 @@ type Plugin() =
         ignore <| Directory.CreateDirectory mirageDirectory
 
         // Credits goes to DissonanceLagFix: https://thunderstore.io/c/lethal-company/p/linkoid/DissonanceLagFix/
-        //for category in Seq.cast<LogCategory> <| Enum.GetValues typeof<LogCategory> do
-        //    Logs.SetLogLevel(category, LogLevel.Error)
+        for category in Seq.cast<LogCategory> <| Enum.GetValues typeof<LogCategory> do
+            Logs.SetLogLevel(category, LogLevel.Error)
 
         initLethalConfig assembly localConfig.General
         initLobbyCompatibility pluginName pluginVersion

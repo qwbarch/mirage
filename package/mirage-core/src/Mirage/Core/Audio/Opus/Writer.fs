@@ -36,6 +36,7 @@ let OpusWriter args =
                     | Close ->
                         async {
                             closed <- true
+                            ignore << Directory.CreateDirectory <| Path.GetDirectoryName args.filePath
                             use fileStream = new FileStream(args.filePath, FileMode.Create, FileAccess.Write)
                             use encoder = OpusEncoder()
                             let opusStream = OpusOggWriteStream(
