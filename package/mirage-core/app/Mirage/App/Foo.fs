@@ -6,11 +6,16 @@ open Mirage.Core.Audio.Opus.Codec
 open Concentus.Structs
 open System
 open Mirage.Core.Audio.Opus
-open Mirage.Baz
+open Ply
+open FSharp.Control.Tasks.Affine.Unsafe
 
 [<EntryPoint>]
 let main args =
-    foobar()
+    let program =
+        uply {
+            printfn "in program"
+        }
+    printfn "in main"
     //Async.RunSynchronously <| async {
     //    let! opusReader = readOpusFile "hello.opus"
     //    let frames = List<byte>()
