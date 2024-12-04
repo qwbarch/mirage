@@ -1,7 +1,9 @@
 module Mirage.Core.Audio.Microphone.Detection
 
+open System
 open System.Collections.Generic
 open System.Threading
+open System.Buffers
 open NAudio.Wave
 open IcedTasks
 open Mirage.Prelude
@@ -26,22 +28,8 @@ type DetectStart =
     }
 
 [<Struct>]
-type DetectFound =
-    {   vadFrame: VADFrame
-        /// Samples containing only the current audio frame.
-        currentAudio: ResampledAudio
-        /// Samples containing the entirety of speech being detected.
-        fullAudio: ResampledAudio
-    }
-
-[<Struct>]
 type DetectEnd =
-    {   /// VAD timing for the final frame.
-        //vadFrame: VADFrame
-        //vadTimings: list<VADFrame>
-        audioDurationMs: int
-        /// Samples containing only the current audio frame.
-        currentAudio: ResampledAudio
+    {   audioDurationMs: int
         /// Samples containing the entirety of speech being detected.
         fullAudio: ResampledAudio
     }
@@ -50,7 +38,6 @@ type DetectEnd =
 [<Struct>]
 type DetectAction
     = DetectStart of detectStart: DetectStart
-    | DetectFound of detectFound: DetectFound
     | DetectEnd of detectEnd: DetectEnd
 
 /// Detect if speech is found. All async functions are run on a separate thread.
@@ -72,7 +59,9 @@ type VoiceDetectorArgs<'State> =
         /// Return value is a float32 in the range of 0f-1f.<br />
         /// The closer to 0f, the less likely speech is detected.
         /// The closer to 1f, the more likely speech is detected.
-        detectSpeech: Samples -> float32
+        /// 
+        /// The int argument is the sampleCount, assuming the given samples are rented by __ArrayPool.Shared__.
+        detectSpeech: Samples -> int -> float32
         /// Function that gets called every time a voice is detected, represented by __DetectAction__.
         onVoiceDetected: 'State -> DetectAction -> unit
     }
@@ -86,7 +75,6 @@ let VoiceDetector args =
         {|  original = new List<float32>()
             resampled = new List<float32>()
         |}
-    let mutable vadFrames = []
     let mutable currentIndex = 0
     let mutable endIndex = 0
     let mutable voiceDetected = false
@@ -98,74 +86,70 @@ let VoiceDetector args =
                 | Reset ->
                     samples.original.Clear()
                     samples.resampled.Clear()
-                    vadFrames <- []
                     currentIndex <- 0
                     endIndex <- 0
                     voiceDetected <- false
                 | ResamplerOutput struct (state, currentAudio) ->
-                    let onVoiceDetected = args.onVoiceDetected state
-                    &currentIndex += currentAudio.original.samples.Length
-                    samples.original.AddRange currentAudio.original.samples
-                    samples.resampled.AddRange currentAudio.resampled.samples
-                    let probability =
-                        match args.forcedProbability state with
-                            | ValueSome probability -> probability
-                            | ValueNone -> args.detectSpeech currentAudio.resampled.samples
-                    let fullAudio =
-                        {   original =
-                                {   format = currentAudio.original.format
-                                    samples = samples.original.ToArray()
-                                }
-                            resampled =
-                                {   format = currentAudio.resampled.format
-                                    samples = samples.resampled.ToArray()
-                                }
-                        }
-                    let vadFrame =
-                        {   elapsedTime = audioLengthMs fullAudio.original.format fullAudio.original.samples
-                            probability = probability
-                        }
-                    let detectFound =
-                        DetectFound
-                            {   vadFrame = vadFrame
-                                currentAudio = currentAudio
-                                fullAudio = fullAudio
-                            }
-                    if probability >= args.startThreshold then
-                        if endIndex <> 0 then
-                            endIndex <- 0
-                        if not voiceDetected then
-                            voiceDetected <- true
-                            vadFrames <- [vadFrame]
-                            onVoiceDetected << DetectStart <|
-                                {   originalFormat = currentAudio.original.format
-                                    resampledFormat = currentAudio.resampled.format
-                                }
-                        else
-                            vadFrames <- vadFrame :: vadFrames
-                        onVoiceDetected detectFound
-                    else if probability < args.endThreshold && voiceDetected then
-                        if endIndex = 0 then
-                            endIndex <- currentIndex
-                        if float32 (currentIndex - endIndex) < minSilenceSamples then
-                            onVoiceDetected detectFound
-                        else
-                            endIndex <- 0
-                            voiceDetected <- false
-                            onVoiceDetected <| detectFound
-                            onVoiceDetected << DetectEnd <|
-                                {   //vadFrame = vadFrame
-                                    //vadTimings = rev vadFrames
-                                    audioDurationMs = vadFrame.elapsedTime
-                                    currentAudio = currentAudio
-                                    fullAudio = fullAudio
-                                }
-                            vadFrames <- []
+                    try
+                        &currentIndex += currentAudio.original.samples.Length
+                        samples.original.AddRange <| ArraySegment(currentAudio.original.samples, 0, currentAudio.original.sampleCount)
+                        samples.resampled.AddRange <| ArraySegment(currentAudio.resampled.samples, 0, currentAudio.resampled.sampleCount)
+
+                        let probability =
+                            match args.forcedProbability state with
+                                | ValueSome probability -> probability
+                                | ValueNone -> args.detectSpeech currentAudio.resampled.samples currentAudio.resampled.sampleCount
+                        if probability >= args.startThreshold then
+                            if endIndex <> 0 then
+                                endIndex <- 0
+                            if not voiceDetected then
+                                voiceDetected <- true
+                                args.onVoiceDetected state << DetectStart <|
+                                    {   originalFormat = currentAudio.original.format
+                                        resampledFormat = currentAudio.resampled.format
+                                    }
+                        else if probability < args.endThreshold && voiceDetected then
+                            if endIndex = 0 then
+                                endIndex <- currentIndex
+                            printfn "before if"
+                            if float32 (currentIndex - endIndex) >= minSilenceSamples then
+                                let fullAudio =
+                                    let original =
+                                        let buffer = ArrayPool.Shared.Rent samples.original.Count
+                                        samples.original.CopyTo(0, buffer, 0, samples.original.Count)
+                                        buffer
+                                    let resampled =
+                                        let buffer = ArrayPool.Shared.Rent samples.resampled.Count
+                                        samples.resampled.CopyTo(0, buffer, 0, samples.resampled.Count)
+                                        buffer
+                                    printfn $"original (rented) sample size: {original.Length}"
+                                    printfn $"resampled (rented) sample size: {resampled.Length}"
+                                    {   original =
+                                            {   format = currentAudio.original.format
+                                                samples = original
+                                                sampleCount = samples.original.Count
+                                            }
+                                        resampled =
+                                            {   format = currentAudio.resampled.format
+                                                samples = resampled
+                                                sampleCount = samples.resampled.Count
+                                            }
+                                    }
+                                endIndex <- 0
+                                voiceDetected <- false
+                                args.onVoiceDetected state << DetectEnd <|
+                                    {   audioDurationMs = audioLengthMs fullAudio.original.format samples.original.Count
+                                        fullAudio = fullAudio
+                                    }
+                                samples.original.Clear()
+                                samples.resampled.Clear()
+                        else if not voiceDetected then
                             samples.original.Clear()
                             samples.resampled.Clear()
-                    else if not voiceDetected then
-                        samples.original.Clear()
-                        samples.resampled.Clear()
+                    with | ex -> printfn $"error while voice detecting: {ex}"
+                    //finally
+                    ArrayPool.Shared.Return currentAudio.original.samples
+                    ArrayPool.Shared.Return currentAudio.resampled.samples
         }
     fork CancellationToken.None consumer
     { channel = channel }

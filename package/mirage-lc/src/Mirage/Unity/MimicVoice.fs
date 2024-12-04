@@ -33,7 +33,7 @@ type MimicVoice() as self =
                 if not (isNull enemyAI)
                     && not enemyAI.isEnemyDead
                     && not (isNull mimicPlayer.MimickingPlayer)
-                    && mimicPlayer.MimickingPlayer = StartOfRound.Instance.localPlayerController
+                    && Object.ReferenceEquals(mimicPlayer.MimickingPlayer, StartOfRound.Instance.localPlayerController)
                 then
                     let! recording = getRecording recordingManager
                     if recording.IsSome then
@@ -95,7 +95,7 @@ type MimicVoice() as self =
                     && enemyAI.agent.speed = 0f
                     && (enemyAI :?> MaskedPlayerEnemy).crouching
             audioStream.AudioSource.volume <-
-                if mimicPlayer.MimickingPlayer = localPlayer then
+                if Object.ReferenceEquals(mimicPlayer.MimickingPlayer, localPlayer) then
                     getSettings().localPlayerVolume
                 else
                     // Might as well use 1f as the default if any of those fields are null.

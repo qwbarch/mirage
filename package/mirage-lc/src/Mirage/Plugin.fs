@@ -36,7 +36,7 @@ type Plugin() =
 
             ignore <| Directory.CreateDirectory mirageDirectory
             let! settings = initSettings <| Path.Join(mirageDirectory, "settings.json")
-            logInfo $"Loaded settings:\n{JsonConvert.SerializeObject settings}"
+            logInfo $"Loaded settings: {JsonConvert.SerializeObject settings}"
 
             // Credits goes to DissonanceLagFix: https://thunderstore.io/c/lethal-company/p/linkoid/DissonanceLagFix/
             //for category in Seq.cast<LogCategory> <| Enum.GetValues typeof<LogCategory> do

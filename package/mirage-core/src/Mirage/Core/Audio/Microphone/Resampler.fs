@@ -21,21 +21,19 @@ let private WriterFormat = WaveFormat(SampleRate, 1)
 /// Resamples the given audio samples using the resampler's configured in/out sample rates.<br />
 /// This assumes the input/output is mono-channel audio.<br />
 /// Source: https://markheath.net/post/fully-managed-input-driven-resampling-wdl
-let private resample (resampler: WdlResampler) (samples: Samples) =
+let inline private resample (resampler: WdlResampler) (samples: Samples) =
     let mutable inBuffer = null
     let mutable inBufferOffset = 0
     let inAvailable = resampler.ResamplePrepare(samples.Length, 1, &inBuffer, &inBufferOffset)
-    Array.Copy(samples, 0, inBuffer, inBufferOffset, inAvailable)
+    Buffer.BlockCopy(samples, 0, inBuffer, inBufferOffset, inAvailable * sizeof<float32>)
     let mutable outBuffer = ArrayPool.Shared.Rent BufferSize
     let outAvailable = resampler.ResampleOut(outBuffer, 0, inAvailable, BufferSize, 1)
-    let buffer = Array.zeroCreate<float32> outAvailable
-    Array.Copy(outBuffer, 0, buffer, 0, outAvailable)
-    ArrayPool.Shared.Return outBuffer
-    buffer
+    struct (outBuffer, outAvailable)
 
 [<Struct>]
 type AudioFrame =
     {   samples: Samples
+        sampleCount: int
         format: WaveFormat
     }
 
@@ -76,37 +74,50 @@ let Resampler<'State> samplesPerWindow (onResampled: ResamplerOutput<'State> -> 
                     resampledSamples.Clear()
                     onResampled Reset
                 | ResamplerInput struct (state, frame) ->
-                    originalSamples.AddRange frame.samples
-                    resampledSamples.AddRange <|
-                        if frame.format.SampleRate <> SampleRate then
-                            resampler.SetRates(frame.format.SampleRate, SampleRate)
-                            resample resampler frame.samples
+                    try
+                        let frameSamples = ArraySegment(frame.samples, 0, frame.sampleCount)
+                        originalSamples.AddRange frameSamples
+                        if frame.format.SampleRate = SampleRate then
+                            resampledSamples.AddRange frameSamples
                         else
-                            frame.samples
-                    if resampledSamples.Count >= samplesPerWindow then
-                        let original =
-                            let sampleSize = int <| windowDuration * float frame.format.SampleRate
-                            let samples = originalSamples.GetRange(0, sampleSize)
+                            resampler.SetRates(frame.format.SampleRate, SampleRate)
+                            let struct (samples, sampleCount) = resample resampler frame.samples
+                            resampledSamples.AddRange <| ArraySegment(samples, 0, sampleCount)
+                            ArrayPool.Shared.Return samples
+                        let sampleSize = int <| windowDuration * float frame.format.SampleRate
+                        if originalSamples.Count >= sampleSize && resampledSamples.Count >= samplesPerWindow then
+                            printfn $"sampleSize: {int (windowDuration * float frame.format.SampleRate)}"
+                            printfn $"sampleCount: {frame.sampleCount}"
+                            printfn $"rentSize: {frame.samples.Length}"
+                            printfn $"samplesPerWindow: {samplesPerWindow}"
+                            printfn $"originalSamples: {originalSamples.Count}"
+                            printfn $"resampledSamples: {resampledSamples.Count}"
+                            let original = ArrayPool.Shared.Rent sampleSize
+                            originalSamples.CopyTo(0, original, 0, sampleSize)
                             originalSamples.RemoveRange(0, sampleSize)
-                            samples.ToArray()
-                        let resampled =
-                            let samples = resampledSamples.GetRange(0, samplesPerWindow)
+                            let resampled = ArrayPool.Shared.Rent samplesPerWindow
+                            resampledSamples.CopyTo(0, resampled, 0, samplesPerWindow)
                             resampledSamples.RemoveRange(0, samplesPerWindow)
-                            samples.ToArray()
-                        let resampledAudio =
-                            {   original =
-                                    {   samples = original
-                                        format = frame.format
-                                    }
-                                resampled =
-                                    {   samples = resampled
-                                        format = WriterFormat
-                                    }
-                            }
-                        onResampled << ResamplerOutput <| struct (state, resampledAudio)
+                            let resampledAudio =
+                                {   original =
+                                        {   samples = original
+                                            sampleCount = sampleSize
+                                            format = frame.format
+                                        }
+                                    resampled =
+                                        {   samples = resampled
+                                            sampleCount = samplesPerWindow
+                                            format = WriterFormat
+                                        }
+                                }
+                            onResampled << ResamplerOutput <| struct (state, resampledAudio)
+                    with | ex -> printfn $"error while resampling: {ex}"
+                    //finally
+                    ArrayPool.Shared.Return frame.samples
         }
     fork CancellationToken.None consumer
     { channel = channel }
 
 /// Add audio samples to be processed by the resampler.
+/// This assumes the array is rented from __ArrayPool.Shared__, and will be returned after being used.
 let writeResampler resampler = writeChannel resampler.channel

@@ -4,43 +4,13 @@ open IcedTasks
 open System
 open System.IO
 open System.Threading
+open System.Buffers
 open Mirage.Core.Audio.Microphone.Detection
 open Mirage.Core.Audio.Microphone.Resampler
 open Mirage.Core.Audio.Opus.Writer
 open Mirage.Core.Task.Channel
 open Mirage.Core.Task.Fork
 open Mirage.Core.Task.Utility
-
-//[<Struct>]
-//type RecordStart =
-//    {   originalFormat: WaveFormat
-//        resampledFormat: WaveFormat
-//    }
-//
-//[<Struct>]
-//type RecordFound =
-//    {   //vadFrame: VADFrame
-//        fullAudio: ResampledAudio
-//        currentAudio: ResampledAudio
-//    }
-//
-///// Note: After the callback finishes for this action, the mp3 writer is disposed.
-//[<Struct>]
-//type RecordEnd =
-//    {   opusWriter: OpusWriter
-//        //vadFrame: VADFrame
-//        //vadTimings: list<VADFrame>
-//        fullAudio: ResampledAudio
-//        currentAudio: ResampledAudio
-//        audioDurationMs: int
-//    }
-//
-///// A sum type representing the progress of a recording.
-//[<Struct>]
-//type RecordAction
-//    = RecordStart of recordStart: RecordStart
-//    | RecordFound of recordFound: RecordFound
-//    | RecordEnd of recordEnd: RecordEnd
 
 /// Records audio from a live microphone feed.
 type Recorder<'State> = private { channel: Channel<ValueTuple<'State, DetectAction>> }
@@ -52,8 +22,6 @@ type RecorderArgs<'State> =
         directory: string
         /// Whether recordings should be created or not, based on the current state.
         allowRecordVoice: 'State -> bool
-        ///// Function that gets called every time a recording is in the process of being created.
-        //onRecording: 'State -> RecordAction -> Async<Unit>
     }
 
 let Recorder args =
@@ -61,36 +29,21 @@ let Recorder args =
     let consumer () =
         forever <| fun () -> valueTask {
             let! struct (state, action) = readChannel channel
-            //let onRecording = args.onRecording state
             match action with
                 | DetectStart _ -> ()
-                    //do! onRecording << RecordStart <|
-                    //    {   originalFormat = payload.originalFormat
-                    //        resampledFormat = payload.resampledFormat
-                    //    }
                 | DetectEnd payload ->
                     if payload.audioDurationMs >= args.minAudioDurationMs && args.allowRecordVoice state then
-                        let opusWriter =
-                            OpusWriter 
-                                {   filePath = Path.Join(args.directory, $"{Guid.NewGuid()}.opus")
-                                    format = payload.fullAudio.original.format
-                                }
-                        writeOpusSamples opusWriter payload.fullAudio.original.samples
-                        closeOpusWriter opusWriter
-                        //do! onRecording << RecordEnd <|
-                        //    {   opusWriter = opusWriter
-                        //        //vadFrame = payload.vadFrame
-                        //        //vadTimings = payload.vadTimings
-                        //        fullAudio = payload.fullAudio
-                        //        currentAudio = payload.currentAudio
-                        //        audioDurationMs = payload.audioDurationMs
-                        //    }
-                | DetectFound _ -> ()
-                    //do! onRecording << RecordFound <|
-                    //    {   //vadFrame = payload.vadFrame
-                    //        fullAudio = payload.fullAudio
-                    //        currentAudio = payload.currentAudio
-                    //    }
+                        try
+                            let opusWriter =
+                                OpusWriter 
+                                    {   filePath = Path.Join(args.directory, $"{Guid.NewGuid()}.opus")
+                                        format = payload.fullAudio.original.format
+                                    }
+                            writeOpusSamples opusWriter payload.fullAudio.original.samples
+                            closeOpusWriter opusWriter
+                        finally
+                            ArrayPool.Shared.Return payload.fullAudio.original.samples
+                            ArrayPool.Shared.Return payload.fullAudio.resampled.samples
         }
     fork CancellationToken.None consumer
     { channel = channel }

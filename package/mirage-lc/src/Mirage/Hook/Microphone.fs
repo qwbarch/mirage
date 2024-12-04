@@ -25,6 +25,7 @@ let [<Literal>] EndThreshold = 0.2f
 [<Struct>]
 type ProcessingInput =
     {   samples: Samples
+        sampleCount: int
         format: WaveFormat
         isReady: bool
         isPlayerDead: bool
@@ -52,8 +53,6 @@ type BufferInput =
         channels: int
     }
 
-let private bufferPool: ArrayPool<float32> = ArrayPool.Create()
-
 /// A channel for pulling microphone data from the dissonance thread.
 /// The given audio samples points to an array that belongs to the buffer pool, but we cannot hold this reference for long.
 /// A deep copy of the audio samples is done, and then the input audio samples is returned to the buffer pool.
@@ -63,12 +62,10 @@ let private bufferChannel =
     let consumer () =
         forever <| fun () -> valueTask {
             let! input = readChannel channel
-            let samples = Array.zeroCreate<float32> input.sampleCount
-            Buffer.BlockCopy(input.samples, 0, samples, 0, input.sampleCount * sizeof<float32>)
-            bufferPool.Return(input.samples, true)
             if not (isNull StartOfRound.Instance) then
                 writeChannel processingChannel << ValueSome <|
-                    {   samples = samples
+                    {   samples = input.samples
+                        sampleCount = input.sampleCount
                         format = WaveFormat(input.sampleRate, input.channels)
                         isReady = isReady
                         isPlayerDead = StartOfRound.Instance.localPlayerController.isPlayerDead
@@ -83,7 +80,7 @@ let private bufferChannel =
 type MicrophoneSubscriber() =
     interface IMicrophoneSubscriber with
         member _.ReceiveMicrophoneData(buffer, format) =
-            let samples = bufferPool.Rent buffer.Count
+            let samples = ArrayPool.Shared.Rent buffer.Count
             Buffer.BlockCopy(buffer.Array, buffer.Offset, samples, 0, buffer.Count * sizeof<float32>)
             writeChannel bufferChannel
                 {   samples = samples
@@ -120,6 +117,7 @@ let readMicrophone recordingDirectory =
                     if state.isReady && (getConfig().enableRecordVoiceWhileDead || not state.isPlayerDead) then
                         let frame =
                             {   samples = state.samples
+                                sampleCount = state.sampleCount
                                 format = state.format
                             }
                         let processingState =

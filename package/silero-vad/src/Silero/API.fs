@@ -49,4 +49,4 @@ let releaseSilero (SileroVAD vad) = release_silero vad
 /// The closer the number to 0f, the less likely speech is found.<br />
 /// The closer the number to 1f, the more likely speech is found.
 /// </returns>
-let detectSpeech (SileroVAD vad) pcmData = detect_speech(vad, pcmData, pcmData.Length)
+let detectSpeech (SileroVAD vad) pcmData pcmLength = detect_speech(vad, pcmData, int pcmLength)

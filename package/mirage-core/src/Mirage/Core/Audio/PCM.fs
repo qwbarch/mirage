@@ -28,5 +28,5 @@ let toPCMBytes (floatData: Samples) : PCMData =
     pcmData
 
 /// Calculates the length of the given audio samples in milliseconds.
-let audioLengthMs (waveFormat: WaveFormat) (samples: Samples) =
-    int <| float samples.Length / float waveFormat.SampleRate / float waveFormat.Channels * 1000.0
+let audioLengthMs (waveFormat: WaveFormat) sampleCount =
+    int <| float sampleCount / float waveFormat.SampleRate / float waveFormat.Channels * 1000.0
