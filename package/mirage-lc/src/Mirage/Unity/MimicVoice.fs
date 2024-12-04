@@ -14,7 +14,7 @@ open Mirage.Domain.Setting
 open Mirage.Domain.Audio.Recording
 open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicPlayer
-open Mirage.Core.Task.Fork
+open Mirage.Core.Task.Utility
 
 let private random = Random()
 
@@ -28,28 +28,25 @@ type MimicVoice() as self =
     let mutable enemyAI: EnemyAI = null
 
     let startVoiceMimic () =
-        let rec mimicVoice () =
-            valueTask {
-                try
-                    if not (isNull enemyAI)
-                        && not enemyAI.isEnemyDead
-                        && not (isNull mimicPlayer.MimickingPlayer)
-                        && mimicPlayer.MimickingPlayer = StartOfRound.Instance.localPlayerController
-                    then
-                        let! recording = getRecording recordingManager
-                        if recording.IsSome then
-                            do! audioStream.StreamOpusFromFile recording.Value
-                with | error -> logError $"Error occurred while mimicking voice: {error}"
-                let delay =
-                    if enemyAI :? MaskedPlayerEnemy then
-                        random.Next(getConfig().minimumDelayMasked, getConfig().maximumDelayMasked + 1)
-                    else
-                        random.Next(getConfig().minimumDelayNonMasked, getConfig().maximumDelayNonMasked + 1)
+        forever <| fun () -> valueTask {
+            try
+                if not (isNull enemyAI)
+                    && not enemyAI.isEnemyDead
+                    && not (isNull mimicPlayer.MimickingPlayer)
+                    && mimicPlayer.MimickingPlayer = StartOfRound.Instance.localPlayerController
+                then
+                    let! recording = getRecording recordingManager
+                    if recording.IsSome then
+                        do! audioStream.StreamOpusFromFile recording.Value
+            with | error -> logError $"Error occurred while mimicking voice: {error}"
+            let delay =
+                if enemyAI :? MaskedPlayerEnemy then
+                    random.Next(getConfig().minimumDelayMasked, getConfig().maximumDelayMasked + 1)
+                else
+                    random.Next(getConfig().minimumDelayNonMasked, getConfig().maximumDelayNonMasked + 1)
 
-                do! Task.Delay(delay, self.destroyCancellationToken)
-                do! mimicVoice()
-            }
-        fork self.destroyCancellationToken mimicVoice
+            do! Task.Delay(delay, self.destroyCancellationToken)
+        }
     
     member this.Awake() =
         audioStream <- this.GetComponent<AudioStream>()

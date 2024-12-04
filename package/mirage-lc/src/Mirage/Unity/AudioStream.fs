@@ -59,9 +59,9 @@ type AudioStream() as self =
         event.Trigger(self, AudioStreamEventArgs(eventData))
 
     /// Run the callback if the sender client id matches the <b>AllowedSenderId</b> value.
-    let onValidSender (this: NetworkBehaviour) (serverRpcParams: ServerRpcParams) callback =
+    let onValidSender (serverRpcParams: ServerRpcParams) callback =
         let clientId = serverRpcParams.Receive.SenderClientId
-        if this.IsHost && this.NetworkManager.ConnectedClients.ContainsKey clientId && Some clientId = self.AllowedSenderId then
+        if self.IsHost && self.NetworkManager.ConnectedClients.ContainsKey clientId && Some clientId = self.AllowedSenderId then
             callback()
     
     /// Load the opus file, play it locally, while streaming the packets to all other clients to play.
@@ -101,10 +101,7 @@ type AudioStream() as self =
             if Some localId <> this.AllowedSenderId then
                 invalidOp $"StreamAudioFromFile cannot be run from this client. LocalId: {localId}. AllowedId: {this.AllowedSenderId}."
             else
-                let! opusReader = readOpusFile filePath
-                printfn "printing total samples."
-                printfn $"{opusReader.totalSamples}"
-                printfn "done printing total samples."
+                let! opusReader = Async.AwaitTask((readOpusFile filePath).AsTask())
                 // opusReader could be disposed by the time Async.Sleep is called.
                 // This is cached to avoid failing to grab the amount of milliseconds to wait.
                 let totalTime = int opusReader.reader.TotalTime.TotalMilliseconds
@@ -115,7 +112,8 @@ type AudioStream() as self =
                         streamAudioClient opusReader
                 with | error ->
                     logError $"An exception occured while streaming audio: {error}"
-                do! Task.Delay(totalTime, this.destroyCancellationToken)
+                //do! Task.Delay(totalTime, this.destroyCancellationToken)
+                do! Async.Sleep totalTime
         }
 
     /// Initialize the audio receiver to playback audio when opus packets are received.
@@ -138,7 +136,7 @@ type AudioStream() as self =
 
     [<ServerRpc(RequireOwnership = false)>]
     member this.InitializeAudioReceiverServerRpc(totalSamples, serverRpcParams) =
-        onValidSender this serverRpcParams <| fun () ->
+        onValidSender serverRpcParams <| fun () ->
             this.InitializeAudioReceiver totalSamples
             this.InitializeAudioReceiverClientRpc totalSamples 
 
@@ -150,6 +148,6 @@ type AudioStream() as self =
     
     [<ServerRpc(RequireOwnership = false)>]
     member this.SendPacketServerRpc(opusPacket, serverRpcParams) =
-        onValidSender this serverRpcParams <| fun () ->
+        onValidSender serverRpcParams <| fun () ->
             onReceivePacket audioReceiver opusPacket
             this.SendPacketClientRpc opusPacket
