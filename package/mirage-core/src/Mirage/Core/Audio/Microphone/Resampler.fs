@@ -86,12 +86,6 @@ let Resampler<'State> samplesPerWindow (onResampled: ResamplerOutput<'State> -> 
                             ArrayPool.Shared.Return samples
                         let sampleSize = int <| windowDuration * float frame.format.SampleRate
                         if originalSamples.Count >= sampleSize && resampledSamples.Count >= samplesPerWindow then
-                            printfn $"sampleSize: {int (windowDuration * float frame.format.SampleRate)}"
-                            printfn $"sampleCount: {frame.sampleCount}"
-                            printfn $"rentSize: {frame.samples.Length}"
-                            printfn $"samplesPerWindow: {samplesPerWindow}"
-                            printfn $"originalSamples: {originalSamples.Count}"
-                            printfn $"resampledSamples: {resampledSamples.Count}"
                             let original = ArrayPool.Shared.Rent sampleSize
                             originalSamples.CopyTo(0, original, 0, sampleSize)
                             originalSamples.RemoveRange(0, sampleSize)
@@ -111,9 +105,8 @@ let Resampler<'State> samplesPerWindow (onResampled: ResamplerOutput<'State> -> 
                                         }
                                 }
                             onResampled << ResamplerOutput <| struct (state, resampledAudio)
-                    with | ex -> printfn $"error while resampling: {ex}"
-                    //finally
-                    ArrayPool.Shared.Return frame.samples
+                    finally
+                        ArrayPool.Shared.Return frame.samples
         }
     fork CancellationToken.None consumer
     { channel = channel }

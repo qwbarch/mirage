@@ -111,7 +111,6 @@ let VoiceDetector args =
                         else if probability < args.endThreshold && voiceDetected then
                             if endIndex = 0 then
                                 endIndex <- currentIndex
-                            printfn "before if"
                             if float32 (currentIndex - endIndex) >= minSilenceSamples then
                                 let fullAudio =
                                     let original =
@@ -122,8 +121,6 @@ let VoiceDetector args =
                                         let buffer = ArrayPool.Shared.Rent samples.resampled.Count
                                         samples.resampled.CopyTo(0, buffer, 0, samples.resampled.Count)
                                         buffer
-                                    printfn $"original (rented) sample size: {original.Length}"
-                                    printfn $"resampled (rented) sample size: {resampled.Length}"
                                     {   original =
                                             {   format = currentAudio.original.format
                                                 samples = original
@@ -146,10 +143,9 @@ let VoiceDetector args =
                         else if not voiceDetected then
                             samples.original.Clear()
                             samples.resampled.Clear()
-                    with | ex -> printfn $"error while voice detecting: {ex}"
-                    //finally
-                    ArrayPool.Shared.Return currentAudio.original.samples
-                    ArrayPool.Shared.Return currentAudio.resampled.samples
+                    finally
+                        ArrayPool.Shared.Return currentAudio.original.samples
+                        ArrayPool.Shared.Return currentAudio.resampled.samples
         }
     fork CancellationToken.None consumer
     { channel = channel }
