@@ -1,9 +1,9 @@
 module Mirage.Unity.AudioStream
 
+open IcedTasks
 open System
 open System.Threading.Tasks
 open FSharpPlus
-open FSharp.Control.Tasks.Affine.Unsafe
 open UnityEngine
 open Unity.Netcode
 open Mirage.Domain.Audio.Sender
@@ -96,12 +96,15 @@ type AudioStream() as self =
 
     /// Stream audio from the player (can be host or non-host) to all other players.
     member this.StreamOpusFromFile(filePath) =
-        uply {
+        valueTask {
             let localId = StartOfRound.Instance.localPlayerController.actualClientId
             if Some localId <> this.AllowedSenderId then
                 invalidOp $"StreamAudioFromFile cannot be run from this client. LocalId: {localId}. AllowedId: {this.AllowedSenderId}."
             else
                 let! opusReader = readOpusFile filePath
+                printfn "printing total samples."
+                printfn $"{opusReader.totalSamples}"
+                printfn "done printing total samples."
                 // opusReader could be disposed by the time Async.Sleep is called.
                 // This is cached to avoid failing to grab the amount of milliseconds to wait.
                 let totalTime = int opusReader.reader.TotalTime.TotalMilliseconds

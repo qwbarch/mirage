@@ -1,11 +1,12 @@
 module Mirage.Core.Audio.Opus.Reader
 
 open System.IO
+open System.Threading
 open Concentus.Oggfile
-open FSharp.Control.Tasks.Affine.Unsafe
+open IcedTasks
 open Mirage.Prelude
 open Mirage.Core.Audio.Opus.Codec
-open Mirage.Core.Ply.Fork
+open Mirage.Core.Task.Fork
 
 type OpusReader =
     {   reader: OpusOggReadStream
@@ -14,7 +15,7 @@ type OpusReader =
 
 /// Reads an opus file from a background thread, and then returns it to the caller.
 let readOpusFile filePath =
-    forkReturn' <| fun () -> uply {
+    forkReturn CancellationToken.None <| fun () -> valueTask {
         let! bytes = File.ReadAllBytesAsync filePath
         let memoryStream = new MemoryStream(bytes)
         let totalSamples =

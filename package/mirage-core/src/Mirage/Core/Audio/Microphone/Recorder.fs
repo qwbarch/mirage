@@ -1,14 +1,15 @@
 module Mirage.Core.Audio.Microphone.Recorder
 
+open IcedTasks
 open System
 open System.IO
-open FSharpPlus
-open FSharp.Control.Tasks.Affine.Unsafe
+open System.Threading
 open Mirage.Core.Audio.Microphone.Detection
 open Mirage.Core.Audio.Microphone.Resampler
 open Mirage.Core.Audio.Opus.Writer
-open Mirage.Core.Ply.Channel
-open Mirage.Core.Ply.Fork
+open Mirage.Core.Task.Channel
+open Mirage.Core.Task.Fork
+open Mirage.Core.Task.Utility
 
 //[<Struct>]
 //type RecordStart =
@@ -42,10 +43,7 @@ open Mirage.Core.Ply.Fork
 //    | RecordEnd of recordEnd: RecordEnd
 
 /// Records audio from a live microphone feed.
-type Recorder<'State> =
-    private { channel: Channel<ValueTuple<'State, DetectAction>> }
-    interface IDisposable with
-        member this.Dispose() = dispose this.channel
+type Recorder<'State> = private { channel: Channel<ValueTuple<'State, DetectAction>> }
 
 type RecorderArgs<'State> =
     {   /// Minimum amount of audio duration that a recording should contain. If the minimum isn't met, the recording is not written to disk.
@@ -59,10 +57,10 @@ type RecorderArgs<'State> =
     }
 
 let Recorder args =
-    let channel = Channel()
-    let rec consumer () =
-        uply {
-            let! struct (state, action) = readChannel' channel
+    let channel = Channel CancellationToken.None
+    let consumer () =
+        forever <| fun () -> valueTask {
+            let! struct (state, action) = readChannel channel
             //let onRecording = args.onRecording state
             match action with
                 | DetectStart _ -> ()
@@ -93,9 +91,8 @@ let Recorder args =
                     //        fullAudio = payload.fullAudio
                     //        currentAudio = payload.currentAudio
                     //    }
-            do! consumer()
         }
-    fork' consumer
+    fork CancellationToken.None consumer
     { channel = channel }
 
 let writeRecorder recorder = writeChannel recorder.channel

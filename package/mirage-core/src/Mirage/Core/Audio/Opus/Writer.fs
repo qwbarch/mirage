@@ -6,13 +6,13 @@ open Concentus.Oggfile
 open System.IO
 open System.Collections.Generic
 open System.Threading
-open FSharpPlus
-open FSharp.Control.Tasks.Affine.Unsafe
 open NAudio.Wave
+open IcedTasks
 open Mirage.Core.Audio.PCM
 open Mirage.Core.Audio.Opus.Codec
-open Mirage.Core.Ply.Channel
-open Mirage.Core.Ply.Fork
+open Mirage.Core.Task.Channel
+open Mirage.Core.Task.Fork
+open Mirage.Core.Task.Utility
 
 type private WriteAction
     = WriteSamples of Samples
@@ -28,12 +28,12 @@ type OpusWriterArgs =
 
 let OpusWriter args =
     let fullSamples = List<float32>()
-    let channel = Channel()
+    let channel = Channel CancellationToken.None
     let mutable closed = false
-    let rec consumer () =
-        uply {
+    let consumer () =
+        forever <| fun () -> valueTask {
             if not closed then
-                let! action = readChannel' channel
+                let! action = readChannel channel
                 match action with
                     | WriteSamples samples ->
                         fullSamples.AddRange samples
@@ -50,12 +50,9 @@ let OpusWriter args =
                         )
                         opusStream.WriteSamples(fullSamples.ToArray(), 0, fullSamples.Count)
                         opusStream.Finish()
-                        dispose channel
-                do! consumer()
         }
-    fork' consumer
-    {   channel = channel
-    }
+    fork CancellationToken.None consumer
+    { channel = channel }
 
 /// Write float samples into the opus writer, which will be automatically resampled and encoded.
 let writeOpusSamples opusWriter samples = writeChannel opusWriter.channel <| WriteSamples samples

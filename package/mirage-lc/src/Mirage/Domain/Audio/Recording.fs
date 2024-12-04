@@ -3,14 +3,15 @@ module Mirage.Domain.Audio.Recording
 #nowarn "40"
 
 open FSharpPlus
-open FSharp.Control.Tasks.Affine.Unsafe
+open IcedTasks
 open System
 open System.IO
 open System.Collections.Generic
-open Mirage.Core.Ply.Fork
+open System.Threading
 open Mirage.Domain.Setting
 open Mirage.Domain.Logger
 open Mirage.Domain.Directory
+open Mirage.Core.Task.Fork
 
 /// For retrieving player recordings, avoiding grabbing the same recording in succession.
 /// Despite functions using RecordManager being async, this state is not thread-safe.
@@ -33,7 +34,7 @@ let RecordingManager () =
 /// Delete the recordings of the local player. Any exception found is ignored.
 /// Note: This runs on a separate thread, but is not a true non-blocking function, and will cause the other thread to block.
 let internal deleteRecordings () =
-    forkReturn' <| fun () -> uply {
+    forkReturn CancellationToken.None <| fun () -> valueTask {
         if not <| getSettings().neverDeleteRecordings then
             try Directory.Delete(recordingDirectory, true)
             with | _ -> ()
@@ -42,7 +43,7 @@ let internal deleteRecordings () =
 /// Retrieve all the file names in the recordings directory.
 /// Note: This runs on a separate thread, but is not a true non-blocking function, and will cause the other thread to block.
 let private getRecordings () =
-    forkReturn' <| fun () -> uply {
+    forkReturn CancellationToken.None <| fun () -> valueTask {
         return
             try Directory.GetFiles recordingDirectory
             with | _ -> zero
@@ -51,7 +52,7 @@ let private getRecordings () =
 /// Get a recording to be played by a voice mimic.  
 /// Not thread-safe. This function is expected to be called within the same thread when using the same __RecordingManager__.
 let rec getRecording recordingManager =
-    uply {
+    valueTask {
         if recordingManager.recordings.Count = 0 then
             let! recordings = getRecordings()
             recordingManager.recordings.Clear()

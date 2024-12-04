@@ -14,6 +14,7 @@
   <ItemGroup>
     <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1" PrivateAssets="all" />
     <PackageReference Include="BepInEx.Core" Version="5.4.21" />
+    <PackageReference Include="Ply" Version="0.3.1" />
     <PackageReference Include="FSharp.Control.AsyncSeq" Version="3.2.1" />
     <PackageReference Include="FSharpPlus" Version="1.6.1" />
     <ProjectReference Include="../src/Mirage.fsproj" />

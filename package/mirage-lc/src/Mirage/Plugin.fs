@@ -19,6 +19,8 @@ open Mirage.Hook.Config
 open Mirage.Hook.Microphone
 open Mirage.Hook.Dissonance
 open Mirage.Hook.MaskedPlayerEnemy
+open System.Threading.Tasks
+open IcedTasks
 
 [<BepInPlugin(pluginId, pluginName, pluginVersion)>]
 [<BepInDependency(LethalSettings.GeneratedPluginInfo.Identifier, BepInDependency.DependencyFlags.SoftDependency)>]

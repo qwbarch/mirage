@@ -1,6 +1,6 @@
 module Mirage.Domain.Audio.Stream
 
-open FSharp.Control.Tasks.Affine.Unsafe
+open IcedTasks
 open System.Diagnostics
 open System.Threading.Tasks
 open System.Collections.Generic
@@ -24,8 +24,8 @@ let private frequency = float Stopwatch.Frequency / 1000.0
 /// <param name="sendPacket">
 /// Function to run whenever a packet is available. A value of <b>None</b> is passed when the stream is over.
 /// </param>
-let streamAudio opusReader cancellationToken sendPacket =
-    uply {
+let streamAudio opusReader cancellationToken (sendPacket: voption<OpusPacket> -> ValueTask<unit>) =
+    valueTask {
         let mutable sampleIndex = 0
         let mutable previousTime = 0.0
         let mutable currentBuffer = 0.0

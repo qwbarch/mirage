@@ -3,20 +3,20 @@ module Mirage.Hook.Microphone
 open Dissonance
 open Dissonance.Audio.Capture
 open System
-open System.Collections.Concurrent
 open System.Buffers
 open System.Threading
 open Silero.API
-open FSharp.Control.Tasks.Affine.Unsafe
 open NAudio.Wave
 open Mirage.Core.Audio.PCM
 open Mirage.Core.Audio.Microphone.Resampler
 open Mirage.Core.Audio.Microphone.Detection
 open Mirage.Core.Audio.Microphone.Recorder
-open Mirage.Core.Ply.Channel
-open Mirage.Core.Ply.Fork
 open Mirage.Domain.Config
 open Mirage.Domain.Setting
+open Mirage.Core.Task.Channel
+open IcedTasks
+open Mirage.Core.Task.Utility
+open Mirage.Core.Task.Fork
 
 let [<Literal>] SamplesPerWindow = 2048
 let [<Literal>] StartThreshold = 0.5f
@@ -42,7 +42,7 @@ type ProcessingState =
 let mutable private isReady = false
 
 /// A channel for pulling microphone data from __bufferChannel__ into a background thread to process.
-let private processingChannel = Channel()
+let private processingChannel = Channel CancellationToken.None
 
 [<Struct>]
 type BufferInput =
@@ -59,10 +59,10 @@ let private bufferPool: ArrayPool<float32> = ArrayPool.Create()
 /// A deep copy of the audio samples is done, and then the input audio samples is returned to the buffer pool.
 /// Audio data is then sent to __processingChannel__, where the audio samples are safe to use and will not be mutated.
 let private bufferChannel =
-    let channel = Channel()
-    let rec consumer () =
-        uply {
-            let! input = readChannel' channel
+    let channel = Channel CancellationToken.None
+    let consumer () =
+        forever <| fun () -> valueTask {
+            let! input = readChannel channel
             let samples = Array.zeroCreate<float32> input.sampleCount
             Buffer.BlockCopy(input.samples, 0, samples, 0, input.sampleCount * sizeof<float32>)
             bufferPool.Return(input.samples, true)
@@ -76,9 +76,8 @@ let private bufferChannel =
                         isMuted = getDissonance().IsMuted
                         allowRecordVoice = getSettings().allowRecordVoice
                     }
-            do! consumer()
         }
-    fork' consumer
+    fork CancellationToken.None consumer
     channel
 
 type MicrophoneSubscriber() =
@@ -112,9 +111,9 @@ let readMicrophone recordingDirectory =
                 onVoiceDetected = fun state action -> writeRecorder recorder struct (state, action)
             }
     let resampler = Resampler SamplesPerWindow (writeDetector voiceDetector)
-    let rec consumer () =
-        uply {
-            let! value = readChannel' processingChannel
+    let consumer () =
+        forever <| fun () -> valueTask {
+            let! value = readChannel processingChannel
             match value with
                 | ValueNone -> writeResampler resampler ResamplerInput.Reset
                 | ValueSome state ->
@@ -131,9 +130,8 @@ let readMicrophone recordingDirectory =
                                 allowRecordVoice = getSettings().allowRecordVoice
                             }
                         writeResampler resampler <| ResamplerInput struct (processingState, frame)
-            do! consumer()
         }
-    fork' consumer
+    fork CancellationToken.None consumer
 
     On.Dissonance.DissonanceComms.add_Start(fun orig self ->
         orig.Invoke self

@@ -18,7 +18,8 @@
     <PackageReference Include="Concentus" Version="2.2.2" />
     <PackageReference Include="Concentus.Oggfile" Version="1.0.6" Publicize="true" />
     <PackageReference Include="OpusDotNet" Version="1.0.3" Publicize="true" />
-    <PackageReference Include="Ply" Version="0.3.1" />
+    <PackageReference Include="System.Threading.Channels" Version="8.0.0" />
+    <PackageReference Include="IcedTasks" Version="0.11.7" />
     <Reference Include="FSharpx.Async">
       <HintPath>../../../lib/FSharpx.Async/FSharpx.Async.dll</HintPath>
     </Reference>
@@ -40,10 +41,11 @@
     <Compile Include="Mirage/Core/Async/MVar.fs" />
     <Compile Include="Mirage/Core/Async/Print.fs" />
     <Compile Include="Mirage/Core/Async/TVar.fs" />
-    <Compile Include="Mirage/Core/Ply/Channel.fs" />
-    <Compile Include="Mirage/Core/Ply/Fork.fs" />
-    <Compile Include="Mirage/Core/Ply/Lock.fs" />
-    <Compile Include="Mirage/Core/Ply/LVar.fs" />
+    <Compile Include="Mirage/Core/Task/Channel.fs" />
+    <Compile Include="Mirage/Core/Task/Fork.fs" />
+    <Compile Include="Mirage/Core/Task/Lock.fs" />
+    <Compile Include="Mirage/Core/Task/LVar.fs" />
+    <Compile Include="Mirage/Core/Task/Utility.fs" />
     <Compile Include="Mirage/Core/Audio/PCM.fs" />
     <Compile Include="Mirage/Core/Audio/Opus/Codec.fs" />
     <Compile Include="Mirage/Core/Audio/Opus/Reader.fs" />

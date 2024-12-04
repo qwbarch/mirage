@@ -1,5 +1,6 @@
 module Mirage.Unity.MirageVoice
 
+open IcedTasks
 open FSharpPlus
 open System
 open System.Threading.Tasks
@@ -8,13 +9,13 @@ open Unity.Netcode
 open Dissonance.Audio.Playback
 open Mirage.Hook.Dissonance
 open Mirage.Domain.Logger
-open Mirage.Unity.AudioStream
-open Mirage.Unity.MimicPlayer
 open Mirage.Domain.Config
 open Mirage.Domain.Setting
 open Mirage.Domain.Audio.Recording
-open FSharp.Control.Tasks.Affine.Unsafe
-open Mirage.Core.Ply.Fork
+open Mirage.Unity.AudioStream
+open Mirage.Unity.MimicPlayer
+open Mirage.Core.Task.Fork
+
 let private random = Random()
 
 type MimicVoice() as self =
@@ -28,7 +29,7 @@ type MimicVoice() as self =
 
     let startVoiceMimic () =
         let rec mimicVoice () =
-            uply {
+            valueTask {
                 try
                     if not (isNull enemyAI)
                         && not enemyAI.isEnemyDead
@@ -48,7 +49,7 @@ type MimicVoice() as self =
                 do! Task.Delay(delay, self.destroyCancellationToken)
                 do! mimicVoice()
             }
-        fork mimicVoice self.destroyCancellationToken
+        fork self.destroyCancellationToken mimicVoice
     
     member this.Awake() =
         audioStream <- this.GetComponent<AudioStream>()

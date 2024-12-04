@@ -7,15 +7,18 @@ open Concentus.Structs
 open System
 open Mirage.Core.Audio.Opus
 open Ply
-open FSharp.Control.Tasks.Affine.Unsafe
+open Mirage.Core.Ply.Utility
+open System.Threading.Tasks
+open FSharp.Control.Tasks
 
 [<EntryPoint>]
 let main args =
-    let program =
-        uply {
-            printfn "in program"
-        }
-    printfn "in main"
+    ignore <| vtask {
+        while true do
+            do! Task.Delay(100)
+            printfn "hello world!"
+    }
+    ignore <| Console.ReadLine()
     //Async.RunSynchronously <| async {
     //    let! opusReader = readOpusFile "hello.opus"
     //    let frames = List<byte>()

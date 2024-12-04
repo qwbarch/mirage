@@ -1,16 +1,15 @@
 module Mirage.Core.Audio.Microphone.Detection
 
-open System
 open System.Collections.Generic
-open Ply
-open FSharpPlus
+open System.Threading
 open NAudio.Wave
+open IcedTasks
 open Mirage.Prelude
 open Mirage.Core.Audio.PCM
 open Mirage.Core.Audio.Microphone.Resampler
-open Mirage.Core.Ply.Channel
-open FSharp.Control.Tasks.Affine.Unsafe
-open Mirage.Core.Ply.Fork
+open Mirage.Core.Task.Channel
+open Mirage.Core.Task.Utility
+open Mirage.Core.Task.Fork
 
 let [<Literal>] private SamplingRate = 16000
 
@@ -55,10 +54,7 @@ type DetectAction
     | DetectEnd of detectEnd: DetectEnd
 
 /// Detect if speech is found. All async functions are run on a separate thread.
-type VoiceDetector<'State> =
-    private { channel: Channel<ResamplerOutput<'State>> }
-    interface IDisposable with
-        member this.Dispose() = dispose this.channel
+type VoiceDetector<'State> = private { channel: Channel<ResamplerOutput<'State>> }
 
 type VoiceDetectorArgs<'State> =
     {   /// Minimum amount of silence (in milliseconds) before VAD should stop.
@@ -85,7 +81,7 @@ type VoiceDetectorArgs<'State> =
 /// perform when speech is detected, as well as a source to read samples from.
 let VoiceDetector args =
     let minSilenceSamples = float32 SamplingRate * float32 args.minSilenceDurationMs / 1000f
-    let channel = Channel()
+    let channel = Channel CancellationToken.None
     let samples =
         {|  original = new List<float32>()
             resampled = new List<float32>()
@@ -95,9 +91,9 @@ let VoiceDetector args =
     let mutable endIndex = 0
     let mutable voiceDetected = false
 
-    let rec consumer () =
-        uply {
-            let! action = readChannel' channel
+    let consumer () =
+        forever <| fun () -> valueTask {
+            let! action = readChannel channel
             match action with
                 | Reset ->
                     samples.original.Clear()
@@ -170,10 +166,8 @@ let VoiceDetector args =
                     else if not voiceDetected then
                         samples.original.Clear()
                         samples.resampled.Clear()
-                    do! consumer()
-            do! consumer()
         }
-    fork' consumer
+    fork CancellationToken.None consumer
     { channel = channel }
 
 /// Add audio samples to be processed by the voice detector.

@@ -1,9 +1,10 @@
-module Mirage.Core.Ply.Lock
+module Mirage.Core.Task.Lock
 
 open System
 open System.Threading
+open System.Threading.Tasks
 open FSharpPlus
-open FSharp.Control.Tasks.Affine.Unsafe
+open IcedTasks
 
 type Lock =
     private { semaphore: SemaphoreSlim }
@@ -15,10 +16,7 @@ let createLock () = { semaphore = new SemaphoreSlim(1) }
 
 // Returns a key to send back to release the lock.
 // It is written in this way to catch bugs with thread A acquiring a lock and thread B tries to release the lock that thread A acquired.
-let lockAcquire lock =
-    uply {
-        do! lock.semaphore.WaitAsync()
-    }
+let lockAcquire lock = lock.semaphore.WaitAsync()
 
 let lockRelease lock =
     ignore <| lock.semaphore.Release()
@@ -27,8 +25,8 @@ let lockRelease lock =
 let tryAcquire lock = lock.semaphore.Wait TimeSpan.Zero
 
 /// Implicitly acquire/release the given locks by entering/exiting the scope of the given program.
-let withLock lock program =
-    uply {
+let withLock<'A> lock (program: unit -> ValueTask<'A>) =
+    valueTask {
         do! lockAcquire lock
         try return! program()
         finally lockRelease lock
