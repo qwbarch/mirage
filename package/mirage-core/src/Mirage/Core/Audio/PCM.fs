@@ -2,6 +2,7 @@ module Mirage.Core.Audio.PCM
 
 open System
 open NAudio.Wave
+open System.Buffers
 
 let [<Literal>] BytesPerSample = 2
 
@@ -17,12 +18,14 @@ let fromPCMBytes (pcmData: PCMData) : Samples =
 
 /// Converts pcm data represented as a float32 array to a byte array, assuming it contains 2 bytes per sample.
 let toPCMBytes (floatData: Samples) : PCMData =
-    let buffer = Array.zeroCreate<byte> sizeof<int16>
-    Array.init (floatData.Length * BytesPerSample) <| fun i ->
+    let buffer = ArrayPool.Shared.Rent sizeof<int16>
+    let pcmData = Array.init (floatData.Length * BytesPerSample) <| fun i ->
         let value = int16 <| floatData[i / BytesPerSample] * 32768.0f
         buffer[0] <- byte (value &&& 0xFFs)
         buffer[1] <- byte (value >>> 8 &&& 0xFFs)
         buffer[i % BytesPerSample]
+    ArrayPool.Shared.Return buffer
+    pcmData
 
 /// Calculates the length of the given audio samples in milliseconds.
 let audioLengthMs (waveFormat: WaveFormat) (samples: Samples) =

@@ -3,12 +3,16 @@ module Mirage.Domain.Setting
 #nowarn "40"
 
 open FSharpPlus
-open FSharpx.Control
 open System
 open System.IO
 open Newtonsoft.Json
 open Mirage.PluginInfo
 open Mirage.Compatibility
+open Mirage.Core.Task.Channel
+open System.Threading
+open Mirage.Core.Task.Utility
+open IcedTasks
+open Mirage.Core.Task.Fork
 
 /// Mirrors __Settings__ to represent the serializable format. Fields are nullable to make acting new fields seamless.
 type SavedSettings =
@@ -46,26 +50,24 @@ let getSettings () = settings
 
 let internal initSettings filePath =
     let channel =
-        let agent = new BlockingQueueAgent<Settings>(Int32.MaxValue)
-        let rec consumer =
-            async {
-                let! settings = agent.AsyncGet()
+        let self = Channel CancellationToken.None
+        let consumer () =
+            forever <| fun () -> valueTask {
+                let! settings = readChannel self
                 let text = JsonConvert.SerializeObject settings
                 do! Async.AwaitTask(File.WriteAllTextAsync(filePath, text))
-                do! consumer
             }
-        Async.Start consumer
-        agent
+        fork CancellationToken.None consumer
+        self
     let saveSettings updatedSettings =
         settings <- updatedSettings
-        channel.Add updatedSettings
-    Async.StartImmediate <| async {
+        writeChannel channel updatedSettings
+    valueTask {
         let! savedSettings =
-            Async.AwaitTask <|
-                if File.Exists filePath then
-                    JsonConvert.DeserializeObject<SavedSettings> <!> File.ReadAllTextAsync filePath
-                else
-                    result defaultSettings
+            if File.Exists filePath then
+                JsonConvert.DeserializeObject<SavedSettings> <!> File.ReadAllTextAsync filePath
+            else
+                result defaultSettings
         settings <- fromSavedSettings savedSettings
         initLethalSettings
             {   pluginId = pluginId
@@ -78,4 +80,5 @@ let internal initSettings filePath =
                 getAllowRecordVoice = fun () -> settings.allowRecordVoice
                 setAllowRecordVoice = fun value -> saveSettings { settings with allowRecordVoice = value }
             }
+        return settings
     }

@@ -18,8 +18,6 @@ let [<Literal>] private SampleRate = 16000
 let [<Literal>] private BufferSize = 2000
 let private WriterFormat = WaveFormat(SampleRate, 1)
 
-let resamplePool: ArrayPool<float32> = ArrayPool.Shared
-
 /// Resamples the given audio samples using the resampler's configured in/out sample rates.<br />
 /// This assumes the input/output is mono-channel audio.<br />
 /// Source: https://markheath.net/post/fully-managed-input-driven-resampling-wdl
@@ -28,11 +26,11 @@ let private resample (resampler: WdlResampler) (samples: Samples) =
     let mutable inBufferOffset = 0
     let inAvailable = resampler.ResamplePrepare(samples.Length, 1, &inBuffer, &inBufferOffset)
     Array.Copy(samples, 0, inBuffer, inBufferOffset, inAvailable)
-    let mutable outBuffer = resamplePool.Rent BufferSize
+    let mutable outBuffer = ArrayPool.Shared.Rent BufferSize
     let outAvailable = resampler.ResampleOut(outBuffer, 0, inAvailable, BufferSize, 1)
     let buffer = Array.zeroCreate<float32> outAvailable
     Array.Copy(outBuffer, 0, buffer, 0, outAvailable)
-    resamplePool.Return outBuffer
+    ArrayPool.Shared.Return outBuffer
     buffer
 
 [<Struct>]
