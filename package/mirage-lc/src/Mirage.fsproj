@@ -26,8 +26,10 @@
     <PackageReference Include="TeamBMX.LobbyCompatibility" Version="1.2.0" />
     <PackageReference Include="AinaVT-LethalConfig" Version="1.4.3" Publicize="true" />
     <PackageReference Include="Concentus" Version="2.2.2" />
-    <PackageReference Include="Concentus.Oggfile" Version="1.0.6" Publicize="true" />
     <PackageReference Include="OpusDotNet" Version="1.0.3" />
+    <Reference Include="Concentus.Oggfile">
+      <HintPath>../../../lib/Concentus.Oggfile/Concentus.Oggfile.dll</HintPath>
+    </Reference>
     <Reference Include="MMHOOK_Unity.Netcode.Runtime">
       <HintPath>../../../lib/MMHOOK/MMHOOK_Unity.Netcode.Runtime.dll</HintPath>
     </Reference>

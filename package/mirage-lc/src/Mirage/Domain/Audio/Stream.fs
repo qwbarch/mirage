@@ -32,11 +32,10 @@ let streamAudio opusReader cancellationToken (sendPacket: voption<OpusPacket> ->
         let mutable previousTime = 0.0
         let mutable currentBuffer = 0.0
         let delayBuffer = new LinkedList<float>()
-        printfn "streamAudio Start"
-        try
-            while hasNextPacket opusReader do
-                let rawPacket = readNextRawPacket opusReader
-                let currentTime = (getCurrentTime opusReader).TotalMilliseconds * frequency
+        while opusReader.reader.HasNextPacket do
+            let rentedPacket = opusReader.reader.RentNextRawPacket()
+            if not <| isNull rentedPacket.packet then
+                let currentTime = opusReader.reader.CurrentTime.TotalMilliseconds * frequency
                 let delay = currentTime - previousTime
                 ignore <| delayBuffer.AddLast delay
                 previousTime <- currentTime
@@ -53,20 +52,11 @@ let streamAudio opusReader cancellationToken (sendPacket: voption<OpusPacket> ->
                     // If it slept more than expected, we'll need to reduce the buffer a bit.
                     let multiplier = if delayedTime > bufferedTime then 2.0 else 1.0
                     &currentBuffer -= (delayedTime - bufferedTime * multiplier)
-
-                // Since readNextRawPacket internally returns the previous packet's array
-                // to the ArrayPool, we must copy it to avoid referencing a returned array.
-                let opusData = ArrayPool.Shared.Rent rawPacket.packetLength
-                ignore <| Buffer.BlockCopy(rawPacket.packet, 0, opusData, 0, rawPacket.packetLength)
-
-                printfn "streamAudio sending packet"
                 do! sendPacket << ValueSome <|
-                    {   opusData = opusData
-                        opusDataLength = rawPacket.packetLength
+                    {   opusData = rentedPacket.packet
+                        opusDataLength = rentedPacket.packetLength
                         sampleIndex = sampleIndex
                     }
                 &sampleIndex += SamplesPerPacket
-        with | ex -> printfn $"error while streaming audio: {ex}"
-        printfn "streamAudio End"
         do! sendPacket ValueNone
     }

@@ -69,8 +69,8 @@ type AudioStream() as self =
     /// Load the opus file, play it locally, while streaming the packets to all other clients to play.
     let streamAudioHost opusReader =
         iter dispose audioSender
-        self.InitializeAudioReceiver <| getTotalSamples opusReader
-        self.InitializeAudioReceiverClientRpc <| getTotalSamples opusReader
+        self.InitializeAudioReceiver opusReader.totalSamples
+        self.InitializeAudioReceiverClientRpc opusReader.totalSamples
         audioSender <- Some <| AudioSender (onReceivePacket audioReceiver) opusReader self.destroyCancellationToken
         startAudioSender audioSender.Value
     
@@ -80,7 +80,7 @@ type AudioStream() as self =
         let sendPacket packet =
             self.SendPacketServerRpc(packet, serverRpcParams)
             ArrayPool.Shared.Return packet.opusData
-        self.InitializeAudioReceiverServerRpc(getTotalSamples opusReader, serverRpcParams)
+        self.InitializeAudioReceiverServerRpc(opusReader.totalSamples, serverRpcParams)
         audioSender <- Some <| AudioSender sendPacket opusReader self.destroyCancellationToken
         startAudioSender audioSender.Value
 
@@ -108,7 +108,7 @@ type AudioStream() as self =
                 let! opusReader = readOpusFile filePath
                 // opusReader could be disposed by the time Async.Sleep is called.
                 // This is cached to avoid failing to grab the amount of milliseconds to wait.
-                let totalTime = int (getCurrentTime opusReader).TotalMilliseconds
+                let totalTime = int opusReader.reader.CurrentTime.TotalMilliseconds
                 try
                     if this.IsHost then
                         streamAudioHost opusReader

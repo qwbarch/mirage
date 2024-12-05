@@ -81,17 +81,14 @@ let startAudioReceiver receiver =
         )
     let decoderThread () =
         forever <| fun () -> valueTask {
-            try
-                let! opusPacket = readChannel receiver.decoderChannel
-                let pcmData = Array.zeroCreate<byte> <| PacketPcmLength
-                let decoded = receiver.decoder.Decode(opusPacket.opusData, opusPacket.opusDataLength, pcmData, PacketPcmLength)
-                logInfo $"decoded: {decoded}"
-                writeChannel receiver.playbackChannel <|
-                    {   samples = fromPCMBytes pcmData
-                        sampleIndex = opusPacket.sampleIndex
-                    }
-                ArrayPool.Shared.Return opusPacket.opusData
-            with | ex -> logError $"error while decoding: {ex}"
+            let! opusPacket = readChannel receiver.decoderChannel
+            let pcmData = Array.zeroCreate<byte> <| PacketPcmLength
+            ignore <| receiver.decoder.Decode(opusPacket.opusData, opusPacket.opusDataLength, pcmData, PacketPcmLength)
+            writeChannel receiver.playbackChannel <|
+                {   samples = fromPCMBytes pcmData
+                    sampleIndex = opusPacket.sampleIndex
+                }
+            ArrayPool.Shared.Return opusPacket.opusData
         }
     let playbackThread () =
         forever <| fun () -> valueTask {

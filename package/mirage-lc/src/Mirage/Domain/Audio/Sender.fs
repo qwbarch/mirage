@@ -24,7 +24,8 @@ type AudioSender =
         }
     interface IDisposable with
         member this.Dispose() =
-            ignore <| writeLVar this.running false
+            try ignore <| writeLVar this.running false
+            finally dispose this.opusReader
 
 /// Responsible for sending opus audio packets, to be received by a __AudioReceiver__.
 let AudioSender sendPacket opusReader cancellationToken =
@@ -43,7 +44,6 @@ let startAudioSender sender =
             valueTask {
                 let! running = readLVar sender.running
                 if running then
-                    printfn "sender writeChannel"
                     writeChannel sender.channel packet
             }
     let consumer () =
@@ -54,7 +54,6 @@ let startAudioSender sender =
                 | ValueSome packet ->
                     let! running = readLVar sender.running
                     if running then
-                        printfn "sending packet"
                         sender.sendPacket packet
         }
     fork sender.cancellationToken producer
