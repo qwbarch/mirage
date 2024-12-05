@@ -13,6 +13,7 @@ open Mirage.Core.Audio.Opus.Codec
 open Mirage.Core.Task.Channel
 open Mirage.Core.Task.Fork
 open Mirage.Core.Task.Utility
+open System
 
 type private WriteAction
     = WriteSamples of Samples
@@ -36,7 +37,7 @@ let OpusWriter args =
                 let! action = readChannel channel
                 match action with
                     | WriteSamples samples ->
-                        fullSamples.AddRange samples
+                        fullSamples.AddRange <| ArraySegment(samples.data, 0, samples.length)
                     | Close ->
                         closed <- true
                         ignore << Directory.CreateDirectory <| Path.GetDirectoryName args.filePath

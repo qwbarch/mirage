@@ -91,14 +91,14 @@ let VoiceDetector args =
                     voiceDetected <- false
                 | ResamplerOutput struct (state, currentAudio) ->
                     try
-                        &currentIndex += currentAudio.original.samples.Length
-                        samples.original.AddRange <| ArraySegment(currentAudio.original.samples, 0, currentAudio.original.sampleCount)
-                        samples.resampled.AddRange <| ArraySegment(currentAudio.resampled.samples, 0, currentAudio.resampled.sampleCount)
+                        &currentIndex += currentAudio.original.samples.length
+                        samples.original.AddRange <| ArraySegment(currentAudio.original.samples.data, 0, currentAudio.original.samples.length)
+                        samples.resampled.AddRange <| ArraySegment(currentAudio.resampled.samples.data, 0, currentAudio.resampled.samples.length)
 
                         let probability =
                             match args.forcedProbability state with
                                 | ValueSome probability -> probability
-                                | ValueNone -> args.detectSpeech currentAudio.resampled.samples currentAudio.resampled.sampleCount
+                                | ValueNone -> args.detectSpeech currentAudio.resampled.samples currentAudio.resampled.samples.length
                         if probability >= args.startThreshold then
                             if endIndex <> 0 then
                                 endIndex <- 0
@@ -123,13 +123,11 @@ let VoiceDetector args =
                                         buffer
                                     {   original =
                                             {   format = currentAudio.original.format
-                                                samples = original
-                                                sampleCount = samples.original.Count
+                                                samples = { data = original; length = samples.original.Count }
                                             }
                                         resampled =
                                             {   format = currentAudio.resampled.format
-                                                samples = resampled
-                                                sampleCount = samples.resampled.Count
+                                                samples = { data = resampled; length = samples.resampled.Count }
                                             }
                                     }
                                 endIndex <- 0
@@ -144,8 +142,8 @@ let VoiceDetector args =
                             samples.original.Clear()
                             samples.resampled.Clear()
                     finally
-                        ArrayPool.Shared.Return currentAudio.original.samples
-                        ArrayPool.Shared.Return currentAudio.resampled.samples
+                        ArrayPool.Shared.Return currentAudio.original.samples.data
+                        ArrayPool.Shared.Return currentAudio.resampled.samples.data
         }
     fork CancellationToken.None consumer
     { channel = channel }

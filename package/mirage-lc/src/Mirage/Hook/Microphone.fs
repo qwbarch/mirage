@@ -25,7 +25,6 @@ let [<Literal>] EndThreshold = 0.2f
 [<Struct>]
 type ProcessingInput =
     {   samples: Samples
-        sampleCount: int
         format: WaveFormat
         isReady: bool
         isPlayerDead: bool
@@ -49,7 +48,6 @@ let private processingChannel = Channel CancellationToken.None
 type BufferInput =
     {   samples: Samples
         sampleRate: int
-        sampleCount: int
         channels: int
     }
 
@@ -65,7 +63,6 @@ let private bufferChannel =
             if not (isNull StartOfRound.Instance) then
                 writeChannel processingChannel << ValueSome <|
                     {   samples = input.samples
-                        sampleCount = input.sampleCount
                         format = WaveFormat(input.sampleRate, input.channels)
                         isReady = isReady
                         isPlayerDead = StartOfRound.Instance.localPlayerController.isPlayerDead
@@ -83,9 +80,8 @@ type MicrophoneSubscriber() =
             let samples = ArrayPool.Shared.Rent buffer.Count
             Buffer.BlockCopy(buffer.Array, buffer.Offset, samples, 0, buffer.Count * sizeof<float32>)
             writeChannel bufferChannel
-                {   samples = samples
+                {   samples = { data = samples; length = buffer.Count }
                     sampleRate = format.SampleRate
-                    sampleCount = buffer.Count
                     channels = format.Channels
                 }
         member _.Reset() = writeChannel processingChannel ValueNone
@@ -104,7 +100,7 @@ let readMicrophone recordingDirectory =
                 forcedProbability = _.forcedProbability
                 startThreshold = StartThreshold 
                 endThreshold = EndThreshold
-                detectSpeech = detectSpeech silero
+                detectSpeech = detectSpeech silero << _.data
                 onVoiceDetected = fun state action -> writeRecorder recorder struct (state, action)
             }
     let resampler = Resampler SamplesPerWindow (writeDetector voiceDetector)
@@ -117,7 +113,6 @@ let readMicrophone recordingDirectory =
                     if state.isReady && (getConfig().enableRecordVoiceWhileDead || not state.isPlayerDead) then
                         let frame =
                             {   samples = state.samples
-                                sampleCount = state.sampleCount
                                 format = state.format
                             }
                         let processingState =

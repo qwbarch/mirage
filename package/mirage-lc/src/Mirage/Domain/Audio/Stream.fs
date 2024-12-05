@@ -1,8 +1,6 @@
 module Mirage.Domain.Audio.Stream
 
 open IcedTasks
-open System
-open System.Buffers
 open System.Diagnostics
 open System.Threading.Tasks
 open System.Collections.Generic

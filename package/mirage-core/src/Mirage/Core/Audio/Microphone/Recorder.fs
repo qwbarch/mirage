@@ -42,8 +42,8 @@ let Recorder args =
                             writeOpusSamples opusWriter payload.fullAudio.original.samples
                             closeOpusWriter opusWriter
                         finally
-                            ArrayPool.Shared.Return payload.fullAudio.original.samples
-                            ArrayPool.Shared.Return payload.fullAudio.resampled.samples
+                            ArrayPool.Shared.Return payload.fullAudio.original.samples.data
+                            ArrayPool.Shared.Return payload.fullAudio.resampled.samples.data
         }
     fork CancellationToken.None consumer
     { channel = channel }

@@ -17,6 +17,13 @@ open Mirage.Core.Task.Fork
 open Mirage.Domain.Audio.Packet
 open Mirage.Domain.Audio.Stream
 open Mirage.Domain.Logger
+open Unity.Collections
+open System.Runtime.CompilerServices
+
+type private RawArrayData () =
+    member val Length = 0u with get, set
+    member val Padding = 0u with get, set
+    member val Data = 0uy with get, set
 
 [<Struct>]
 type DecodedPacket =
@@ -82,24 +89,32 @@ let startAudioReceiver receiver =
     let decoderThread () =
         forever <| fun () -> valueTask {
             let! opusPacket = readChannel receiver.decoderChannel
-            let pcmData = Array.zeroCreate<byte> <| PacketPcmLength
-            ignore <| receiver.decoder.Decode(opusPacket.opusData, opusPacket.opusDataLength, pcmData, PacketPcmLength)
-            writeChannel receiver.playbackChannel <|
-                {   samples = fromPCMBytes pcmData
-                    sampleIndex = opusPacket.sampleIndex
-                }
-            ArrayPool.Shared.Return opusPacket.opusData
+            try
+                let pcmData = Array.zeroCreate<byte> <| PacketPcmLength
+                ignore <| receiver.decoder.Decode(opusPacket.opusData, opusPacket.opusDataLength, pcmData, PacketPcmLength)
+                writeChannel receiver.playbackChannel <|
+                    {   samples = fromPcmData { data = pcmData; length = PacketPcmLength }
+                        sampleIndex = opusPacket.sampleIndex
+                    }
+            finally
+                ArrayPool.Shared.Return opusPacket.opusData
         }
     let playbackThread () =
         forever <| fun () -> valueTask {
             if not receiver.disposed then
                 let! decodedPacket = readChannel receiver.playbackChannel
-                if decodedPacket.samples.Length > 0 then
-                    &receiver.bufferedPackets += 1
-                    ignore <| receiver.audioSource.clip.SetData(decodedPacket.samples, decodedPacket.sampleIndex)
-                    receiver.onPacketDecoded decodedPacket
-                if not receiver.audioSource.isPlaying && receiver.bufferedPackets >= receiver.minimumBufferedPackets then
-                    receiver.audioSource.Play()
+                try
+                    if decodedPacket.samples.length > 0 then
+                        // Unfortunately, AudioClip.SetData does not have the Span variation in the current Unity version.
+                        // This is not ideal, but since packets now come in order and are guranteed to arrive,
+                        // SetData() will not overwrite data due to the packet array being too large (from being rented).
+                        &receiver.bufferedPackets += 1
+                        ignore <| receiver.audioSource.clip.SetData(decodedPacket.samples.data, decodedPacket.sampleIndex)
+                        receiver.onPacketDecoded decodedPacket
+                    if not receiver.audioSource.isPlaying && receiver.bufferedPackets >= receiver.minimumBufferedPackets then
+                        receiver.audioSource.Play()
+                finally
+                    ArrayPool.Shared.Return decodedPacket.samples.data
         }
     fork receiver.cancellationToken decoderThread
     ignore <| playbackThread()
