@@ -24,7 +24,8 @@ type AudioSender =
         }
     interface IDisposable with
         member this.Dispose() =
-            ignore <| writeLVar this.running false
+            try ignore <| writeLVar this.running false
+            finally dispose this.opusReader
 
 /// Responsible for sending opus audio packets, to be received by a __AudioReceiver__.
 let AudioSender sendPacket opusReader cancellationToken =

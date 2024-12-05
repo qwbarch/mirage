@@ -4,6 +4,7 @@ open FSharpPlus
 open UnityEngine
 open System
 open System.Threading
+open System.Buffers
 open OpusDotNet
 open IcedTasks
 open Mirage.PluginInfo
@@ -15,6 +16,7 @@ open Mirage.Core.Task.Utility
 open Mirage.Core.Task.Fork
 open Mirage.Domain.Audio.Packet
 open Mirage.Domain.Audio.Stream
+open Mirage.Domain.Logger
 
 [<Struct>]
 type DecodedPacket =
@@ -81,11 +83,12 @@ let startAudioReceiver receiver =
         forever <| fun () -> valueTask {
             let! opusPacket = readChannel receiver.decoderChannel
             let pcmData = Array.zeroCreate<byte> <| PacketPcmLength
-            ignore <| receiver.decoder.Decode(opusPacket.opusData, opusPacket.opusData.Length, pcmData, PacketPcmLength)
+            ignore <| receiver.decoder.Decode(opusPacket.opusData, opusPacket.opusDataLength, pcmData, PacketPcmLength)
             writeChannel receiver.playbackChannel <|
                 {   samples = fromPCMBytes pcmData
                     sampleIndex = opusPacket.sampleIndex
                 }
+            ArrayPool.Shared.Return opusPacket.opusData
         }
     let playbackThread () =
         forever <| fun () -> valueTask {

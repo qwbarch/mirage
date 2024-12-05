@@ -2,6 +2,7 @@ module Mirage.Unity.AudioStream
 
 open IcedTasks
 open System
+open System.Buffers
 open System.Threading.Tasks
 open FSharpPlus
 open UnityEngine
@@ -9,6 +10,7 @@ open Unity.Netcode
 open Mirage.Domain.Audio.Sender
 open Mirage.Domain.Audio.Receiver
 open Mirage.Domain.Logger
+open Mirage.Domain.Audio.Packet
 open Mirage.Core.Audio.PCM
 open Mirage.Core.Audio.Opus.Reader
 open Mirage.Core.Audio.Opus.Codec
@@ -75,7 +77,9 @@ type AudioStream() as self =
     /// Load the opus file, and then send the packets to the host. The host then relays it to all clients.
     let streamAudioClient opusReader =
         let serverRpcParams = ServerRpcParams()
-        let sendPacket opusPacket = self.SendPacketServerRpc(opusPacket, serverRpcParams)
+        let sendPacket packet =
+            self.SendPacketServerRpc(packet, serverRpcParams)
+            ArrayPool.Shared.Return packet.opusData
         self.InitializeAudioReceiverServerRpc(opusReader.totalSamples, serverRpcParams)
         audioSender <- Some <| AudioSender sendPacket opusReader self.destroyCancellationToken
         startAudioSender audioSender.Value
@@ -101,10 +105,10 @@ type AudioStream() as self =
             if Some localId <> this.AllowedSenderId then
                 invalidOp $"StreamAudioFromFile cannot be run from this client. LocalId: {localId}. AllowedId: {this.AllowedSenderId}."
             else
-                let! opusReader = Async.AwaitTask((readOpusFile filePath).AsTask())
+                let! opusReader = readOpusFile filePath
                 // opusReader could be disposed by the time Async.Sleep is called.
                 // This is cached to avoid failing to grab the amount of milliseconds to wait.
-                let totalTime = int opusReader.reader.TotalTime.TotalMilliseconds
+                let totalTime = int opusReader.reader.CurrentTime.TotalMilliseconds
                 try
                     if this.IsHost then
                         streamAudioHost opusReader
@@ -112,8 +116,7 @@ type AudioStream() as self =
                         streamAudioClient opusReader
                 with | error ->
                     logError $"An exception occured while streaming audio: {error}"
-                //do! Task.Delay(totalTime, this.destroyCancellationToken)
-                do! Async.Sleep totalTime
+                do! Task.Delay(totalTime, this.destroyCancellationToken)
         }
 
     /// Initialize the audio receiver to playback audio when opus packets are received.
