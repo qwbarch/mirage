@@ -89,8 +89,8 @@ let startAudioReceiver receiver =
     let decoderThread () =
         forever <| fun () -> valueTask {
             let! opusPacket = readChannel receiver.decoderChannel
+            let pcmData = ArrayPool.Shared.Rent PacketPcmLength
             try
-                let pcmData = Array.zeroCreate<byte> <| PacketPcmLength
                 ignore <| receiver.decoder.Decode(opusPacket.opusData, opusPacket.opusDataLength, pcmData, PacketPcmLength)
                 writeChannel receiver.playbackChannel <|
                     {   samples = fromPcmData { data = pcmData; length = PacketPcmLength }
@@ -98,6 +98,7 @@ let startAudioReceiver receiver =
                     }
             finally
                 ArrayPool.Shared.Return opusPacket.opusData
+                ArrayPool.Shared.Return pcmData
         }
     let playbackThread () =
         forever <| fun () -> valueTask {
