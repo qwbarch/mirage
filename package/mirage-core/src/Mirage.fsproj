@@ -19,6 +19,7 @@
     <PackageReference Include="OpusDotNet" Version="1.0.3" Publicize="true" />
     <PackageReference Include="System.Threading.Channels" Version="8.0.0" />
     <PackageReference Include="IcedTasks" Version="0.11.7" />
+    <PackageReference Include="Collections.Pooled" Version="1.0.82" />
     <Reference Include="Concentus.Oggfile">
       <HintPath>../../../lib/Concentus.Oggfile/Concentus.Oggfile.dll</HintPath>
     </Reference>

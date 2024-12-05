@@ -2,9 +2,9 @@ module Mirage.Core.Audio.Microphone.Resampler
 
 #nowarn "40"
 
+open Collections.Pooled
 open IcedTasks
 open System
-open System.Collections.Generic
 open System.Buffers
 open System.Threading
 open NAudio.Wave
@@ -62,35 +62,37 @@ let Resampler<'State> samplesPerWindow (onResampled: ResamplerOutput<'State> -> 
     resampler.SetFilterParms()
     resampler.SetFeedMode true
     let channel = Channel CancellationToken.None
-    let originalSamples = new List<float32>()
-    let resampledSamples = new List<float32>()
+    let buffer =
+        {|  original = new PooledList<float32>(ClearMode.Never)
+            resampled = new PooledList<float32>(ClearMode.Never)
+        |}
     let consumer () =
         forever <| fun () -> valueTask {
             let! action = readChannel channel
             match action with
                 | ResamplerInput.Reset ->
-                    originalSamples.Clear()
-                    resampledSamples.Clear()
+                    buffer.original.Clear()
+                    buffer.resampled.Clear()
                     onResampled Reset
                 | ResamplerInput struct (state, frame) ->
                     try
                         let frameSamples = ArraySegment(frame.samples.data, 0, frame.samples.length)
-                        originalSamples.AddRange frameSamples
+                        appendSegment buffer.original frameSamples
                         if frame.format.SampleRate = SampleRate then
-                            resampledSamples.AddRange frameSamples
+                            appendSegment buffer.resampled frameSamples
                         else
                             resampler.SetRates(frame.format.SampleRate, SampleRate)
                             let struct (samples, sampleCount) = resample resampler frame.samples
-                            try resampledSamples.AddRange <| ArraySegment(samples, 0, sampleCount)
+                            try appendSegment buffer.resampled <| ArraySegment(samples, 0, sampleCount)
                             finally ArrayPool.Shared.Return samples
                         let sampleSize = int <| windowDuration * float frame.format.SampleRate
-                        if originalSamples.Count >= sampleSize && resampledSamples.Count >= samplesPerWindow then
+                        if buffer.original.Count >= sampleSize && buffer.resampled.Count >= samplesPerWindow then
                             let original = ArrayPool.Shared.Rent sampleSize
-                            originalSamples.CopyTo(0, original, 0, sampleSize)
-                            originalSamples.RemoveRange(0, sampleSize)
+                            copyFrom buffer.original original sampleSize
+                            buffer.original.RemoveRange(0, sampleSize)
                             let resampled = ArrayPool.Shared.Rent samplesPerWindow
-                            resampledSamples.CopyTo(0, resampled, 0, samplesPerWindow)
-                            resampledSamples.RemoveRange(0, samplesPerWindow)
+                            copyFrom buffer.resampled resampled samplesPerWindow
+                            buffer.resampled.RemoveRange(0, samplesPerWindow)
                             let resampledAudio =
                                 {   original =
                                         {   samples = { data = original; length = sampleSize }

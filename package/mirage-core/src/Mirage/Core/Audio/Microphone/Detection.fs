@@ -1,7 +1,7 @@
 module Mirage.Core.Audio.Microphone.Detection
 
+open Collections.Pooled
 open System
-open System.Collections.Generic
 open System.Threading
 open System.Buffers
 open NAudio.Wave
@@ -72,8 +72,8 @@ let VoiceDetector args =
     let minSilenceSamples = float32 SamplingRate * float32 args.minSilenceDurationMs / 1000f
     let channel = Channel CancellationToken.None
     let samples =
-        {|  original = new List<float32>()
-            resampled = new List<float32>()
+        {|  original = new PooledList<float32>(ClearMode.Never)
+            resampled = new PooledList<float32>(ClearMode.Never)
         |}
     let mutable currentIndex = 0
     let mutable endIndex = 0
@@ -92,9 +92,8 @@ let VoiceDetector args =
                 | ResamplerOutput struct (state, currentAudio) ->
                     try
                         &currentIndex += currentAudio.original.samples.length
-                        samples.original.AddRange <| ArraySegment(currentAudio.original.samples.data, 0, currentAudio.original.samples.length)
-                        samples.resampled.AddRange <| ArraySegment(currentAudio.resampled.samples.data, 0, currentAudio.resampled.samples.length)
-
+                        appendSegment samples.original <| ArraySegment(currentAudio.original.samples.data, 0, currentAudio.original.samples.length)
+                        appendSegment samples.resampled <| ArraySegment(currentAudio.resampled.samples.data, 0, currentAudio.resampled.samples.length)
                         let probability =
                             match args.forcedProbability state with
                                 | ValueSome probability -> probability
@@ -115,11 +114,11 @@ let VoiceDetector args =
                                 let fullAudio =
                                     let original =
                                         let buffer = ArrayPool.Shared.Rent samples.original.Count
-                                        samples.original.CopyTo(0, buffer, 0, samples.original.Count)
+                                        copyFrom samples.original buffer samples.original.Count
                                         buffer
                                     let resampled =
                                         let buffer = ArrayPool.Shared.Rent samples.resampled.Count
-                                        samples.resampled.CopyTo(0, buffer, 0, samples.resampled.Count)
+                                        copyFrom samples.resampled buffer samples.resampled.Count
                                         buffer
                                     {   original =
                                             {   format = currentAudio.original.format

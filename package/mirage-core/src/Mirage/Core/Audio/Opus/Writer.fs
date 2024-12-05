@@ -2,10 +2,13 @@ module Mirage.Core.Audio.Opus.Writer
 
 #nowarn "40"
 
+open Collections.Pooled
 open Concentus.Oggfile
+open FSharpPlus
+open System
 open System.IO
-open System.Collections.Generic
 open System.Threading
+open System.Buffers
 open NAudio.Wave
 open IcedTasks
 open Mirage.Core.Audio.PCM
@@ -13,7 +16,6 @@ open Mirage.Core.Audio.Opus.Codec
 open Mirage.Core.Task.Channel
 open Mirage.Core.Task.Fork
 open Mirage.Core.Task.Utility
-open System
 
 type private WriteAction
     = WriteSamples of Samples
@@ -28,7 +30,7 @@ type OpusWriterArgs =
     }
 
 let OpusWriter args =
-    let fullSamples = List<float32>()
+    let fullSamples = new PooledList<float32>(ClearMode.Never, ArrayPool.Shared)
     let channel = Channel CancellationToken.None
     let mutable closed = false
     let consumer () =
@@ -37,7 +39,7 @@ let OpusWriter args =
                 let! action = readChannel channel
                 match action with
                     | WriteSamples samples ->
-                        fullSamples.AddRange <| ArraySegment(samples.data, 0, samples.length)
+                        appendSegment fullSamples <| ArraySegment(samples.data, 0, samples.length)
                     | Close ->
                         closed <- true
                         ignore << Directory.CreateDirectory <| Path.GetDirectoryName args.filePath
@@ -51,6 +53,7 @@ let OpusWriter args =
                         )
                         opusStream.WriteSamples(fullSamples.ToArray(), 0, fullSamples.Count)
                         opusStream.Finish()
+                        dispose fullSamples
         }
     fork CancellationToken.None consumer
     { channel = channel }

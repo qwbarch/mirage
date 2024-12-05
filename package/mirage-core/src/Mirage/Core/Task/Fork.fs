@@ -6,7 +6,7 @@ open Mirage.Core.Task.Channel
 
 /// Run the given program from the async thread pool, and then return the value to the caller thread.  
 /// If an exception is caught, the exception is re-thrown in the caller's thread.
-let forkReturn<'A> cancellationToken (program: unit -> ValueTask<'A>) =
+let inline forkReturn<'A> cancellationToken (program: unit -> ValueTask<'A>) =
     valueTask {
         let channel = Channel cancellationToken
         let thread () =
@@ -27,4 +27,4 @@ let forkReturn<'A> cancellationToken (program: unit -> ValueTask<'A>) =
 
 /// Run the given program from the async thread pool.  
 /// If an exception is caught, the exception is re-thrown in the caller's thread.  
-let fork cancellationToken = ignore << forkReturn cancellationToken
+let inline fork cancellationToken = ignore << forkReturn cancellationToken
