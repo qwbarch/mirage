@@ -16,14 +16,6 @@ open Mirage.Core.Task.Utility
 open Mirage.Core.Task.Fork
 open Mirage.Domain.Audio.Packet
 open Mirage.Domain.Audio.Stream
-open Mirage.Domain.Logger
-open Unity.Collections
-open System.Runtime.CompilerServices
-
-type private RawArrayData () =
-    member val Length = 0u with get, set
-    member val Padding = 0u with get, set
-    member val Data = 0uy with get, set
 
 [<Struct>]
 type DecodedPacket =
@@ -91,14 +83,14 @@ let startAudioReceiver receiver =
             let! opusPacket = readChannel receiver.decoderChannel
             let pcmData = ArrayPool.Shared.Rent PacketPcmLength
             try
-                ignore <| receiver.decoder.Decode(opusPacket.opusData, opusPacket.opusDataLength, pcmData, PacketPcmLength)
+                ignore <| receiver.decoder.Decode(opusPacket.opusData, opusPacket.opusLength, pcmData, PacketPcmLength)
                 writeChannel receiver.playbackChannel <|
                     {   samples = fromPcmData { data = pcmData; length = PacketPcmLength }
                         sampleIndex = opusPacket.sampleIndex
                     }
-            finally
-                ArrayPool.Shared.Return opusPacket.opusData
-                ArrayPool.Shared.Return pcmData
+            with | ex -> printfn $"error while decoding: {ex}"
+            ArrayPool.Shared.Return opusPacket.opusData
+            ArrayPool.Shared.Return pcmData
         }
     let playbackThread () =
         forever <| fun () -> valueTask {
@@ -114,8 +106,8 @@ let startAudioReceiver receiver =
                         receiver.onPacketDecoded decodedPacket
                     if not receiver.audioSource.isPlaying && receiver.bufferedPackets >= receiver.minimumBufferedPackets then
                         receiver.audioSource.Play()
-                finally
-                    ArrayPool.Shared.Return decodedPacket.samples.data
+                with | ex -> printfn $"error while playing back: {ex}"
+                ArrayPool.Shared.Return decodedPacket.samples.data
         }
     fork receiver.cancellationToken decoderThread
     ignore <| playbackThread()

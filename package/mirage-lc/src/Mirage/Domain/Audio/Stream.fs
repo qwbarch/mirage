@@ -52,7 +52,7 @@ let streamAudio opusReader cancellationToken (sendPacket: voption<OpusPacket> ->
                     &currentBuffer -= (delayedTime - bufferedTime * multiplier)
                 do! sendPacket << ValueSome <|
                     {   opusData = rentedPacket.packet
-                        opusDataLength = rentedPacket.packetLength
+                        opusLength = rentedPacket.packetLength
                         sampleIndex = sampleIndex
                     }
                 &sampleIndex += SamplesPerPacket

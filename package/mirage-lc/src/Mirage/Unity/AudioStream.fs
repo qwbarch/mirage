@@ -71,7 +71,10 @@ type AudioStream() as self =
         iter dispose audioSender
         self.InitializeAudioReceiver opusReader.totalSamples
         self.InitializeAudioReceiverClientRpc opusReader.totalSamples
-        audioSender <- Some <| AudioSender (onReceivePacket audioReceiver) opusReader self.destroyCancellationToken
+        let sendPacket packet =
+            self.SendPacketClientRpc packet
+            onReceivePacket audioReceiver packet
+        audioSender <- Some <| AudioSender sendPacket opusReader self.destroyCancellationToken
         startAudioSender audioSender.Value
     
     /// Load the opus file, and then send the packets to the host. The host then relays it to all clients.
@@ -110,10 +113,8 @@ type AudioStream() as self =
                 // This is cached to avoid failing to grab the amount of milliseconds to wait.
                 let totalTime = int opusReader.reader.CurrentTime.TotalMilliseconds
                 try
-                    if this.IsHost then
-                        streamAudioHost opusReader
-                    else
-                        streamAudioClient opusReader
+                    if this.IsHost then streamAudioHost opusReader
+                    else streamAudioClient opusReader
                 with | error ->
                     logError $"An exception occured while streaming audio: {error}"
                 do! Task.Delay(totalTime, this.destroyCancellationToken)
