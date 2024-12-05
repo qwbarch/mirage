@@ -43,6 +43,7 @@ let startAudioSender sender =
             valueTask {
                 let! running = readLVar sender.running
                 if running then
+                    printfn "sender writeChannel"
                     writeChannel sender.channel packet
             }
     let consumer () =
@@ -53,6 +54,7 @@ let startAudioSender sender =
                 | ValueSome packet ->
                     let! running = readLVar sender.running
                     if running then
+                        printfn "sending packet"
                         sender.sendPacket packet
         }
     fork sender.cancellationToken producer

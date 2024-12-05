@@ -1,6 +1,8 @@
 module Mirage.Domain.Audio.Stream
 
 open IcedTasks
+open System
+open System.Buffers
 open System.Diagnostics
 open System.Threading.Tasks
 open System.Collections.Generic
@@ -29,31 +31,42 @@ let streamAudio opusReader cancellationToken (sendPacket: voption<OpusPacket> ->
         let mutable sampleIndex = 0
         let mutable previousTime = 0.0
         let mutable currentBuffer = 0.0
-        let mutable packet = opusReader.reader.ReadNextRawPacket()
         let delayBuffer = new LinkedList<float>()
-        while not <| isNull packet do
-            let currentTime = opusReader.reader.CurrentTime.TotalMilliseconds * frequency
-            let delay = currentTime - previousTime
-            ignore <| delayBuffer.AddLast delay
-            previousTime <- currentTime
-            &currentBuffer += delay
-            if currentBuffer >= maximumBuffer then
-                let bufferedTime = delayBuffer.First.Value
-                delayBuffer.RemoveFirst()
-                let startTime = Stopwatch.GetTimestamp()
-                let mutable delayedTime = 0.0
-                while delayedTime < bufferedTime do
-                    do! Task.Delay(100, cancellationToken)
-                    delayedTime <- float <| Stopwatch.GetTimestamp() - startTime
-                // Task.Delay isn't accurate and can sleep less/more than what we wanted.
-                // If it slept more than expected, we'll need to reduce the buffer a bit.
-                let multiplier = if delayedTime > bufferedTime then 2.0 else 1.0
-                &currentBuffer -= (delayedTime - bufferedTime * multiplier)
-            do! sendPacket << ValueSome <|
-                {   opusData = packet
-                    sampleIndex = sampleIndex
-                }
-            &sampleIndex += SamplesPerPacket
-            packet <- opusReader.reader.ReadNextRawPacket()
+        printfn "streamAudio Start"
+        try
+            while hasNextPacket opusReader do
+                let rawPacket = readNextRawPacket opusReader
+                let currentTime = (getCurrentTime opusReader).TotalMilliseconds * frequency
+                let delay = currentTime - previousTime
+                ignore <| delayBuffer.AddLast delay
+                previousTime <- currentTime
+                &currentBuffer += delay
+                if currentBuffer >= maximumBuffer then
+                    let bufferedTime = delayBuffer.First.Value
+                    delayBuffer.RemoveFirst()
+                    let startTime = Stopwatch.GetTimestamp()
+                    let mutable delayedTime = 0.0
+                    while delayedTime < bufferedTime do
+                        do! Task.Delay(100, cancellationToken)
+                        delayedTime <- float <| Stopwatch.GetTimestamp() - startTime
+                    // Task.Delay isn't accurate and can sleep less/more than what we wanted.
+                    // If it slept more than expected, we'll need to reduce the buffer a bit.
+                    let multiplier = if delayedTime > bufferedTime then 2.0 else 1.0
+                    &currentBuffer -= (delayedTime - bufferedTime * multiplier)
+
+                // Since readNextRawPacket internally returns the previous packet's array
+                // to the ArrayPool, we must copy it to avoid referencing a returned array.
+                let opusData = ArrayPool.Shared.Rent rawPacket.packetLength
+                ignore <| Buffer.BlockCopy(rawPacket.packet, 0, opusData, 0, rawPacket.packetLength)
+
+                printfn "streamAudio sending packet"
+                do! sendPacket << ValueSome <|
+                    {   opusData = opusData
+                        opusDataLength = rawPacket.packetLength
+                        sampleIndex = sampleIndex
+                    }
+                &sampleIndex += SamplesPerPacket
+        with | ex -> printfn $"error while streaming audio: {ex}"
+        printfn "streamAudio End"
         do! sendPacket ValueNone
     }
