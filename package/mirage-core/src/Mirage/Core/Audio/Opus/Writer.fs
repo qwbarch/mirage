@@ -41,19 +41,25 @@ let OpusWriter args =
                     | WriteSamples samples ->
                         appendSegment fullSamples <| ArraySegment(samples.data, 0, samples.length)
                     | Close ->
-                        closed <- true
-                        ignore << Directory.CreateDirectory <| Path.GetDirectoryName args.filePath
-                        use fileStream = new FileStream(args.filePath, FileMode.Create, FileAccess.Write)
-                        use encoder = OpusEncoder()
-                        let opusStream = OpusOggWriteStream(
-                            encoder,
-                            fileStream,
-                            null, // Opus tags.
-                            args.format.sampleRate
-                        )
-                        opusStream.WriteSamples(fullSamples.ToArray(), 0, fullSamples.Count)
-                        opusStream.Finish()
-                        dispose fullSamples
+                        try
+                            closed <- true
+                            ignore << Directory.CreateDirectory <| Path.GetDirectoryName args.filePath
+                            use fileStream = new FileStream(args.filePath, FileMode.Create, FileAccess.Write)
+                            use encoder = OpusEncoder()
+                            let opusStream = OpusOggWriteStream(
+                                encoder,
+                                fileStream,
+                                null, // Opus tags.
+                                args.format.sampleRate
+                            )
+                            let samples = ArrayPool.Shared.Rent fullSamples.Count
+                            try
+                                opusStream.WriteSamples(fullSamples.ToArray(), 0, fullSamples.Count)
+                                opusStream.Finish()
+                            finally
+                                ArrayPool.Shared.Return samples
+                        finally
+                            dispose fullSamples
         }
     fork CancellationToken.None consumer
     { channel = channel }

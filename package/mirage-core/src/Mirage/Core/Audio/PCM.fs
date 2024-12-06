@@ -29,6 +29,7 @@ type Samples =
 let toPcmData (samples: Samples) : PcmData =
     let bufferLength = samples.length * 2
     let buffer = ArrayPool.Shared.Rent bufferLength
+    Array.Clear(buffer, 0, bufferLength)
     let mutable sampleIndex = 0
     let mutable pcmIndex = 0
     while sampleIndex < samples.length do
@@ -44,6 +45,7 @@ let toPcmData (samples: Samples) : PcmData =
 let fromPcmData (pcmData: PcmData) : Samples =
     let bufferLength = pcmData.length / 2
     let buffer = ArrayPool.Shared.Rent bufferLength
+    Array.Clear(buffer, 0, bufferLength)
     let mutable sampleIndex = 0
     for i in 0 .. bufferLength - 1 do
         let sample = BitConverter.ToInt16(pcmData.data, i * 2)
