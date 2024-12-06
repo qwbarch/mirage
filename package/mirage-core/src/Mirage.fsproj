@@ -23,9 +23,6 @@
     <Reference Include="Concentus.Oggfile.Fork">
       <HintPath>../../../lib/Concentus.Oggfile/Concentus.Oggfile.Fork.dll</HintPath>
     </Reference>
-    <Reference Include="FSharpx.Async">
-      <HintPath>../../../lib/FSharpx.Async/FSharpx.Async.dll</HintPath>
-    </Reference>
     <Reference Include="NAudio" Publicize="true">
       <HintPath>../../../lib/NAudio/NAudio.dll</HintPath>
     </Reference>
@@ -35,15 +32,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Mirage/Prelude/Operator.fs" />
-    <Compile Include="Mirage/Core/Async/AtomicFile.fs" />
-    <Compile Include="Mirage/Core/Async/BatchProcessor.fs" />
-    <Compile Include="Mirage/Core/Async/Lazy.fs" />
-    <Compile Include="Mirage/Core/Async/Lock.fs" />
-    <Compile Include="Mirage/Core/Async/LVar.fs" />
-    <Compile Include="Mirage/Core/Async/Fork.fs" />
-    <Compile Include="Mirage/Core/Async/MVar.fs" />
-    <Compile Include="Mirage/Core/Async/Print.fs" />
-    <Compile Include="Mirage/Core/Async/TVar.fs" />
     <Compile Include="Mirage/Core/Task/Channel.fs" />
     <Compile Include="Mirage/Core/Task/Fork.fs" />
     <Compile Include="Mirage/Core/Task/Lock.fs" />
