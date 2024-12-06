@@ -141,24 +141,6 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
             "Max spawned masked enemies"
             2
             <| ConfigDescription(description, tags = zero)
-    
-    member val MinSilenceDurationMs =
-        let description =
-            "The minimum amount of detected silence before a voice clip should stop recording. By default, a recording stops after 2 seconds of non-detected speech is found.\n"
-                + "Note: This config option is for advanced users only. If you don't know what you're doing, don't touch this option. This only affects voice activity users."
-        bindAdvanced
-            "Minimum silence duration (in milliseconds)"
-            2000
-            <| ConfigDescription(description, tags = zero)
-    
-    member val MinAudioDurationMs =
-        let description =
-            "The minimum amount of audio a voice clip should contain. If you have a lot of saved audio clips that contains useless audio, you can consider increasing this value.\n"
-                + "Note: This config option is for advanced users only. If you don't know what you're doing, don't touch this option. This only affects voice activity users."
-        bindAdvanced
-            "Minimum audio duration (in milliseconds)"
-            150
-            <| ConfigDescription(description, tags = zero)
 
 let internal localConfig = LocalConfig(loadConfig "General", loadConfig "Enemies")
 
@@ -182,9 +164,6 @@ type SyncedConfig =
         enableArmsOut: bool
         enableMaskTexture: bool
         mimicVoiceWhileHiding: bool
-
-        minSilenceDurationMs: int
-        minAudioDurationMs: int
     }
 
 let mutable private syncedConfig: Option<SyncedConfig> = None
@@ -208,9 +187,6 @@ let private toSyncedConfig () =
         enableArmsOut = localConfig.EnableArmsOut.Value
         enableMaskTexture = localConfig.EnableMaskTexture.Value
         mimicVoiceWhileHiding = localConfig.MimicVoiceWhileHiding.Value
-
-        minSilenceDurationMs = localConfig.MinSilenceDurationMs.Value
-        minAudioDurationMs = localConfig.MinAudioDurationMs.Value
     }
 
 /// Get the currently synchronized config. This should only be used while in-game (not inside the menu).

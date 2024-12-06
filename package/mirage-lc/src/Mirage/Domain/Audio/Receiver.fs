@@ -88,9 +88,9 @@ let startAudioReceiver receiver =
                     {   samples = fromPcmData { data = pcmData; length = PacketPcmLength }
                         sampleIndex = opusPacket.sampleIndex
                     }
-            with | ex -> printfn $"error while decoding: {ex}"
-            ArrayPool.Shared.Return opusPacket.opusData
-            ArrayPool.Shared.Return pcmData
+            finally
+                ArrayPool.Shared.Return opusPacket.opusData
+                ArrayPool.Shared.Return pcmData
         }
     let playbackThread () =
         forever <| fun () -> valueTask {
@@ -106,8 +106,8 @@ let startAudioReceiver receiver =
                         receiver.onPacketDecoded decodedPacket
                     if not receiver.audioSource.isPlaying && receiver.bufferedPackets >= receiver.minimumBufferedPackets then
                         receiver.audioSource.Play()
-                with | ex -> printfn $"error while playing back: {ex}"
-                ArrayPool.Shared.Return decodedPacket.samples.data
+                finally
+                    ArrayPool.Shared.Return decodedPacket.samples.data
         }
     fork receiver.cancellationToken decoderThread
     ignore <| playbackThread()

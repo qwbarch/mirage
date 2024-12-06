@@ -18,6 +18,8 @@ open IcedTasks
 open Mirage.Core.Task.Utility
 open Mirage.Core.Task.Fork
 
+let [<Literal>] MinAudioDurationMs = 150
+let [<Literal>] MinSilenceDurationMs = 2000
 let [<Literal>] SamplesPerWindow = 2048
 let [<Literal>] StartThreshold = 0.5f
 let [<Literal>] EndThreshold = 0.2f
@@ -90,13 +92,13 @@ let readMicrophone recordingDirectory =
     let silero = SileroVAD SamplesPerWindow
     let recorder =
         Recorder
-            {   minAudioDurationMs = localConfig.MinAudioDurationMs.Value
+            {   minAudioDurationMs = MinAudioDurationMs
                 directory = recordingDirectory
                 allowRecordVoice = _.allowRecordVoice
             }
     let voiceDetector =
         VoiceDetector
-            {   minSilenceDurationMs = localConfig.MinSilenceDurationMs.Value
+            {   minSilenceDurationMs = MinSilenceDurationMs
                 forcedProbability = _.forcedProbability
                 startThreshold = StartThreshold 
                 endThreshold = EndThreshold
