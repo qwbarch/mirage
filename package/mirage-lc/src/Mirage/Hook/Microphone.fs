@@ -21,7 +21,7 @@ open Mirage.Core.Task.Fork
 let [<Literal>] MinAudioDurationMs = 150
 let [<Literal>] MinSilenceDurationMs = 2000
 let [<Literal>] SamplesPerWindow = 2048
-let [<Literal>] StartThreshold = 0.5f
+let [<Literal>] StartThreshold = 0.3f
 let [<Literal>] EndThreshold = 0.2f
 
 [<Struct>]
