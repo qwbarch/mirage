@@ -5,6 +5,7 @@ module Mirage.Core.Audio.Opus.Codec
 open OpusDotNet
 open Concentus.Enums
 
+let [<Literal>] OpusBitRate = 32_000
 let [<Literal>] OpusSampleRate = 48_000
 let [<Literal>] OpusChannels = 1
 let [<Literal>] FrameSizeMs = 20
@@ -18,7 +19,7 @@ let OpusDecoder () = new OpusDecoder(FrameSizeMs, OpusSampleRate, OpusChannels)
 let OpusEncoder () =
     let encoder = new Concentus.Structs.OpusEncoder(OpusSampleRate, OpusChannels, OpusApplication.OPUS_APPLICATION_AUDIO)
     encoder.UseVBR <- true
-    encoder.Bitrate <- 522_240
+    encoder.Bitrate <- OpusBitRate
     encoder.UseConstrainedVBR <- true
     encoder.Complexity <- 10
     encoder.PredictionDisabled <- true
