@@ -5,7 +5,7 @@ module Mirage.Core.Audio.Opus.Codec
 open OpusDotNet
 open Concentus.Enums
 
-let [<Literal>] OpusBitRate = 32_000
+let [<Literal>] OpusBitRate = 24_000
 let [<Literal>] OpusSampleRate = 48_000
 let [<Literal>] OpusChannels = 1
 let [<Literal>] FrameSizeMs = 20

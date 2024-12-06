@@ -12,6 +12,8 @@ open Mirage.Core.Audio.Opus.Writer
 open Mirage.Core.Task.Channel
 open Mirage.Core.Task.Fork
 open Mirage.Core.Task.Utility
+open Mirage.Core.Audio.Opus.Codec
+open Concentus.Enums
 
 /// Records audio from a live microphone feed.
 type Recorder<'State> = private { channel: Channel<ValueTuple<'State, DetectAction>> }
@@ -34,9 +36,10 @@ let Recorder args =
                 | DetectStart _ -> ()
                 | DetectEnd payload ->
                     if payload.audioDurationMs >= args.minAudioDurationMs && args.allowRecordVoice state then
+                        let guid = Guid.NewGuid()
                         let opusWriter =
                             OpusWriter 
-                                {   filePath = Path.Join(args.directory, $"{Guid.NewGuid()}.opus")
+                                {   filePath = Path.Join(args.directory, $"{guid}.opus")
                                     format = payload.fullAudio.original.format
                                 }
                         try
