@@ -5,6 +5,7 @@ open System
 open System.IO
 open System.Threading
 open System.Buffers
+open FSharpPlus
 open Mirage.Core.Audio.Microphone.Detection
 open Mirage.Core.Audio.Microphone.Resampler
 open Mirage.Core.Audio.Opus.Writer
@@ -33,17 +34,18 @@ let Recorder args =
                 | DetectStart _ -> ()
                 | DetectEnd payload ->
                     if payload.audioDurationMs >= args.minAudioDurationMs && args.allowRecordVoice state then
+                        let opusWriter =
+                            OpusWriter 
+                                {   filePath = Path.Join(args.directory, $"{Guid.NewGuid()}.opus")
+                                    format = payload.fullAudio.original.format
+                                }
                         try
-                            let opusWriter =
-                                OpusWriter 
-                                    {   filePath = Path.Join(args.directory, $"{Guid.NewGuid()}.opus")
-                                        format = payload.fullAudio.original.format
-                                    }
                             writeOpusSamples opusWriter payload.fullAudio.original.samples
                             closeOpusWriter opusWriter
                         finally
                             ArrayPool.Shared.Return payload.fullAudio.original.samples.data
                             ArrayPool.Shared.Return payload.fullAudio.resampled.samples.data
+                            dispose opusWriter
         }
     fork CancellationToken.None consumer
     { channel = channel }

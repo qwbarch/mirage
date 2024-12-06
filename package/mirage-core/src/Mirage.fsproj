@@ -20,8 +20,8 @@
     <PackageReference Include="System.Threading.Channels" Version="8.0.0" />
     <PackageReference Include="IcedTasks" Version="0.11.7" />
     <PackageReference Include="Collections.Pooled" Version="1.0.82" />
-    <Reference Include="Concentus.Oggfile">
-      <HintPath>../../../lib/Concentus.Oggfile/Concentus.Oggfile.dll</HintPath>
+    <Reference Include="Concentus.Oggfile.Fork">
+      <HintPath>../../../lib/Concentus.Oggfile/Concentus.Oggfile.Fork.dll</HintPath>
     </Reference>
     <Reference Include="FSharpx.Async">
       <HintPath>../../../lib/FSharpx.Async/FSharpx.Async.dll</HintPath>
