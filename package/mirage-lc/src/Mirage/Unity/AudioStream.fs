@@ -27,7 +27,7 @@ type AudioStartEvent =
 
 [<Struct>]
 type AudioReceivedEvent =
-    {   /// Audio signal containing a single decompressed mp3 frame.
+    {   /// 16-bit audio signal.
         samples: Samples
         /// Index of where the sample belongs in, relative to the whole audio clip.
         sampleIndex: int
@@ -48,8 +48,8 @@ type AudioStreamEventArgs(eventData: AudioStreamEvent) =
 type AudioStream() as self =
     inherit NetworkBehaviour()
 
-    let mutable audioSender: Option<AudioSender> = None
-    let mutable audioReceiver: Option<AudioReceiver> = None
+    let mutable audioSender = None
+    let mutable audioReceiver = None
 
     let event = Event<EventHandler<_>, _>()
     let triggerEvent (decodedPacket: DecodedPacket) =
