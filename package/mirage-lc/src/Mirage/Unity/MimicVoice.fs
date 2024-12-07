@@ -38,7 +38,9 @@ type MimicVoice() as self =
                     let! recording = getRecording recordingManager
                     if recording.IsSome then
                         do! audioStream.StreamOpusFromFile recording.Value
-            with | error -> logError $"Error occurred while mimicking voice: {error}"
+            with
+                | :? TaskCanceledException as _ -> ()
+                | error -> logError $"Error occurred while mimicking voice: {error}"
             let delay =
                 if enemyAI :? MaskedPlayerEnemy then
                     random.Next(getConfig().minimumDelayMasked, getConfig().maximumDelayMasked + 1)

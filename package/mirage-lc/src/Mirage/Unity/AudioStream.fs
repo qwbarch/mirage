@@ -40,25 +40,13 @@ type AudioStreamEvent
     /// Event that is trigered when audio samples are received.
     | AudioReceivedEvent of audioReceivedEvent: AudioReceivedEvent
 
-type AudioStreamEventArgs(eventData: AudioStreamEvent) =
-    inherit EventArgs()
-    member _.EventData = eventData
-
 [<AllowNullLiteral>]
 type AudioStream() as self =
     inherit NetworkBehaviour()
 
     let mutable audioSender = None
     let mutable audioReceiver = None
-
     let event = Event<EventHandler<_>, _>()
-    let triggerEvent (decodedPacket: DecodedPacket) =
-        let eventData =
-            AudioReceivedEvent
-                {   samples = decodedPacket.samples
-                    sampleIndex = decodedPacket.sampleIndex
-                }
-        event.Trigger(self, AudioStreamEventArgs(eventData))
 
     /// Run the callback if the sender client id matches the <b>AllowedSenderId</b> value.
     let onValidSender (serverRpcParams: ServerRpcParams) callback =
@@ -123,6 +111,13 @@ type AudioStream() as self =
     /// Initialize the audio receiver to playback audio when opus packets are received.
     member this.InitializeAudioReceiver(totalSamples) =
         iter dispose audioReceiver
+        let triggerEvent (decodedPacket: DecodedPacket) =
+            let eventData =
+                AudioReceivedEvent
+                    {   samples = decodedPacket.samples
+                        sampleIndex = decodedPacket.sampleIndex
+                    }
+            event.Trigger(self, eventData)
         audioReceiver <- Some <| AudioReceiver this.AudioSource totalSamples triggerEvent this.destroyCancellationToken
         startAudioReceiver audioReceiver.Value
         let eventData =
@@ -131,7 +126,7 @@ type AudioStream() as self =
                     channels = OpusChannels
                     frequency = OpusSampleRate
                 }
-        event.Trigger(this, AudioStreamEventArgs(eventData))
+        event.Trigger(this, eventData)
     
     [<ClientRpc>]
     member this.InitializeAudioReceiverClientRpc(totalSamples) =
