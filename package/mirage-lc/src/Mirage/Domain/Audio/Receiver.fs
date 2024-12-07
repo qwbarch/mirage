@@ -44,8 +44,9 @@ type AudioReceiver =
                     this.audioSource.Stop()
                     dispose this.decoder
             finally
-                UnityEngine.Object.Destroy this.audioSource.clip
-                this.audioSource.clip <- null
+                if not <| isNull this.audioSource.clip then
+                    UnityEngine.Object.Destroy this.audioSource.clip
+                    this.audioSource.clip <- null
 
 /// The inverse of __AudioSender__. Receives packets sent by the AudioSender, decodes the opus packet, and then plays it back live.
 let AudioReceiver audioSource totalSamples onPacketDecoded cancellationToken =
