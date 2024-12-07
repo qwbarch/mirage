@@ -21,7 +21,7 @@ open Mirage.Core.Task.Fork
 let [<Literal>] MinAudioDurationMs = 150
 let [<Literal>] MinSilenceDurationMs = 2000
 let [<Literal>] SamplesPerWindow = 2048
-let [<Literal>] StartThreshold = 0.3f
+let [<Literal>] StartThreshold = 0.35f
 let [<Literal>] EndThreshold = 0.2f
 
 [<Struct>]
@@ -112,7 +112,7 @@ let readMicrophone recordingDirectory =
             match value with
                 | ValueNone -> writeResampler resampler ResamplerInput.Reset
                 | ValueSome state ->
-                    if state.isReady && (getConfig().enableRecordVoiceWhileDead || not state.isPlayerDead) then
+                    if state.isReady && isConfigReady() && (getConfig().enableRecordVoiceWhileDead || not state.isPlayerDead) then
                         let frame =
                             {   samples = state.samples
                                 format = state.format

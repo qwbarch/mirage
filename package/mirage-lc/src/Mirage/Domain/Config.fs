@@ -10,6 +10,7 @@ open System.Runtime.Serialization
 open BepInEx.Configuration
 open Unity.Netcode
 open Unity.Collections
+open IcedTasks
 open Mirage.Prelude
 open Mirage.PluginInfo
 open Mirage.Domain.Logger
@@ -27,7 +28,6 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
     let bindImitateVoice key (value: 'A) (description: 'B) = bind "Imitate voice" key value description
     let bindMaskedEnemy = bind "Masked enemy"
     let bindSpawnControl key (value: 'A) (description: 'B) = bind "Spawn control" key value description
-    let bindAdvanced = bind "Advanced users"
 
     member val internal General = general
     member val internal Enemies = enemies
@@ -189,9 +189,11 @@ let private toSyncedConfig () =
         mimicVoiceWhileHiding = localConfig.MimicVoiceWhileHiding.Value
     }
 
+let isConfigReady () = syncedConfig.IsSome
+
 /// Get the currently synchronized config. This should only be used while in-game (not inside the menu).
 let getConfig () =
-    if syncedConfig.IsNone then
+    if not <| isConfigReady() then
         logWarning "syncedConfig has not been initialized yet."
     syncedConfig.Value
 
@@ -243,6 +245,7 @@ let internal requestSync () =
 
 let private onRequestSync clientId _ =
     if isHost() then
+        logInfo "onRequestSync is running"
         let bytes = serializeToBytes <| getConfig()
         let bytesLength = bytes.Length
         use writer = new FastBufferWriter(bytesLength + sizeof<int32>, Allocator.Temp)
@@ -250,12 +253,14 @@ let private onRequestSync clientId _ =
             writer.WriteValueSafe &bytesLength
             writer.WriteBytesSafe bytes
             sendMessage ReceiveSync clientId writer
+            logInfo $"sending config to client: {clientId}"
         with | error ->
             logError $"Failed during onRequestSync: {error}"
 
 let private onReceiveSync _ (reader: FastBufferReader) =
     if not <| isHost() then
         Result.iterError logError <| monad' {
+            logInfo "onReceiveSync is running"
             if not <| reader.TryBeginRead sizeof<int> then
                 return! Error "onReceiveSync failed while reading beginning of buffer."
             let mutable bytesLength = 0
@@ -265,6 +270,7 @@ let private onReceiveSync _ (reader: FastBufferReader) =
             let bytes = Array.zeroCreate<byte> bytesLength
             reader.ReadBytesSafe(ref bytes, bytesLength)
             syncedConfig <- Some <| deserializeFromBytes bytes
+            logInfo $"syncedConfig: {syncedConfig}"
         }
 
 /// Register the named message handler for the given action.

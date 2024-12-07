@@ -38,7 +38,7 @@ type Settings =
 
 let private fromSavedSettings savedSettings =
     let getValue (getField: SavedSettings -> Nullable<'A>) =
-        Option.defaultValue ((getField defaultSettings).Value) <| Option.ofNullable (getField savedSettings)
+        Option.defaultValue (getField defaultSettings).Value <| Option.ofNullable (getField savedSettings)
     {   localPlayerVolume = getValue _.localPlayerVolume
         neverDeleteRecordings = getValue _.neverDeleteRecordings
         allowRecordVoice = getValue _.allowRecordVoice
@@ -63,12 +63,16 @@ let internal initSettings filePath =
         settings <- updatedSettings
         writeChannel channel updatedSettings
     valueTask {
+        // TODO: USE A MUTEX LATER
+        let fileExists = File.Exists filePath
         let! savedSettings =
-            if File.Exists filePath then
+            if fileExists then 
                 JsonConvert.DeserializeObject<SavedSettings> <!> File.ReadAllTextAsync filePath
             else
                 result defaultSettings
         settings <- fromSavedSettings savedSettings
+        if not fileExists then
+            saveSettings settings
         initLethalSettings
             {   pluginId = pluginId
                 pluginVersion = pluginVersion
