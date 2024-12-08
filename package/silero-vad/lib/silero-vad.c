@@ -1,13 +1,13 @@
 #include "../../../lib/onnxruntime/include/onnxruntime_c_api.h"
 #include <wtypes.h>
 
-#define HC_LENGTH 2 * 1 * 64
+#define STATE_LENGTH 2 * 1 * 128
 
 const int64_t sr_shape[] = {1};
-const int64_t hc_shape[] = {2, 1, 64};
+const int64_t state_shape[] = {2, 1, 128};
 
-const char *input_names[] = {"input", "sr", "h", "c"};
-const char *output_names[] = {"output", "hn", "cn"};
+const char *input_names[] = {"input", "state", "sr"};
+const char *output_names[] = {"output", "stateN"};
 
 struct SileroVAD
 {
@@ -16,8 +16,7 @@ struct SileroVAD
     OrtSessionOptions *session_options;
     OrtSession *session;
     OrtMemoryInfo *memory_info;
-    float *h;
-    float *c;
+    float *state;
     int64_t input_shape[2];
 };
 
@@ -46,11 +45,9 @@ __declspec(dllexport) struct SileroVAD *init_silero(struct SileroInitParams init
     vad->api->SetSessionGraphOptimizationLevel(vad->session_options, ORT_ENABLE_ALL);
     vad->api->CreateSession(vad->env, init_params.model_path, vad->session_options, &vad->session);
     vad->api->CreateCpuMemoryInfo(OrtArenaAllocator, OrtMemTypeCPU, &vad->memory_info);
-    const int hc_bytes = HC_LENGTH * sizeof(float);
-    vad->h = (float *)malloc(hc_bytes);
-    vad->c = (float *)malloc(hc_bytes);
-    memset(vad->h, 0.0f, hc_bytes);
-    memset(vad->c, 0.0f, hc_bytes);
+    int state_bytes = STATE_LENGTH * sizeof(float);
+    vad->state = (float *)malloc(state_bytes);
+    memset(vad->state, 0.0f, state_bytes);
     vad->input_shape[0] = 1;
     vad->input_shape[1] = init_params.window_size;
     return vad;
@@ -62,9 +59,7 @@ __declspec(dllexport) void release_silero(struct SileroVAD *vad)
     vad->api->ReleaseSessionOptions(vad->session_options);
     vad->api->ReleaseSession(vad->session);
     vad->api->ReleaseMemoryInfo(vad->memory_info);
-    free(vad->h);
-    free(vad->c);
-    free(vad->input_shape);
+    free(vad->state);
     free(vad);
 }
 
@@ -91,6 +86,17 @@ __declspec(dllexport) float detect_speech(struct SileroVAD *vad, const float *pc
         ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT,
         &input_tensor);
 
+    // State tensor.
+    OrtValue *state_tensor = NULL;
+    vad->api->CreateTensorWithDataAsOrtValue(
+        vad->memory_info,
+        vad->state,
+        STATE_LENGTH * sizeof(float),
+        state_shape,
+        sizeof(state_shape) / sizeof(int64_t),
+        ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT,
+        &state_tensor);
+
     // Sample-rate tensor (assumes 16khz).
     int64_t sample_rate[] = {16000};
     OrtValue *sr_tensor = NULL;
@@ -103,31 +109,9 @@ __declspec(dllexport) float detect_speech(struct SileroVAD *vad, const float *pc
         ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64,
         &sr_tensor);
 
-    // h tensor.
-    OrtValue *h_tensor = NULL;
-    vad->api->CreateTensorWithDataAsOrtValue(
-        vad->memory_info,
-        vad->h,
-        HC_LENGTH * sizeof(float),
-        hc_shape,
-        sizeof(hc_shape) / sizeof(int64_t),
-        ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT,
-        &h_tensor);
-
-    // c tensor.
-    OrtValue *c_tensor = NULL;
-    vad->api->CreateTensorWithDataAsOrtValue(
-        vad->memory_info,
-        vad->c,
-        HC_LENGTH * sizeof(float),
-        hc_shape,
-        sizeof(hc_shape) / sizeof(int64_t),
-        ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT,
-        &c_tensor);
-
     // Run inference.
-    const OrtValue *input_tensors[] = {input_tensor, sr_tensor, h_tensor, c_tensor};
-    OrtValue *output_tensors[] = {NULL, NULL, NULL};
+    const OrtValue *input_tensors[] = {input_tensor, state_tensor, sr_tensor};
+    OrtValue *output_tensors[] = {NULL, NULL};
     vad->api->Run(
         vad->session,
         NULL,
@@ -139,22 +123,18 @@ __declspec(dllexport) float detect_speech(struct SileroVAD *vad, const float *pc
         output_tensors);
 
     float *probabilities = NULL;
-    float *h_output = NULL;
-    float *c_output = NULL;
-    vad->api->GetTensorMutableData(output_tensors[0], &probabilities);
-    vad->api->GetTensorMutableData(output_tensors[1], &h_output);
-    vad->api->GetTensorMutableData(output_tensors[2], &c_output);
+    float *state_output = NULL;
 
-    memcpy(vad->h, h_output, HC_LENGTH * sizeof(float));
-    memcpy(vad->c, c_output, HC_LENGTH * sizeof(float));
+    vad->api->GetTensorMutableData(output_tensors[0], &probabilities);
+    vad->api->GetTensorMutableData(output_tensors[1], &state_output);
+
+    memcpy(vad->state, state_output, STATE_LENGTH * sizeof(float));
 
     vad->api->ReleaseValue(output_tensors[0]);
     vad->api->ReleaseValue(output_tensors[1]);
-    vad->api->ReleaseValue(output_tensors[2]);
     vad->api->ReleaseValue(input_tensor);
+    vad->api->ReleaseValue(state_tensor);
     vad->api->ReleaseValue(sr_tensor);
-    vad->api->ReleaseValue(h_tensor);
-    vad->api->ReleaseValue(c_tensor);
 
     return probabilities[0];
 }

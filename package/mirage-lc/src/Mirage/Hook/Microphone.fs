@@ -7,21 +7,21 @@ open System.Buffers
 open System.Threading
 open Silero.API
 open NAudio.Wave
+open IcedTasks
 open Mirage.Core.Audio.PCM
 open Mirage.Core.Audio.Microphone.Resampler
 open Mirage.Core.Audio.Microphone.Detection
 open Mirage.Core.Audio.Microphone.Recorder
-open Mirage.Domain.Config
-open Mirage.Domain.Setting
 open Mirage.Core.Task.Channel
-open IcedTasks
 open Mirage.Core.Task.Utility
 open Mirage.Core.Task.Fork
+open Mirage.Domain.Config
+open Mirage.Domain.Setting
 
 let [<Literal>] MinAudioDurationMs = 150
 let [<Literal>] MinSilenceDurationMs = 2000
-let [<Literal>] SamplesPerWindow = 2048
-let [<Literal>] StartThreshold = 0.35f
+let [<Literal>] SamplesPerWindow = 512
+let [<Literal>] StartThreshold = 0.5f
 let [<Literal>] EndThreshold = 0.2f
 
 [<Struct>]

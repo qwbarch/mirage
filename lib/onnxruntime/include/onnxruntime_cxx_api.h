@@ -508,6 +508,7 @@ ORT_DEFINE_RELEASE(CustomOpDomain);
 ORT_DEFINE_RELEASE(ThreadingOptions);
 ORT_DEFINE_RELEASE(Env);
 ORT_DEFINE_RELEASE(RunOptions);
+ORT_DEFINE_RELEASE(LoraAdapter);
 ORT_DEFINE_RELEASE(Session);
 ORT_DEFINE_RELEASE(SessionOptions);
 ORT_DEFINE_RELEASE(TensorTypeAndShapeInfo);
@@ -736,6 +737,32 @@ struct CustomOpDomain : detail::Base<OrtCustomOpDomain> {
   void Add(const OrtCustomOp* op);  ///< Wraps CustomOpDomain_Add
 };
 
+/// \brief LoraAdapter holds a set of Lora Parameters loaded from a single file
+struct LoraAdapter : detail::Base<OrtLoraAdapter> {
+  using Base = detail::Base<OrtLoraAdapter>;
+  using Base::Base;
+
+  explicit LoraAdapter(std::nullptr_t) {}  ///< Create an empty LoraAdapter object, must be assigned a valid one to be used
+  /// \brief Wraps OrtApi::CreateLoraAdapter
+  ///
+  /// The function attempts to load the adapter from the specified file
+  /// \param adapter_path The path to the Lora adapter
+  /// \param allocator optional pointer to a device allocator. If nullptr, the data stays on CPU. It would still
+  ///        be copied to device if required by the model at inference time.
+  static LoraAdapter CreateLoraAdapter(const std::basic_string<ORTCHAR_T>& adapter_path,
+                                       OrtAllocator* allocator);
+
+  /// \brief Wraps OrtApi::CreateLoraAdapterFromArray
+  ///
+  /// The function attempts to load the adapter from the specified byte array.
+  /// \param bytes The byte array containing file LoraAdapter format
+  /// \param num_bytes The number of bytes in the byte array
+  /// \param allocator optional pointer to a device allocator. If nullptr, the data stays on CPU. It would still
+  ///        be copied to device if required by the model at inference time.
+  static LoraAdapter CreateLoraAdapterFromArray(const void* bytes, size_t num_bytes,
+                                                OrtAllocator* allocator);
+};
+
 /** \brief RunOptions
  *
  */
@@ -766,6 +793,14 @@ struct RunOptions : detail::Base<OrtRunOptions> {
    * Wraps OrtApi::RunOptionsUnsetTerminate
    */
   RunOptions& UnsetTerminate();
+
+  /** \brief Add the LoraAdapter to the list of active adapters.
+   *  The setting does not affect RunWithBinding() calls.
+   *
+   * Wraps OrtApi::RunOptionsAddActiveLoraAdapter
+   * \param adapter The LoraAdapter to be used as the active adapter
+   */
+  RunOptions& AddActiveLoraAdapter(const LoraAdapter& adapter);
 };
 
 namespace detail {
@@ -873,6 +908,9 @@ struct SessionOptionsImpl : ConstSessionOptionsImpl<T> {
 
   SessionOptionsImpl& AddInitializer(const char* name, const OrtValue* ort_val);                                             ///< Wraps OrtApi::AddInitializer
   SessionOptionsImpl& AddExternalInitializers(const std::vector<std::string>& names, const std::vector<Value>& ort_values);  ///< Wraps OrtApi::AddExternalInitializers
+  SessionOptionsImpl& AddExternalInitializersFromFilesInMemory(const std::vector<std::basic_string<ORTCHAR_T>>& external_initializer_file_names,
+                                                               const std::vector<char*>& external_initializer_file_buffer_array,
+                                                               const std::vector<size_t>& external_initializer_file_lengths);  ///< Wraps OrtApi::AddExternalInitializersFromFilesInMemory
 
   SessionOptionsImpl& AppendExecutionProvider_CUDA(const OrtCUDAProviderOptions& provider_options);          ///< Wraps OrtApi::SessionOptionsAppendExecutionProvider_CUDA
   SessionOptionsImpl& AppendExecutionProvider_CUDA_V2(const OrtCUDAProviderOptionsV2& provider_options);     ///< Wraps OrtApi::SessionOptionsAppendExecutionProvider_CUDA_V2
@@ -901,6 +939,9 @@ struct SessionOptionsImpl : ConstSessionOptionsImpl<T> {
   SessionOptionsImpl& RegisterCustomOpsLibrary(const ORTCHAR_T* library_name, const CustomOpConfigs& custom_op_configs = {});
 
   SessionOptionsImpl& RegisterCustomOpsUsingFunction(const char* function_name);  ///< Wraps OrtApi::RegisterCustomOpsUsingFunction
+
+  ///< Wraps OrtApi::SessionOptionsAppendExecutionProvider_VitisAI
+  SessionOptionsImpl& AppendExecutionProvider_VitisAI(const std::unordered_map<std::string, std::string>& provider_options = {});
 };
 }  // namespace detail
 
@@ -1099,6 +1140,19 @@ struct SessionImpl : ConstSessionImpl<T> {
    *  The OrtAllocator instances must be valid at the point of memory release.
    */
   AllocatedStringPtr EndProfilingAllocated(OrtAllocator* allocator);  ///< Wraps OrtApi::SessionEndProfiling
+
+  /** \brief Set DynamicOptions for EPs (Execution Providers)
+   *
+   * Wraps OrtApi::SetEpDynamicOptions
+   *
+   * Valid options can be found in `include\onnxruntime\core\session\onnxruntime_session_options_config_keys.h`
+   * Look for `kOrtEpDynamicOptions`
+   *
+   * \param[in] keys Array of null terminated UTF8 encoded strings of EP dynamic option keys
+   * \param[in] values Array of null terminated UTF8 encoded string of EP dynamic option values
+   * \param[in] kv_len Number of elements in the keys and values arrays
+   */
+  void SetEpDynamicOptions(const char* const* keys, const char* const* values, size_t kv_len);
 };
 
 }  // namespace detail
@@ -2052,7 +2106,11 @@ struct KernelContext {
   explicit KernelContext(OrtKernelContext* context);
   size_t GetInputCount() const;
   size_t GetOutputCount() const;
+  // If input is optional and is not present, the method returns en empty ConstValue
+  // which can be compared to nullptr.
   ConstValue GetInput(size_t index) const;
+  // If outout is optional and is not present, the method returns en empty UnownedValue
+  // which can be compared to nullptr.
   UnownedValue GetOutput(size_t index, const int64_t* dim_values, size_t dim_count) const;
   UnownedValue GetOutput(size_t index, const std::vector<int64_t>& dims) const;
   void* GetGPUComputeStream() const;
@@ -2165,8 +2223,8 @@ struct Op : detail::Base<OrtOp> {
 /// </summary>
 struct ShapeInferContext {
   struct SymbolicInteger {
-    SymbolicInteger(int64_t i) : i_(i), is_int_(true){};
-    SymbolicInteger(const char* s) : s_(s), is_int_(false){};
+    SymbolicInteger(int64_t i) : i_(i), is_int_(true) {};
+    SymbolicInteger(const char* s) : s_(s), is_int_(false) {};
     SymbolicInteger(const SymbolicInteger&) = default;
     SymbolicInteger(SymbolicInteger&&) = default;
 
@@ -2206,7 +2264,7 @@ struct ShapeInferContext {
 
   size_t GetInputCount() const { return input_shapes_.size(); }
 
-  Status SetOutputShape(size_t indice, const Shape& shape);
+  Status SetOutputShape(size_t indice, const Shape& shape, ONNXTensorElementDataType type = ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT);
 
   int64_t GetAttrInt(const char* attr_name);
 
@@ -2294,6 +2352,11 @@ struct CustomOpBase : OrtCustomOp {
     OrtCustomOp::GetEndVersion = [](const OrtCustomOp* this_) {
       return static_cast<const TOp*>(this_)->end_ver_;
     };
+
+    OrtCustomOp::GetMayInplace = nullptr;
+    OrtCustomOp::ReleaseMayInplace = nullptr;
+    OrtCustomOp::GetAliasMap = nullptr;
+    OrtCustomOp::ReleaseAliasMap = nullptr;
   }
 
   // Default implementation of GetExecutionProviderType that returns nullptr to default to the CPU provider

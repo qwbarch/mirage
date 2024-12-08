@@ -10,7 +10,6 @@ open System.Runtime.Serialization
 open BepInEx.Configuration
 open Unity.Netcode
 open Unity.Collections
-open IcedTasks
 open Mirage.Prelude
 open Mirage.PluginInfo
 open Mirage.Domain.Logger
@@ -245,7 +244,6 @@ let internal requestSync () =
 
 let private onRequestSync clientId _ =
     if isHost() then
-        logInfo "onRequestSync is running"
         let bytes = serializeToBytes <| getConfig()
         let bytesLength = bytes.Length
         use writer = new FastBufferWriter(bytesLength + sizeof<int32>, Allocator.Temp)
@@ -253,14 +251,12 @@ let private onRequestSync clientId _ =
             writer.WriteValueSafe &bytesLength
             writer.WriteBytesSafe bytes
             sendMessage ReceiveSync clientId writer
-            logInfo $"sending config to client: {clientId}"
         with | error ->
             logError $"Failed during onRequestSync: {error}"
 
 let private onReceiveSync _ (reader: FastBufferReader) =
     if not <| isHost() then
         Result.iterError logError <| monad' {
-            logInfo "onReceiveSync is running"
             if not <| reader.TryBeginRead sizeof<int> then
                 return! Error "onReceiveSync failed while reading beginning of buffer."
             let mutable bytesLength = 0
@@ -270,7 +266,6 @@ let private onReceiveSync _ (reader: FastBufferReader) =
             let bytes = Array.zeroCreate<byte> bytesLength
             reader.ReadBytesSafe(ref bytes, bytesLength)
             syncedConfig <- Some <| deserializeFromBytes bytes
-            logInfo $"syncedConfig: {syncedConfig}"
         }
 
 /// Register the named message handler for the given action.

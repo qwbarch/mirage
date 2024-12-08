@@ -98,6 +98,7 @@ let VoiceDetector args =
                             match args.forcedProbability state with
                                 | ValueSome probability -> probability
                                 | ValueNone -> args.detectSpeech currentAudio.resampled.samples currentAudio.resampled.samples.length
+                        printfn $"probability: {probability}"
                         if probability >= args.startThreshold then
                             if endIndex <> 0 then
                                 endIndex <- 0
