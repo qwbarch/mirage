@@ -23,7 +23,7 @@ let SileroVAD windowSize =
         init_silero
             {   onnxruntime_path = Path.Combine(baseDirectory, "onnxruntime.dll")
                 model_path = Path.Combine(baseDirectory, "silero_vad.onnx")
-                intra_threads = Environment.ProcessorCount
+                intra_threads = 1
                 inter_threads = 1
                 log_level = int LogLevel.Error
                 window_size = windowSize

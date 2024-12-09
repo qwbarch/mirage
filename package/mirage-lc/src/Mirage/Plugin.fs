@@ -1,6 +1,8 @@
 namespace Mirage
 
 open BepInEx
+open Dissonance
+open System
 open System.IO
 open System.Reflection
 open System.Threading
@@ -39,8 +41,8 @@ type Plugin() =
             logInfo $"Loaded settings: {JsonConvert.SerializeObject settings}"
 
             // Credits goes to DissonanceLagFix: https://thunderstore.io/c/lethal-company/p/linkoid/DissonanceLagFix/
-            //for category in Seq.cast<LogCategory> <| Enum.GetValues typeof<LogCategory> do
-            //    Logs.SetLogLevel(category, LogLevel.Error)
+            for category in Seq.cast<LogCategory> <| Enum.GetValues typeof<LogCategory> do
+                Logs.SetLogLevel(category, LogLevel.Error)
 
             initLobbyCompatibility pluginName pluginVersion
             initLethalConfig assembly localConfig.General

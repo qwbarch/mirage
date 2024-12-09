@@ -1,5 +1,42 @@
 ## Changelog
 
+### 1.13.0
+
+- Fixed the bugs introduced since v1.9.0:
+    - Fixed a bug where voices are sometimes repeated with no delay.
+    - Fixed a bug where a voice clip is sometimes played right after another with no delay.
+    - Fixed a bug where voice clips can glitch out and sound really weird.
+    - Fixed a bug where recordings were sometimes being deleted on startup despite having "never delete recordings" enabled.
+    - Exceptions should no longer be thrown when the round is over, or when exiting back to the main menu.
+- Heavily optimized the mod. Personally when comparing to vanilla, my fps is identical now. For any developers interested:
+    - Due to needing to process audio, the biggest bottleneck with garbage collection since v1.9.0 was the amount of large arrays being allocated.
+    - Every instance where an array used to be allocated has been replaced with array pooling.
+    - Replaced F# ``Async`` type with ``ValueTask`` for any async code, since ``Async`` causes heap allocations everywhere.
+    - Objects that were being created extremely often (e.g. objects containing audio data) are now structs, to avoid unnecessary heap allocations.
+    - Audio packet sizes are extremely tiny now, making the networked audio much more efficient.
+    - Audio decompression no longer runs on the main thread.
+- Audio clips no longer save as ``.mp3``, and are instead saved as ``.opus``.
+    - The weird glitchy audio turns out to be an issue with the mp3 encoder I was using.
+    - Opus (at the current settings I've set) sounds the same as its ``.wav`` equivalent, while having a file size even smaller than the previous ``.mp3`` files.
+- Voice activity detection threshold has been lowered.
+    - This makes it more lenient on when it creates recordings, on the downside that you'll have a lot more "garbage" recordings like MirageLegacy (v1.8.X and older) had.
+    - This was needed, due to SileroVAD not being perfect which caused recordings to be created either too late, or was stopped too early, causing the audio clip to sound cut off.
+- LethalSettings is now a soft dependency and will not crash if LethalSettings is not installed.
+    - This is still set as a dependency on Thunderstore due to being the intended user experience.
+    - If you are absolutely against using LethalSettings, you and your users can edit your respective settings by editing the ``Mirage/settings.json`` file,
+      located in your Lethal Company directory.
+    - I highly recommend to keep LethalSettings installed to avoid the need to edit the file manually.
+- Added an option to the LethalSettings menu called ``Allow record voice``. When disabled, audio clips will never be created. Useful when paired with ``Never delete recordings``, for those who want to provide their own audio clips.
+- LethalConfig is now supported, but only for ``Mirage.General.cfg``. If you want to edit which enemies mimic voices, you still need to edit it via your mod manager.
+- ``NAudio.Lame`` is no longer a dependency and can be removed from your modpacks.
+- ``Minimum audio duration ms`` and ``Minimum silence duration ms`` has been removed to keep the config simpler.
+
+##### Special thanks:
+- [Alecksword](<https://thunderstore.io/c/lethal-company/p/Alecksword/?section=modpacks>) - For generously dedicating countless hours in voice chat to help debug issues I couldn’t replicate on my own.
+- [Winter Mantis](<https://thunderstore.io/c/lethal-company/p/WinterMantis/>) and ``Myrin`` - For their help in testing experimental builds and providing consistent feedback on the Lethal Company modding Discord.
+- [Lunxara](<https://www.twitch.tv/lunxara>) and [a glitched npc](<https://www.twitch.tv/a_glitched_npc>) - For testing many updates on stream, even when those updates affected their streaming experience.
+- [slayer6409](<https://thunderstore.io/c/lethal-company/p/slayer6409>) - For helping with profiling Mirage, providing feedback on performance issues.
+
 ### 1.12.2
 
 - Fixed a bug introduced in ``12.12.1``, where recordings are created even if the push-to-talk button isn't pressed.
