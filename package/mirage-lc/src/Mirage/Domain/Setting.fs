@@ -63,16 +63,21 @@ let internal initSettings filePath =
         settings <- updatedSettings
         writeChannel channel updatedSettings
     valueTask {
-        // TODO: USE A MUTEX LATER
-        let fileExists = File.Exists filePath
-        let! savedSettings =
-            if fileExists then 
-                JsonConvert.DeserializeObject<SavedSettings> <!> File.ReadAllTextAsync filePath
-            else
-                result defaultSettings
-        settings <- fromSavedSettings savedSettings
-        if not fileExists then
-            saveSettings settings
+        // Wait handle is used to allow only one process to initially write to the settings file.
+        use handle = new EventWaitHandle(true, EventResetMode.AutoReset, pluginId)
+        try
+            ignore <| handle.WaitOne()
+            let fileExists = File.Exists filePath
+            let! savedSettings =
+                if fileExists then 
+                    JsonConvert.DeserializeObject<SavedSettings> <!> File.ReadAllTextAsync filePath
+                else
+                    result defaultSettings
+            settings <- fromSavedSettings savedSettings
+            if not fileExists then
+                saveSettings settings
+        finally
+            ignore <| handle.Set()
         initLethalSettings
             {   pluginId = pluginId
                 pluginVersion = pluginVersion

@@ -12,8 +12,6 @@ open Mirage.Core.Audio.Opus.Writer
 open Mirage.Core.Task.Channel
 open Mirage.Core.Task.Fork
 open Mirage.Core.Task.Utility
-open Mirage.Core.Audio.Opus.Codec
-open Concentus.Enums
 
 /// Records audio from a live microphone feed.
 type Recorder<'State> = private { channel: Channel<ValueTuple<'State, DetectAction>> }

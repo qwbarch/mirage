@@ -7,6 +7,7 @@ open System.Buffers
 open System.Threading
 open Silero.API
 open NAudio.Wave
+open IcedTasks
 open Mirage.Core.Audio.PCM
 open Mirage.Core.Audio.Microphone.Resampler
 open Mirage.Core.Audio.Microphone.Detection
@@ -14,7 +15,6 @@ open Mirage.Core.Audio.Microphone.Recorder
 open Mirage.Domain.Config
 open Mirage.Domain.Setting
 open Mirage.Core.Task.Channel
-open IcedTasks
 open Mirage.Core.Task.Utility
 open Mirage.Core.Task.Fork
 
