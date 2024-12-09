@@ -54,6 +54,15 @@ For those who still don't want to use it either way, LethalSettings is a soft de
 If you have LethalSettings disabled, you and your users will need to modify your per-player settings by editing the ``Mirage/settings.json`` file,
 located inside your Lethal Company directory (highly unrecommended to do this).
 
+#### How do I access per-player settings?
+
+<a href="https://github.com/qwbarch/mirage/blob/main/assets/settings_1.png?raw=true" target="_blank">
+  <img src="https://github.com/qwbarch/mirage/blob/main/assets/settings_1.png?raw=true" alt="Settings" width="50%" />
+</a>
+<a href="https://github.com/qwbarch/mirage/blob/main/assets/settings_2.png?raw=true" target="_blank">
+  <img src="https://github.com/qwbarch/mirage/blob/main/assets/settings_2.png?raw=true" alt="Settings" width="50%" />
+</a>
+
 #### Can I use MaskedEnemyOverhaul with this mod?
 
 MaskedEnemyOverhaul will cause the masked enemy's suit and mimicking voice to not match.  
@@ -123,7 +132,6 @@ If you're making small changes for your friends, you will need to share the comp
 - [Alecksword](<https://thunderstore.io/c/lethal-company/p/Alecksword/?section=modpacks>) - For generously dedicating countless hours in voice chat with me to debug
   issues that I could not replicate on my own.
 - [Winter Mantis](<https://thunderstore.io/c/lethal-company/p/WinterMantis/>) and ``Myrin`` - For their help in testing experimental builds and providing consistent feedback on the Lethal Company modding Discord.
-
 - [a glitched npc](<https://www.twitch.tv/a_glitched_npc>) - For helping test many of the experimental builds on stream. Check out his stream! https://www.twitch.tv/a_glitched_npc
 - [slayer6409](https://thunderstore.io/c/lethal-company/p/slayer6409) - For helping with profiling Mirage, providing feedback on performance issues.
 
