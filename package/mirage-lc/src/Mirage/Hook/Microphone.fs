@@ -21,7 +21,7 @@ open Mirage.Domain.Setting
 let [<Literal>] MinAudioDurationMs = 150
 let [<Literal>] MinSilenceDurationMs = 2000
 let [<Literal>] SamplesPerWindow = 512
-let [<Literal>] StartThreshold = 0.5f
+let [<Literal>] StartThreshold = 0.3f
 let [<Literal>] EndThreshold = 0.2f
 
 [<Struct>]
@@ -89,7 +89,7 @@ type MicrophoneSubscriber() =
         member _.Reset() = writeChannel processingChannel ValueNone
 
 let readMicrophone recordingDirectory =
-    let silero = SileroVAD SamplesPerWindow
+    let silero = SileroVAD()
     let recorder =
         Recorder
             {   minAudioDurationMs = MinAudioDurationMs
@@ -105,7 +105,7 @@ let readMicrophone recordingDirectory =
                 detectSpeech = detectSpeech silero << _.data
                 onVoiceDetected = fun state action -> writeRecorder recorder struct (state, action)
             }
-    let resampler = Resampler SamplesPerWindow (writeDetector voiceDetector)
+    let resampler = Resampler <| writeDetector voiceDetector
     let consumer () =
         forever <| fun () -> valueTask {
             let! value = readChannel processingChannel

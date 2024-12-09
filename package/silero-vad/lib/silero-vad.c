@@ -2,6 +2,8 @@
 #include <wtypes.h>
 
 #define STATE_LENGTH 2 * 1 * 128
+#define WINDOW_SIZE 512 // 16khz sample rate can only have a window size of 512 in the v5 model.
+#define CONTEXT_SIZE 64
 
 const int64_t sr_shape[] = {1};
 const int64_t state_shape[] = {2, 1, 128};
@@ -17,6 +19,8 @@ struct SileroVAD
     OrtSession *session;
     OrtMemoryInfo *memory_info;
     float *state;
+    float *context;
+    float *audio_signal;
     int64_t input_shape[2];
 };
 
@@ -27,7 +31,6 @@ struct SileroInitParams
     OrtLoggingLevel log_level;
     int intra_threads;
     int inter_threads;
-    int window_size;
 };
 
 typedef OrtApiBase *(ORT_API_CALL *OrtGetApiBaseFunc)();
@@ -49,7 +52,6 @@ __declspec(dllexport) struct SileroVAD *init_silero(struct SileroInitParams init
     vad->state = (float *)malloc(state_bytes);
     memset(vad->state, 0.0f, state_bytes);
     vad->input_shape[0] = 1;
-    vad->input_shape[1] = init_params.window_size;
     return vad;
 }
 
@@ -60,27 +62,51 @@ __declspec(dllexport) void release_silero(struct SileroVAD *vad)
     vad->api->ReleaseSession(vad->session);
     vad->api->ReleaseMemoryInfo(vad->memory_info);
     free(vad->state);
+    if (vad->context != NULL)
+    {
+        free(vad->context);
+    }
     free(vad);
 }
 
 /**
- * Detect if speech is found for the given pcm data. This assumes the following:
- * - Pcm data contains WINDOW_SIZE samples.
+ * Detect if speech is found for the given samples. This assumes the following:
+ * - Samples contains WINDOW_SIZE samples.
  * - Sample rate is 16khz.
  * - Audio is mono-channel.
  * - Each sample contains 2 bytes.
  *
- * If the given pcm data does not follow this structure, its output will be unknown (and can potentially crash).
+ * If the given samples does not follow this structure, its output will be unknown (and can potentially crash).
  * Error handling is not present, as I assume the data sent from F# is already valid.
  */
-__declspec(dllexport) float detect_speech(struct SileroVAD *vad, const float *pcm_data, const int pcm_data_length)
+__declspec(dllexport) float detect_speech(struct SileroVAD *vad, const float *samples, const int samples_length)
 {
+    int64_t audio_length;
+    float *audio_signal;
+    if (vad->context == NULL)
+    {
+        audio_length = samples_length;
+        audio_signal = malloc(audio_length * sizeof(float));
+        vad->context = malloc(CONTEXT_SIZE * sizeof(float));
+        memcpy(audio_signal, samples, samples_length * sizeof(float));
+        memset(vad->context, 0, CONTEXT_SIZE * sizeof(float));
+    }
+    else
+    {
+        audio_length = samples_length + CONTEXT_SIZE;
+        audio_signal = malloc(audio_length * sizeof(float));
+        memcpy(audio_signal, vad->context, CONTEXT_SIZE * sizeof(float));
+        memcpy(audio_signal + CONTEXT_SIZE, samples, samples_length * sizeof(float));
+    }
+    memcpy(vad->context, samples + samples_length - CONTEXT_SIZE, CONTEXT_SIZE * sizeof(float));
+    vad->input_shape[1] = audio_length;
+
     // Input tensor (containing the pcm data).
     OrtValue *input_tensor = NULL;
     vad->api->CreateTensorWithDataAsOrtValue(
         vad->memory_info,
-        (float *)pcm_data,
-        pcm_data_length * sizeof(float),
+        (float *)audio_signal,
+        audio_length * sizeof(float),
         vad->input_shape,
         sizeof(vad->input_shape) / sizeof(int64_t),
         ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT,
@@ -135,6 +161,8 @@ __declspec(dllexport) float detect_speech(struct SileroVAD *vad, const float *pc
     vad->api->ReleaseValue(input_tensor);
     vad->api->ReleaseValue(state_tensor);
     vad->api->ReleaseValue(sr_tensor);
+
+    free(audio_signal);
 
     return probabilities[0];
 }

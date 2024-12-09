@@ -14,6 +14,7 @@ open Mirage.Core.Task.Channel
 open Mirage.Core.Task.Fork
 open Mirage.Core.Task.Utility
 
+let [<Literal>] private SamplesPerWindow = 512
 let [<Literal>] private SampleRate = 16000
 let [<Literal>] private BufferSize = 2000
 let private WriterFormat = WaveFormat(SampleRate, 1)
@@ -55,8 +56,8 @@ type ResamplerOutput<'State>
 /// A live resampler for a microphone's input.
 type Resampler<'State> = private { channel: Channel<ResamplerInput<'State>> }
 
-let Resampler<'State> samplesPerWindow (onResampled: ResamplerOutput<'State> -> unit) =
-    let windowDuration = float samplesPerWindow / float SampleRate
+let Resampler<'State> (onResampled: ResamplerOutput<'State> -> unit) =
+    let windowDuration = float SamplesPerWindow / float SampleRate
     let resampler = WdlResampler()
     resampler.SetMode(true, 2, false)
     resampler.SetFilterParms()
@@ -86,20 +87,20 @@ let Resampler<'State> samplesPerWindow (onResampled: ResamplerOutput<'State> -> 
                             try appendSegment buffer.resampled <| ArraySegment(samples, 0, sampleCount)
                             finally ArrayPool.Shared.Return samples
                         let sampleSize = int <| windowDuration * float frame.format.SampleRate
-                        if buffer.original.Count >= sampleSize && buffer.resampled.Count >= samplesPerWindow then
+                        if buffer.original.Count >= sampleSize && buffer.resampled.Count >= SamplesPerWindow then
                             let original = ArrayPool.Shared.Rent sampleSize
                             copyFrom buffer.original original sampleSize
                             buffer.original.RemoveRange(0, sampleSize)
-                            let resampled = ArrayPool.Shared.Rent samplesPerWindow
-                            copyFrom buffer.resampled resampled samplesPerWindow
-                            buffer.resampled.RemoveRange(0, samplesPerWindow)
+                            let resampled = ArrayPool.Shared.Rent SamplesPerWindow
+                            copyFrom buffer.resampled resampled SamplesPerWindow
+                            buffer.resampled.RemoveRange(0, SamplesPerWindow)
                             let resampledAudio =
                                 {   original =
                                         {   samples = { data = original; length = sampleSize }
                                             format = frame.format
                                         }
                                     resampled =
-                                        {   samples = { data = resampled; length = samplesPerWindow }
+                                        {   samples = { data = resampled; length = SamplesPerWindow }
                                             format = WriterFormat
                                         }
                                 }
