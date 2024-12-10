@@ -110,6 +110,12 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
             "Enable mask texture"
             false
             <| ConfigDescription(description = "Whether the masked enemy's mask texture should be shown.", tags = zero)
+    
+    member val EnableRadarSpin =
+        bindMaskedEnemy
+            "Enable radar spin"
+            false
+            <| ConfigDescription(description = "Whether masked enemies should spin on the radar.", tags = zero)
 
     member val MimicVoiceWhileHiding =
         bindMaskedEnemy
@@ -162,6 +168,7 @@ type SyncedConfig =
 
         enableArmsOut: bool
         enableMaskTexture: bool
+        enableRadarSpin: bool
         mimicVoiceWhileHiding: bool
     }
 
@@ -185,6 +192,7 @@ let private toSyncedConfig () =
 
         enableArmsOut = localConfig.EnableArmsOut.Value
         enableMaskTexture = localConfig.EnableMaskTexture.Value
+        enableRadarSpin = localConfig.EnableRadarSpin.Value
         mimicVoiceWhileHiding = localConfig.MimicVoiceWhileHiding.Value
     }
 

@@ -20,6 +20,10 @@ let hookMaskedEnemy () =
             self.GetComponentsInChildren<Transform>()
                 |> filter _.name.StartsWith("HeadMask")
                 |> iter _.gameObject.SetActive(false)
+        if not <| getConfig().enableRadarSpin then
+            self.GetComponentsInChildren<Transform>()
+                |> tryFind _.name.StartsWith("MapDot")
+                |> iter _.gameObject.SetActive(false)
     )
 
     On.MaskedPlayerEnemy.add_SetHandsOutClientRpc(fun orig self _ ->

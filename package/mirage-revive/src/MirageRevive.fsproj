@@ -4,6 +4,7 @@
     <NetcodePatch Include="$(TargetPath)" />
   </ItemGroup>
   <PropertyGroup>
+    <LangVersion>9.0</LangVersion>
     <TargetFramework>netstandard2.1</TargetFramework>
     <RootNamespace>MirageRevive</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -18,9 +19,6 @@
     <PackageReference Include="LethalCompany.GameLibs.Steam" Version="67.0.0-ngd.0" Publicize="true" />
     <PackageReference Include="FSharpPlus" Version="1.6.1" />
     <PackageReference Include="TeamBMX.LobbyCompatibility" Version="1.2.0" />
-    <Reference Include="FSharpx.Async">
-      <HintPath>../../../lib/FSharpx.Async/FSharpx.Async.dll</HintPath>
-    </Reference>
     <Reference Include="MMHOOK_Assembly-CSharp">
       <HintPath>../../../lib/MMHOOK/MMHOOK_Assembly-CSharp.dll</HintPath>
     </Reference>

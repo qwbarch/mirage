@@ -2,4 +2,4 @@ module Mirage.Revive.PluginInfo
 
 let [<Literal>] pluginName = "MirageRevive"
 let [<Literal>] pluginId = "qwbarch." + pluginName
-let [<Literal>] pluginVersion = "1.2.0"
+let [<Literal>] pluginVersion = "1.3.0"
