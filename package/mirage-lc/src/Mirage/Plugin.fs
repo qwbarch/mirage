@@ -46,7 +46,7 @@ type Plugin() =
 
             initLobbyCompatibility pluginName pluginVersion
             initLethalConfig assembly localConfig.General
-            initNetcodePatcher()
+            initNetcodePatcher assembly
             ignore <| deleteRecordings()
             Application.add_quitting(ignore << deleteRecordings)
 

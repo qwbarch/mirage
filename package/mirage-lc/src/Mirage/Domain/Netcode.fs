@@ -38,4 +38,7 @@ let private invokeMethod (method: MethodInfo) =
 /// This must be run once (and only once) on plugin startup for the netcode patcher to work.<br />
 /// See: https://github.com/EvaisaDev/UnityNetcodePatcher/tree/c64eb86e74e85e1badc442adc0bf270bab0df6b6#preparing-mods-for-patching
 /// </summary>
-let initNetcodePatcher () = Assembly.GetExecutingAssembly().GetTypes() >>= _.GetMethods(flags) |> iter invokeMethod
+let initNetcodePatcher (assembly: Assembly) =
+    assembly.GetTypes()
+        >>= _.GetMethods(flags)
+        |> iter invokeMethod
