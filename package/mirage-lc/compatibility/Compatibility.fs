@@ -6,24 +6,26 @@ open LobbyCompatibility.Features
 open LobbyCompatibility.Enums
 open LethalSettings.UI
 open LethalSettings.UI.Components
+open LethalConfig.ConfigItems
+open LethalConfig.ConfigItems.Options
 
 // Why are these not part of Mirage.dll?
 // Due to the netcode patcher requiring a call to Assembly.GetExecutingAssembly().GetTypes(), it
-// loads forces all classes to load, causing a missing dependency exception.
+// forces all classes to load, causing a missing dependency exception.
 // Hence, these compatibility functions had to be separated to avoid loading them unless necessary.
 
-// Why are these compatibility functions declined within a closure?
+// Why are these compatibility functions defined within a closure?
 // With optimize set to false in the .fsproj, these are compiled into a separate class,
 // which is needed when using these dependencies as soft dependencies.
 
 let initLethalConfig assembly configFile =
     if Chainloader.PluginInfos.ContainsKey LethalConfig.PluginInfo.Guid then
         let run () =
-            LethalConfig.LethalConfigManager.LateConfigFiles.Add <|
-            LethalConfig.AutoConfig.AutoConfigGenerator.ConfigFileAssemblyPair(
-                ConfigFile = configFile,
-                Assembly = assembly
-            )
+            LethalConfig.LethalConfigManager.CustomConfigFiles.Add <|
+                LethalConfig.AutoConfig.AutoConfigGenerator.ConfigFileAssemblyPair(
+                    ConfigFile = configFile,
+                    Assembly = assembly
+                )
         run()
 
 let initLobbyCompatibility pluginName (pluginVersion: string) =

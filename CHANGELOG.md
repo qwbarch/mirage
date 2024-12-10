@@ -1,5 +1,12 @@
 ## Changelog
 
+### 1.14.0
+
+- Added a config option ``Enable radar spin``.
+    - When set to false, will prevent masked enemies from spinning on the radar.
+    - Default value: false.
+- Fixed a bug that caused LethalConfig ``Mirage.General.cfg`` to not load for some players.
+
 ### 1.13.0
 
 - Fixed the bugs introduced since v1.9.0:

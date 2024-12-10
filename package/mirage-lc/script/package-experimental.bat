@@ -1,10 +1,10 @@
 @echo off
 
 call ./build.bat
+powershell Copy-Item -Path "../manifest-experimental.json" -Destination "../bin/manifest.json"
 powershell Compress-Archive^
     -Force^
     -Path "../bin/*",^
-          "../manifest-experimental.json",^
           "../icon.png",^
           "../../../README.md",^
           "../../../CHANGELOG.md",^

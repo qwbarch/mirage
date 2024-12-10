@@ -33,9 +33,12 @@ type Plugin() =
     inherit BaseUnityPlugin()
 
     member _.Awake() =
-        fork CancellationToken.None <| fun () -> valueTask {
-            let assembly = Assembly.GetExecutingAssembly()
+        let assembly = Assembly.GetExecutingAssembly()
+        initLobbyCompatibility pluginName pluginVersion
+        initLethalConfig assembly localConfig.General
+        initNetcodePatcher assembly
 
+        fork CancellationToken.None <| fun () -> valueTask {
             ignore <| Directory.CreateDirectory mirageDirectory
             let! settings = initSettings <| Path.Join(mirageDirectory, "settings.json")
             logInfo $"Loaded settings: {JsonConvert.SerializeObject settings}"
@@ -44,9 +47,6 @@ type Plugin() =
             for category in Seq.cast<LogCategory> <| Enum.GetValues typeof<LogCategory> do
                 Logs.SetLogLevel(category, LogLevel.Error)
 
-            initLobbyCompatibility pluginName pluginVersion
-            initLethalConfig assembly localConfig.General
-            initNetcodePatcher assembly
             ignore <| deleteRecordings()
             Application.add_quitting(ignore << deleteRecordings)
 

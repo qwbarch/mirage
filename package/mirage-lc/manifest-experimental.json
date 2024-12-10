@@ -1,9 +1,9 @@
 {
     "name": "MirageExperimental",
-    "version_number": "0.0.77",
+    "version_number": "0.0.79",
     "website_url": "https://github.com/qwbarch/mirage",
     "description": "Experimental build of Mirage. Please report any issues you find on GitHub (or on the LC modding discord).",
     "dependencies": [
-        "qwbarch-MirageCoreExperimental-1.0.7"
+        "qwbarch-MirageCore-1.0.3"
     ]
 }
