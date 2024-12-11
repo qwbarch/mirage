@@ -115,4 +115,4 @@ let saveAudioClipWithName fileName (audioClip: AudioClip) =
 
 /// Save the audio clip to Mirage's recording directory.
 /// The file is given a random guid as the file name, and is returned when the function is complete.
-let saveAudioClip audioClip = saveAudioClipWithName (Guid.NewGuid().ToString()) audioClip
+let saveAudioClip audioClip = ignore <!> saveAudioClipWithName (Guid.NewGuid().ToString()) audioClip
