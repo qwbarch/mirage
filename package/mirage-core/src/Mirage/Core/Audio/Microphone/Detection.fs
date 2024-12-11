@@ -4,7 +4,6 @@ open Collections.Pooled
 open System
 open System.Threading
 open System.Buffers
-open NAudio.Wave
 open IcedTasks
 open Mirage.Prelude
 open Mirage.Core.Audio.PCM

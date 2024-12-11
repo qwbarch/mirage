@@ -6,17 +6,16 @@ open System
 open System.Buffers
 open System.Threading
 open Silero.API
-open NAudio.Wave
 open IcedTasks
 open Mirage.Core.Audio.PCM
 open Mirage.Core.Audio.Microphone.Resampler
 open Mirage.Core.Audio.Microphone.Detection
 open Mirage.Core.Audio.Microphone.Recorder
-open Mirage.Domain.Config
-open Mirage.Domain.Setting
 open Mirage.Core.Task.Channel
 open Mirage.Core.Task.Utility
 open Mirage.Core.Task.Fork
+open Mirage.Domain.Config
+open Mirage.Domain.Setting
 
 let [<Literal>] MinAudioDurationMs = 150
 let [<Literal>] MinSilenceDurationMs = 2000
@@ -65,7 +64,10 @@ let private bufferChannel =
             if not (isNull StartOfRound.Instance) then
                 writeChannel processingChannel << ValueSome <|
                     {   samples = input.samples
-                        format = WaveFormat(input.sampleRate, input.channels)
+                        format =
+                            {   sampleRate = input.sampleRate
+                                channels = input.channels
+                            }
                         isReady = isReady
                         isPlayerDead = StartOfRound.Instance.localPlayerController.isPlayerDead
                         pushToTalkEnabled = IngamePlayerSettings.Instance.settings.pushToTalk
@@ -145,6 +147,7 @@ let readMicrophone recordingDirectory =
         isReady <- false
         orig.Invoke self
     )
+
     On.StartOfRound.add_ReviveDeadPlayers(fun orig self ->
         isReady <- false
         orig.Invoke self

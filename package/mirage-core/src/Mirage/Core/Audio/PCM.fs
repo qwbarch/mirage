@@ -2,15 +2,21 @@ module Mirage.Core.Audio.PCM
 
 open System
 open System.Buffers
-open NAudio.Wave
 open Mirage.Prelude
 
+[<Struct>]
+type WaveFormat =
+    {   sampleRate: int
+        channels: int
+    }
+
 /// Calculates the length of the given audio samples in milliseconds.
-let audioLengthMs (waveFormat: WaveFormat) sampleCount =
-    int <| float sampleCount / float waveFormat.SampleRate / float waveFormat.Channels * 1000.0
+let audioLengthMs waveFormat sampleCount =
+    int <| float sampleCount / float waveFormat.sampleRate / float waveFormat.channels * 1000.0
 
 /// 16-bit audio represented as a byte[].  
 /// This must be returned via __ArrayPool.Shared.Return__ when finished using it.
+[<Struct>]
 type PcmData =
     {   data: byte[]
         length: int

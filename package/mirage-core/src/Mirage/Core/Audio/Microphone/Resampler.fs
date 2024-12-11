@@ -7,16 +7,17 @@ open IcedTasks
 open System
 open System.Buffers
 open System.Threading
-open NAudio.Wave
 open NAudio.Dsp
 open Mirage.Core.Audio.PCM
 open Mirage.Core.Task.Channel
 open Mirage.Core.Task.Fork
 open Mirage.Core.Task.Utility
 
-let [<Literal>] private SampleRate = 16000
 let [<Literal>] private BufferSize = 2000
-let private WriterFormat = WaveFormat(SampleRate, 1)
+let private WriterFormat =
+    {   sampleRate = 16_000
+        channels = 1
+    }
 
 /// Resamples the given audio samples using the resampler's configured in/out sample rates.<br />
 /// This assumes the input/output is mono-channel audio.<br />
@@ -56,7 +57,7 @@ type ResamplerOutput<'State>
 type Resampler<'State> = private { channel: Channel<ResamplerInput<'State>> }
 
 let Resampler<'State> samplesPerWindow (onResampled: ResamplerOutput<'State> -> unit) =
-    let windowDuration = float samplesPerWindow / float SampleRate
+    let windowDuration = float samplesPerWindow / float WriterFormat.sampleRate
     let resampler = WdlResampler()
     resampler.SetMode(true, 2, false)
     resampler.SetFilterParms()
@@ -78,14 +79,14 @@ let Resampler<'State> samplesPerWindow (onResampled: ResamplerOutput<'State> -> 
                     try
                         let frameSamples = ArraySegment(frame.samples.data, 0, frame.samples.length)
                         appendSegment buffer.original frameSamples
-                        if frame.format.SampleRate = SampleRate then
+                        if frame.format.sampleRate = WriterFormat.sampleRate then
                             appendSegment buffer.resampled frameSamples
                         else
-                            resampler.SetRates(frame.format.SampleRate, SampleRate)
+                            resampler.SetRates(frame.format.sampleRate, WriterFormat.sampleRate)
                             let struct (samples, sampleCount) = resample resampler frame.samples
                             try appendSegment buffer.resampled <| ArraySegment(samples, 0, sampleCount)
                             finally ArrayPool.Shared.Return samples
-                        let sampleSize = int <| windowDuration * float frame.format.SampleRate
+                        let sampleSize = int <| windowDuration * float frame.format.sampleRate
                         if buffer.original.Count >= sampleSize && buffer.resampled.Count >= samplesPerWindow then
                             let original = ArrayPool.Shared.Rent sampleSize
                             copyFrom buffer.original original sampleSize

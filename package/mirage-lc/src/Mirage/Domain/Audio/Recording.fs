@@ -10,9 +10,9 @@ open System.IO
 open System.Collections.Generic
 open System.Threading
 open System.Buffers
-open NAudio.Wave
 open Mirage.Core.Task.Fork
 open Mirage.Core.Audio.Opus.Writer
+open Mirage.Core.Audio.PCM
 open Mirage.Domain.Setting
 open Mirage.Domain.Logger
 open Mirage.Domain.Directory
@@ -102,7 +102,10 @@ let saveRecording (samples: ArraySegment<float32>) format =
 /// The file is given a random guid as the file name, and is returned when the function is complete.
 let saveAudioClip (audioClip: AudioClip) =
     valueTask {
-        let format = WaveFormat(audioClip.frequency, audioClip.channels)
+        let format =
+            {   sampleRate = audioClip.frequency
+                channels = audioClip.channels
+            }
         let samples = ArrayPool.Shared.Rent audioClip.samples
         try
             ignore <| audioClip.GetData(samples, 0)
