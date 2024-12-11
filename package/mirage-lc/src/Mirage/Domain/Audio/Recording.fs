@@ -81,10 +81,9 @@ let rec getRecording recordingManager =
     }
 
 /// Save the given audio samples to Mirage's recording directory.
-/// The file is given a random guid as the file name, and is returned when the function is complete.
-let saveRecording (samples: ArraySegment<float32>) format =
+let saveRecording (fileName: string) (samples: ArraySegment<float32>) format =
     forkReturn CancellationToken.None <| fun () -> valueTask {
-        let filePath = Path.Join(recordingDirectory, $"{Guid.NewGuid()}.opus")
+        let filePath = Path.Join(recordingDirectory, $"{fileName}.opus")
         let opusWriter =
             OpusWriter
                 {   filePath = filePath
@@ -99,8 +98,7 @@ let saveRecording (samples: ArraySegment<float32>) format =
     }
 
 /// Save the audio clip to Mirage's recording directory.
-/// The file is given a random guid as the file name, and is returned when the function is complete.
-let saveAudioClip (audioClip: AudioClip) =
+let saveAudioClipWithName fileName (audioClip: AudioClip) =
     valueTask {
         let format =
             {   sampleRate = audioClip.frequency
@@ -110,7 +108,11 @@ let saveAudioClip (audioClip: AudioClip) =
         try
             ignore <| audioClip.GetData(samples, 0)
             let segment = ArraySegment(samples, 0, audioClip.samples)
-            return! saveRecording segment format
+            return! saveRecording fileName segment format
         finally
             ArrayPool.Shared.Return samples
     }
+
+/// Save the audio clip to Mirage's recording directory.
+/// The file is given a random guid as the file name, and is returned when the function is complete.
+let saveAudioClip audioClip = saveAudioClipWithName (Guid.NewGuid().ToString()) audioClip
