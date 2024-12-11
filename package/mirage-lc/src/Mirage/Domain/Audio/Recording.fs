@@ -2,16 +2,20 @@ module Mirage.Domain.Audio.Recording
 
 #nowarn "40"
 
+open UnityEngine
 open FSharpPlus
 open IcedTasks
 open System
 open System.IO
 open System.Collections.Generic
 open System.Threading
+open System.Buffers
+open NAudio.Wave
+open Mirage.Core.Task.Fork
+open Mirage.Core.Audio.Opus.Writer
 open Mirage.Domain.Setting
 open Mirage.Domain.Logger
 open Mirage.Domain.Directory
-open Mirage.Core.Task.Fork
 
 /// For retrieving player recordings, avoiding grabbing the same recording in succession.
 /// Despite functions using RecordManager being async, this state is not thread-safe.
@@ -33,9 +37,9 @@ let RecordingManager () =
 
 /// Delete the recordings of the local player. Any exception found is ignored.
 /// Note: This runs on a separate thread, but is not a true non-blocking function, and will cause the other thread to block.
-let internal deleteRecordings () =
+let internal deleteRecordings settings =
     forkReturn CancellationToken.None <| fun () -> valueTask {
-        if not <| getSettings().neverDeleteRecordings then
+        if not <| settings.neverDeleteRecordings then
             try Directory.Delete(recordingDirectory, true)
             with | _ -> ()
     }
@@ -74,4 +78,36 @@ let rec getRecording recordingManager =
             else
                 recordingManager.lastRecording <- Some recording
                 return Some recording
+    }
+
+/// Save the given audio samples to Mirage's recording directory.
+/// The file is given a random guid as the file name, and is returned when the function is complete.
+let saveRecording (samples: ArraySegment<float32>) format =
+    forkReturn CancellationToken.None <| fun () -> valueTask {
+        let filePath = Path.Join(recordingDirectory, $"{Guid.NewGuid()}.opus")
+        let opusWriter =
+            OpusWriter
+                {   filePath = filePath
+                    format = format
+                }
+        writeOpusSamples opusWriter <|
+            {   data = samples.Array
+                length = samples.Count
+            }
+        closeOpusWriter opusWriter
+        return filePath
+    }
+
+/// Save the audio clip to Mirage's recording directory.
+/// The file is given a random guid as the file name, and is returned when the function is complete.
+let saveAudioClip (audioClip: AudioClip) =
+    valueTask {
+        let format = WaveFormat(audioClip.frequency, audioClip.channels)
+        let samples = ArrayPool.Shared.Rent audioClip.samples
+        try
+            ignore <| audioClip.GetData(samples, 0)
+            let segment = ArraySegment(samples, 0, audioClip.samples)
+            return! saveRecording segment format
+        finally
+            ArrayPool.Shared.Return samples
     }

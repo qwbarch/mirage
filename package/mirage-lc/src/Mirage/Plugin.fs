@@ -36,19 +36,18 @@ type Plugin() =
         let assembly = Assembly.GetExecutingAssembly()
         initLobbyCompatibility pluginName pluginVersion
         initLethalConfig assembly localConfig.General
-        initNetcodePatcher assembly
-
         fork CancellationToken.None <| fun () -> valueTask {
+            initNetcodePatcher assembly
+
             ignore <| Directory.CreateDirectory mirageDirectory
             let! settings = initSettings <| Path.Join(mirageDirectory, "settings.json")
             logInfo $"Loaded settings: {JsonConvert.SerializeObject settings}"
+            ignore <| deleteRecordings settings
+            Application.add_quitting(fun () -> ignore << deleteRecordings <| getSettings())
 
             // Credits goes to DissonanceLagFix: https://thunderstore.io/c/lethal-company/p/linkoid/DissonanceLagFix/
             for category in Seq.cast<LogCategory> <| Enum.GetValues typeof<LogCategory> do
                 Logs.SetLogLevel(category, LogLevel.Error)
-
-            ignore <| deleteRecordings()
-            Application.add_quitting(ignore << deleteRecordings)
 
             // Hooks.
             cacheDissonance()
