@@ -88,7 +88,7 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
         bindImitateVoice
             "Enable the ability for players to hear enemies mimicking their voice while the player is alive."
             true
-            <| ConfigDescription(description, tags = zero)
+            <| ConfigDescription description
     
     member val EnableRecordVoiceWhileDead =
         let description =
@@ -97,37 +97,49 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
         bindImitateVoice
             "Enable recording player voices while the player is dead."
             false
-            <| ConfigDescription(description, tags = zero)
+            <| ConfigDescription description
 
     member val EnableArmsOut =
         bindMaskedEnemy
             "Enable arms-out animation"
             false
-            <| ConfigDescription(description = "Whether the zombie arms animation should be used.", tags = zero)
+            <| ConfigDescription "Whether the zombie arms animation should be used."
+             
 
     member val EnableMaskTexture =
         bindMaskedEnemy
             "Enable mask texture"
             false
-            <| ConfigDescription(description = "Whether the masked enemy's mask texture should be shown.", tags = zero)
+            <| ConfigDescription("Whether the masked enemy's mask texture should be shown.")
     
     member val EnableRadarSpin =
         bindMaskedEnemy
             "Enable radar spin"
             false
-            <| ConfigDescription(description = "Whether masked enemies should spin on the radar.", tags = zero)
+            <| ConfigDescription("Whether masked enemies should spin on the radar.")
 
     member val MimicVoiceWhileHiding =
         bindMaskedEnemy
             "Mimic voice while hiding"
             false
-            <| ConfigDescription(description = "Whether or not masked enemies should mimic voices while hiding on the ship", tags = zero)
+            <| ConfigDescription("Whether or not masked enemies should mimic voices while hiding on the ship")
+    
+    member val EnablePlayerNames =
+        let description = "Whether or not name tags above a player should show. Useful for making it harder to distinguish masked enemies from players."
+        bind
+            "Player"
+            "Enable player name tags"
+            true
+            <| ConfigDescription description
     
     member val EnableSpawnControl =
+        let description =
+            "If set to false, masked enemy spawns are untouched and are left at the vanilla spawn rates.\n"
+                + "If set to true, masked enemy spawns will use the configured spawn chance."
         bindSpawnControl
             "Enable spawn control (masked enemies)"
             true
-            <| ConfigDescription(description = "If set to false, masked enemy spawns are untouched and are left at the vanilla spawn rates.\nIf set to true, masked enemy spawns will use the configured spawn chance.", tags = zero)
+            <| ConfigDescription description
 
     member val MaskedSpawnChance =
         let description =
@@ -145,7 +157,7 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
         bindSpawnControl
             "Max spawned masked enemies"
             2
-            <| ConfigDescription(description, tags = zero)
+            <| ConfigDescription description
 
 let internal localConfig = LocalConfig(loadConfig "General", loadConfig "Enemies")
 
@@ -170,6 +182,8 @@ type SyncedConfig =
         enableMaskTexture: bool
         enableRadarSpin: bool
         mimicVoiceWhileHiding: bool
+
+        enablePlayerNames: bool
     }
 
 let mutable private syncedConfig: Option<SyncedConfig> = None
@@ -194,6 +208,8 @@ let private toSyncedConfig () =
         enableMaskTexture = localConfig.EnableMaskTexture.Value
         enableRadarSpin = localConfig.EnableRadarSpin.Value
         mimicVoiceWhileHiding = localConfig.MimicVoiceWhileHiding.Value
+
+        enablePlayerNames = localConfig.EnablePlayerNames.Value
     }
 
 let isConfigReady () = syncedConfig.IsSome

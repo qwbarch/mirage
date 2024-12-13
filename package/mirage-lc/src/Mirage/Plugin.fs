@@ -24,6 +24,7 @@ open Mirage.Hook.Config
 open Mirage.Hook.Microphone
 open Mirage.Hook.Dissonance
 open Mirage.Hook.MaskedPlayerEnemy
+open Mirage.Hook.PlayerControllerB
 
 [<BepInPlugin(pluginId, pluginName, pluginVersion)>]
 [<BepInDependency(LethalSettings.GeneratedPluginInfo.Identifier, BepInDependency.DependencyFlags.SoftDependency)>]
@@ -56,4 +57,5 @@ type Plugin() =
             syncConfig()
             readMicrophone recordingDirectory
             hookMaskedEnemy()
+            hookPlayerControllerB()
         }
