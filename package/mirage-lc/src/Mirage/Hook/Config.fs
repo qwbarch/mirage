@@ -5,12 +5,12 @@ open Mirage.Domain.Config
 
 let syncConfig () =
     On.GameNetcodeStuff.PlayerControllerB.add_ConnectClientToPlayerObject(fun orig self ->
-        orig.Invoke self
         if NetworkManager.Singleton.IsHost then
             registerHandler RequestSync
         else
             registerHandler ReceiveSync
             requestSync()
+        orig.Invoke self
     )
 
     On.MenuManager.add_Start(fun orig self ->
