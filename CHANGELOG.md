@@ -1,10 +1,37 @@
 ## Changelog
 
+### 1.15.0
+
+- Incompatible mods such as ``CorporateRestructure`` no longer causes config syncing to fail.
+- Added a config option ``Enable player name tags``.
+    - When set to false, will prevent player name tags from appearing.
+    - This is useful for making it harder to distinguish between masked enemies and players.
+    - Default value: ``true`` (same as vanilla).
+- Fixed a null exception that was sometimes thrown when returning to the menu.
+
+#### For developers:
+
+As requested by ``Zehs``, I have added methods that allow you to save audio into the ``Mirage/Recording`` folder.  
+Expected input is 16-bit audio in normalized form. Audio is internally compressed into ``.opus`` and saved as so.  
+Note: These methods are untested, but there shouldn't be any issues out of the box.
+
+```cs
+// A random file name is created for you. The full file path is returned when the file is finished writing.
+public static ValueTask<string> saveAudioClip(AudioClip audioClip);
+
+// You provide the file name. Note that you only provide the file name without the file extension, as it will be appended with .opus.
+public static ValueTask<string> saveAudioClipWithName(string fileName, AudioClip audioClip);
+
+// Use this if you want to skip the step of creating an audio clip.  
+// Note: The WaveFormat argument comes from Mirage.Core.dll rather than NAudio.
+public static ValueTask<string> saveRecording(string fileName, ArraySegment<float> samples, PCM.WaveFormat format);
+```
+
 ### 1.14.0
 
 - Added a config option ``Enable radar spin``.
     - When set to false, will prevent masked enemies from spinning on the radar.
-    - Default value: false.
+    - Default value: ``false``.
 - Fixed a bug that caused LethalConfig ``Mirage.General.cfg`` to not load for some players.
 
 ### 1.13.0
@@ -38,7 +65,7 @@
 - ``NAudio.Lame`` is no longer a dependency and can be removed from your modpacks.
 - ``Minimum audio duration ms`` and ``Minimum silence duration ms`` has been removed to keep the config simpler.
 
-##### Special thanks:
+#### Special thanks:
 - [Alecksword](<https://thunderstore.io/c/lethal-company/p/Alecksword/?section=modpacks>) - For generously dedicating countless hours in voice chat to help debug issues I couldn’t replicate on my own.
 - [Winter Mantis](<https://thunderstore.io/c/lethal-company/p/WinterMantis/>) and ``Myrin`` - For their help in testing experimental builds and providing consistent feedback on the Lethal Company modding Discord.
 - [Lunxara](<https://www.twitch.tv/lunxara>) and [a glitched npc](<https://www.twitch.tv/a_glitched_npc>) - For testing many updates on stream, even when those updates affected their streaming experience.
