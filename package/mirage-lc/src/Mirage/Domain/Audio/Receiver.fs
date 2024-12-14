@@ -41,10 +41,11 @@ type AudioReceiver =
             try
                 if not this.disposed then
                     this.disposed <- true
-                    this.audioSource.Stop()
+                    if not <| isNull this.audioSource then
+                        this.audioSource.Stop()
                     dispose this.decoder
             finally
-                if not <| isNull this.audioSource.clip then
+                if not (isNull this.audioSource) && not (isNull this.audioSource.clip) then
                     UnityEngine.Object.Destroy this.audioSource.clip
                     this.audioSource.clip <- null
 

@@ -39,7 +39,7 @@ type MimicVoice() as self =
                     if recording.IsSome then
                         do! audioStream.StreamOpusFromFile recording.Value
             with
-                | :? TaskCanceledException as _ -> ()
+                | :? TaskCanceledException as error -> raise error
                 | error -> logError $"Error occurred while mimicking voice: {error}"
             let delay =
                 if enemyAI :? MaskedPlayerEnemy then
@@ -68,7 +68,9 @@ type MimicVoice() as self =
         voicePlayback.transform.parent <- audioStream.transform
         voicePlayback.SetActive true
     
-    member _.Start() = startVoiceMimic()
+    member _.Start() =
+        try ignore <| startVoiceMimic()
+        with :? TaskCanceledException as _ -> ()
 
     /// Update voice playback object to always be at the same location as the parent.
     member this.LateUpdate() = voicePlayback.transform.position <- this.transform.position
