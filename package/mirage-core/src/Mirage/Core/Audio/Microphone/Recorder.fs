@@ -11,10 +11,10 @@ open Mirage.Core.Audio.Microphone.Resampler
 open Mirage.Core.Audio.Opus.Writer
 open Mirage.Core.Task.Channel
 open Mirage.Core.Task.Fork
-open Mirage.Core.Task.Utility
+open Mirage.Core.Task.Loop
 
 /// Records audio from a live microphone feed.
-type Recorder<'State> = private { channel: Channel<ValueTuple<'State, DetectAction>> }
+type Recorder<'State> = { channel: Channel<ValueTuple<'State, DetectAction>> }
 
 type RecorderArgs<'State> =
     {   /// Minimum amount of audio duration that a recording should contain. If the minimum isn't met, the recording is not written to disk.
@@ -51,4 +51,4 @@ let Recorder args =
     fork CancellationToken.None consumer
     { channel = channel }
 
-let writeRecorder recorder = writeChannel recorder.channel
+let inline writeRecorder recorder = writeChannel recorder.channel

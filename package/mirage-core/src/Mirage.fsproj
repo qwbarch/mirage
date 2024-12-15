@@ -32,11 +32,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Mirage/Prelude/Operator.fs" />
+    <Compile Include="Mirage/Core/Pooled.fs" />
     <Compile Include="Mirage/Core/Task/Channel.fs" />
     <Compile Include="Mirage/Core/Task/Fork.fs" />
     <Compile Include="Mirage/Core/Task/Lock.fs" />
     <Compile Include="Mirage/Core/Task/LVar.fs" />
-    <Compile Include="Mirage/Core/Task/Utility.fs" />
+    <Compile Include="Mirage/Core/Task/Loop.fs" />
     <Compile Include="Mirage/Core/Audio/PCM.fs" />
     <Compile Include="Mirage/Core/Audio/Opus/Codec.fs" />
     <Compile Include="Mirage/Core/Audio/Opus/Reader.fs" />

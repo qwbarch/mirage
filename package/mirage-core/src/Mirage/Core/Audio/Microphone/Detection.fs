@@ -8,9 +8,10 @@ open IcedTasks
 open Mirage.Prelude
 open Mirage.Core.Audio.PCM
 open Mirage.Core.Audio.Microphone.Resampler
+open Mirage.Core.Task.Loop
 open Mirage.Core.Task.Channel
-open Mirage.Core.Task.Utility
 open Mirage.Core.Task.Fork
+open Mirage.Core.Pooled
 
 let [<Literal>] private SamplingRate = 16000
 
@@ -40,7 +41,7 @@ type DetectAction
     | DetectEnd of detectEnd: DetectEnd
 
 /// Detect if speech is found. All async functions are run on a separate thread.
-type VoiceDetector<'State> = private { channel: Channel<ResamplerOutput<'State>> }
+type VoiceDetector<'State> = { channel: Channel<ResamplerOutput<'State>> }
 
 type VoiceDetectorArgs<'State> =
     {   /// Minimum amount of silence (in milliseconds) before VAD should stop.
@@ -147,4 +148,4 @@ let VoiceDetector args =
     { channel = channel }
 
 /// Add audio samples to be processed by the voice detector.
-let writeDetector detector = writeChannel detector.channel
+let inline writeDetector detector = writeChannel detector.channel

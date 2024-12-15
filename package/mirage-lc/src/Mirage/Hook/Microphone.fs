@@ -12,7 +12,7 @@ open Mirage.Core.Audio.Microphone.Resampler
 open Mirage.Core.Audio.Microphone.Detection
 open Mirage.Core.Audio.Microphone.Recorder
 open Mirage.Core.Task.Channel
-open Mirage.Core.Task.Utility
+open Mirage.Core.Task.Loop
 open Mirage.Core.Task.Fork
 open Mirage.Domain.Config
 open Mirage.Domain.Setting
@@ -61,7 +61,7 @@ let private bufferChannel =
     let consumer () =
         forever <| fun () -> valueTask {
             let! input = readChannel channel
-            if not (isNull StartOfRound.Instance) then
+            if not <| isNull StartOfRound.Instance then
                 writeChannel processingChannel << ValueSome <|
                     {   samples = input.samples
                         format =

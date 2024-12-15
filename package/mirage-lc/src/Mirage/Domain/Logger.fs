@@ -5,7 +5,7 @@ open System.Threading
 open Mirage.PluginInfo
 open Mirage.Core.Task.Channel
 open Mirage.Core.Task.Fork
-open Mirage.Core.Task.Utility
+open Mirage.Core.Task.Loop
 
 [<Struct>]
 type private LogType = LogInfo | LogDebug | LogWarning | LogError

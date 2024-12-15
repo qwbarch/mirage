@@ -5,13 +5,13 @@ module Mirage.Domain.Setting
 open FSharpPlus
 open System
 open System.IO
+open System.Threading
 open Newtonsoft.Json
+open IcedTasks
 open Mirage.PluginInfo
 open Mirage.Compatibility
 open Mirage.Core.Task.Channel
-open System.Threading
-open Mirage.Core.Task.Utility
-open IcedTasks
+open Mirage.Core.Task.Loop
 open Mirage.Core.Task.Fork
 
 /// Mirrors __Settings__ to represent the serializable format. Fields are nullable to make acting new fields seamless.
@@ -49,19 +49,19 @@ let mutable private settings = fromSavedSettings defaultSettings
 let getSettings () = settings
 
 let internal initSettings filePath =
-    let channel =
-        let self = Channel CancellationToken.None
-        let consumer () =
-            forever <| fun () -> valueTask {
-                let! settings = readChannel self
-                let text = JsonConvert.SerializeObject settings
-                do! Async.AwaitTask(File.WriteAllTextAsync(filePath, text))
-            }
-        fork CancellationToken.None consumer
-        self
+    let channel = Channel CancellationToken.None
+    let consumer () =
+        forever <| fun () -> valueTask {
+            let! settings = readChannel channel
+            let text = JsonConvert.SerializeObject settings
+            do! Async.AwaitTask(File.WriteAllTextAsync(filePath, text))
+        }
+    fork CancellationToken.None consumer
+
     let saveSettings updatedSettings =
         settings <- updatedSettings
         writeChannel channel updatedSettings
+
     valueTask {
         // Wait handle is used to allow only one process to initially write to the settings file.
         use handle = new EventWaitHandle(true, EventResetMode.AutoReset, pluginId)

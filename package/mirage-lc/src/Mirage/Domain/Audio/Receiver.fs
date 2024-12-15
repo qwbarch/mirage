@@ -12,7 +12,7 @@ open Mirage.Prelude
 open Mirage.Core.Audio.PCM
 open Mirage.Core.Task.Channel
 open Mirage.Core.Audio.Opus.Codec
-open Mirage.Core.Task.Utility
+open Mirage.Core.Task.Loop
 open Mirage.Core.Task.Fork
 open Mirage.Domain.Audio.Packet
 open Mirage.Domain.Audio.Stream

@@ -11,7 +11,7 @@ type WaveFormat =
     }
 
 /// Calculates the length of the given audio samples in milliseconds.
-let audioLengthMs waveFormat sampleCount =
+let inline audioLengthMs waveFormat sampleCount =
     int <| float sampleCount / float waveFormat.sampleRate / float waveFormat.channels * 1000.0
 
 /// 16-bit audio represented as a byte[].  

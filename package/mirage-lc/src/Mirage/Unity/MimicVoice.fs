@@ -8,13 +8,13 @@ open UnityEngine
 open Unity.Netcode
 open Dissonance.Audio.Playback
 open Mirage.Hook.Dissonance
+open Mirage.Core.Task.Loop
 open Mirage.Domain.Logger
 open Mirage.Domain.Config
 open Mirage.Domain.Setting
 open Mirage.Domain.Audio.Recording
 open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicPlayer
-open Mirage.Core.Task.Utility
 
 let private random = Random()
 

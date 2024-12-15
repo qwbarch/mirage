@@ -8,10 +8,9 @@ open FSharpPlus
 open System
 open System.IO
 open System.Buffers
-open NAudio.Wave
+open Mirage.Core.Pooled
 open Mirage.Core.Audio.PCM
 open Mirage.Core.Audio.Opus.Codec
-open Mirage.Core.Task.Utility
 
 type OpusWriter =
     private

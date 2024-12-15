@@ -10,7 +10,7 @@ open Mirage.Domain.Audio.Stream
 open Mirage.Core.Task.Channel
 open Mirage.Core.Task.Lock
 open Mirage.Core.Task.LVar
-open Mirage.Core.Task.Utility
+open Mirage.Core.Task.Loop
 open Mirage.Core.Task.Fork
 
 type AudioSender =

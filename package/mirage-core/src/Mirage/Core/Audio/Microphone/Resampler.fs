@@ -8,10 +8,11 @@ open System
 open System.Buffers
 open System.Threading
 open NAudio.Dsp
+open Mirage.Core.Pooled
 open Mirage.Core.Audio.PCM
 open Mirage.Core.Task.Channel
 open Mirage.Core.Task.Fork
-open Mirage.Core.Task.Utility
+open Mirage.Core.Task.Loop
 
 let [<Literal>] private BufferSize = 2000
 let private WriterFormat =
@@ -54,7 +55,7 @@ type ResamplerOutput<'State>
     | Reset
 
 /// A live resampler for a microphone's input.
-type Resampler<'State> = private { channel: Channel<ResamplerInput<'State>> }
+type Resampler<'State> = { channel: Channel<ResamplerInput<'State>> }
 
 let Resampler<'State> samplesPerWindow (onResampled: ResamplerOutput<'State> -> unit) =
     let windowDuration = float samplesPerWindow / float WriterFormat.sampleRate
@@ -113,4 +114,4 @@ let Resampler<'State> samplesPerWindow (onResampled: ResamplerOutput<'State> -> 
 
 /// Add audio samples to be processed by the resampler.
 /// This assumes the array is rented from __ArrayPool.Shared__, and will be returned after being used.
-let writeResampler resampler = writeChannel resampler.channel
+let inline writeResampler resampler = writeChannel resampler.channel
