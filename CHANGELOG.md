@@ -1,5 +1,12 @@
 ## Changelog
 
+### 1.15.1
+
+- Slight optimizations.
+
+I now have a [Ko-fi](https://ko-fi.com/qwbarch) donation link. If you enjoy using the mod
+and have the disposable income, any donations are appreciated!
+
 ### 1.15.0
 
 - Incompatible mods such as ``CorporateRestructure`` no longer causes config syncing to fail.
