@@ -14,7 +14,12 @@ let mutable private maskedPrefab = null
 
 let hookMaskedEnemy () =
     On.MaskedPlayerEnemy.add_Start(fun orig self ->
-        self.GetComponent<MimicPlayer>().StartMimicking()
+        try
+            self.GetComponent<MimicPlayer>().StartMimicking()
+        with | :? NullReferenceException as _ ->
+            logWarning
+                <| "\nFailed to initialize voice mimicking due to an incompatible mod."
+                + $"\nEnemy name: {self.enemyType.enemyName}"
         orig.Invoke self
         if not <| getConfig().enableMaskTexture then
             self.GetComponentsInChildren<Transform>()

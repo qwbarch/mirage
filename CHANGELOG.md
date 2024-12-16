@@ -1,5 +1,10 @@
 ## Changelog
 
+### 1.15.2
+
+- Fixed a log spam issue that occured when Mirage is incompatible with another (unknown) mod.
+- This does not fix the incompatibility itself. It only catches the exception and logs a warning about an incompatible enemy.
+
 ### 1.15.1
 
 - Slight optimizations.
