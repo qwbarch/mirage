@@ -1,5 +1,9 @@
 ## Changelog
 
+### 1.15.3
+
+- ``Mirage.Enemies.cfg`` is now supported on LethalConfig.
+
 ### 1.15.2
 
 - Fixed a log spam issue that occured when Mirage is incompatible with another (unknown) mod.

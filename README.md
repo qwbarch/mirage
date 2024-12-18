@@ -44,7 +44,6 @@ No. Only the host's config is used.
 #### How do I select which enemies get to mimic voices?
 
 You will need to first host a game to generate ``Mirage.Enemies.cfg``.
-Note that you can only modify this config via your mod manager, and will not show up on LethalConfig.
 
 #### Why is there a dependency on LethalSettings? I don't want to use it.
 
