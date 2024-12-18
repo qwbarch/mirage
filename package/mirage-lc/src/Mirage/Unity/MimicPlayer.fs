@@ -60,12 +60,18 @@ type MimicPlayer() =
             mimicId <- Guid.NewGuid()
             let maskedEnemy = this.GetComponent<MaskedPlayerEnemy>()
             let mimickingPlayer =
-                if enemyAI :? MaskedPlayerEnemy && Set.contains maskedEnemy.enemyType.enemyName (getConfig().enemies) then
-                    if isNull maskedEnemy.mimickingPlayer then ValueSome <| randomPlayer()
-                    else ValueSome maskedEnemy.mimickingPlayer
-                else if not (enemyAI :? DressGirlAI) && Set.contains enemyAI.enemyType.enemyName <| getConfig().enemies then
+                if enemyAI :? MaskedPlayerEnemy then
+                    if Set.contains maskedEnemy.enemyType.enemyName <| getConfig().enemies then
+                        if isNull maskedEnemy.mimickingPlayer then ValueSome <| randomPlayer()
+                        else ValueSome maskedEnemy.mimickingPlayer
+                    else
+                        ValueNone
+                else if not <| enemyAI :? DressGirlAI then
                     // DressGirlAI is set during the Update() step instead, if it's enabled.
-                    ValueSome <| randomPlayer()
+                    if Set.contains enemyAI.enemyType.enemyName <| getConfig().enemies then
+                        ValueSome <| randomPlayer()
+                    else
+                        ValueNone
                 else
                     ValueNone
             flip iter mimickingPlayer <| fun player ->
