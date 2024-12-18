@@ -1,6 +1,8 @@
 module Mirage.Hook.Config
 
 open Unity.Netcode
+open System.Reflection
+open Mirage.Compatibility
 open Mirage.Domain.Config
 
 let syncConfig () =
@@ -25,4 +27,7 @@ let syncConfig () =
             if not <| isNull enemyAI then
                 localConfig.RegisterEnemy enemyAI
         localConfig.ClearOrphanedEntries()
+        initEnemiesLethalConfig
+            (Assembly.GetExecutingAssembly())
+            (getEnemyConfigEntries())
     )

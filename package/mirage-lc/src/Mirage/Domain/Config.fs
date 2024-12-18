@@ -47,7 +47,7 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
     member _.RegisterEnemy(enemyAI: EnemyAI) =
         try
             ignore <| enemies.Bind(
-                "Imitate voice",
+                "Enemies",
                 enemyAI.enemyType.enemyName,
                 enemyAI :? MaskedPlayerEnemy
             )
@@ -160,6 +160,17 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
             <| ConfigDescription description
 
 let internal localConfig = LocalConfig(loadConfig "General", loadConfig "Enemies")
+
+let internal getEnemyConfigEntries () =
+    let mutable enemies = zero
+    for key in localConfig.Enemies.Keys do
+        try
+            if localConfig.Enemies.ContainsKey key then
+                let enemy = localConfig.Enemies[key] :?> ConfigEntry<bool>
+                &enemies %= List.cons enemy
+        with | error ->
+            logError $"Failed to read entry from Mirage.Enemies.cfg:\n{error}"
+    enemies
 
 /// <summary>
 /// Network synchronized configuration values. This is taken from the wiki:

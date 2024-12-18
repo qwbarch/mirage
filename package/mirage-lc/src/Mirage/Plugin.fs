@@ -35,9 +35,16 @@ type Plugin() =
 
     member _.Awake() =
         let assembly = Assembly.GetExecutingAssembly()
-        initLobbyCompatibility pluginName pluginVersion
-        initLethalConfig assembly localConfig.General
         fork CancellationToken.None <| fun () -> valueTask {
+            initLobbyCompatibility pluginName pluginVersion
+            initGeneralLethalConfig assembly localConfig.General
+
+            let enemies = getEnemyConfigEntries()
+            if List.isEmpty enemies then
+                logWarning "Mirage.Enemies.cfg has not been generated yet. Please host a game to create the file."
+            else
+                initEnemiesLethalConfig assembly enemies
+
             initNetcodePatcher assembly
 
             ignore <| Directory.CreateDirectory mirageDirectory

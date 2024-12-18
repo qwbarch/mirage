@@ -7,37 +7,46 @@ open LobbyCompatibility.Enums
 open LethalSettings.UI
 open LethalSettings.UI.Components
 open LethalConfig.ConfigItems
-open LethalConfig.ConfigItems.Options
 
 // Why are these not part of Mirage.dll?
 // Due to the netcode patcher requiring a call to Assembly.GetExecutingAssembly().GetTypes(), it
 // forces all classes to load, causing a missing dependency exception.
 // Hence, these compatibility functions had to be separated to avoid loading them unless necessary.
 
-// Why are these compatibility functions defined within a closure?
-// With optimize set to false in the .fsproj, these are compiled into a separate class,
-// which is needed when using these dependencies as soft dependencies.
+// Why are these compatibility functions defined within an immediately invoked lazy block?
+// They are compiled into separate classes in the underlying IL code, allowing it to not be executed
+// if the dependency is missing.
 
-let initLethalConfig assembly configFile =
+let initGeneralLethalConfig assembly configFile =
     if Chainloader.PluginInfos.ContainsKey LethalConfig.PluginInfo.Guid then
-        let run () =
+        (lazy(
             LethalConfig.LethalConfigManager.CustomConfigFiles.Add <|
                 LethalConfig.AutoConfig.AutoConfigGenerator.ConfigFileAssemblyPair(
                     ConfigFile = configFile,
                     Assembly = assembly
                 )
-        run()
+        )).Force()
+
+let mutable private enemiesInitialized = false
+let initEnemiesLethalConfig assembly enemies =
+    if Chainloader.PluginInfos.ContainsKey LethalConfig.PluginInfo.Guid && not enemiesInitialized then
+        (lazy(
+            enemiesInitialized <- not <| List.isEmpty enemies
+            for enemy in enemies do
+                let configItem = BoolCheckBoxConfigItem enemy
+                ignore <| LethalConfig.LethalConfigManager.AddConfigItemForAssembly(configItem, assembly)
+        )).Force()
 
 let initLobbyCompatibility pluginName (pluginVersion: string) =
     if Chainloader.PluginInfos.ContainsKey LobbyCompatibility.PluginInfo.PLUGIN_GUID then
-        let run () =
+        (lazy(
             PluginHelper.RegisterPlugin(
                 pluginName,
                 Version.Parse pluginVersion,
                 CompatibilityLevel.Everyone,
                 VersionStrictness.Minor
             )
-        run()
+        )).Force()
 
 type LethalSettingsArgs =
     {   pluginName: string
@@ -53,7 +62,7 @@ type LethalSettingsArgs =
 
 let initLethalSettings settings =
     if Chainloader.PluginInfos.ContainsKey LethalSettings.GeneratedPluginInfo.Identifier then
-        let run () =
+        (lazy(
             ModMenu.RegisterMod(ModMenu.ModSettingsConfig(
                 Name = settings.pluginName,
                 Id = settings.pluginId,
@@ -82,4 +91,4 @@ let initLethalSettings settings =
             true, // allowedInMainMenu
             true  // allowedInGame
             )
-        run()
+        )).Force()
