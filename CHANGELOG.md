@@ -1,8 +1,10 @@
 ## Changelog
 
-### 1.15.3
+### 1.15.4
 
 - ``Mirage.Enemies.cfg`` is now supported on LethalConfig.
+
+**Note**: This file will be re-generated when you run this update. You will need to re-select which enemies you want to mimic voices.
 
 ### 1.15.2
 
