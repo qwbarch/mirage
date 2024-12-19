@@ -1,5 +1,9 @@
 ## Changelog
 
+### 1.15.5
+
+- Fixed a bug that caused some enemies that were disabled in ``Mirage.Enemies.cfg`` to still mimic voices.
+
 ### 1.15.4
 
 - ``Mirage.Enemies.cfg`` is now supported on LethalConfig.
