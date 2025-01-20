@@ -55,14 +55,14 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
 
 
     member val MaskedMimicChance =
-        let description = "Chance for masked enemy to start mimicking players (in percentage 0-100)"
+        let description = "Chance for masked enemy to start mimicking a player's suit, cosmetics, and voice."
         bindImitateVoice
             "Mimic chance (masked enemies)"
             100
             <| ConfigDescription(description, AcceptableValueRange(0, 100))
 
     member val NonMaskedMimicChance =
-        let description = "Chance for non-masked enemies to start mimicking players (in percentage 0-100)"
+        let description = "Chance for non-masked enemies to start mimicking a player's voice."
         bindImitateVoice
             "Mimic chance (non-masked enemies)"
             100
