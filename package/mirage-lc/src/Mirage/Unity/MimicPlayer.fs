@@ -12,7 +12,6 @@ open Mirage.Domain.Config
 /// Holds what players that can be mimicked, to avoid duplicates.
 let private playerPool = List<int>()
 
-let private random = Random()
 [<AllowNullLiteral>]
 type MimicPlayer() =
     inherit NetworkBehaviour()
@@ -63,22 +62,17 @@ type MimicPlayer() =
             let mimickingPlayer =
                 if enemyAI :? MaskedPlayerEnemy then
                     if Set.contains maskedEnemy.enemyType.enemyName <| getConfig().enemies then
-                        //let gamble = random.Next(0,100);
-                        //logInfo $"gamble: {gamble}, out of {getConfig().enemyMimicChance}"
-                        //if gamble<getConfig().enemyMimicChance then
-                           // logMimic "!!!!!!Gambled!!!!!!"
+                        if random.Next(0,100)<getConfig().maskedMimicChance then
                             if isNull maskedEnemy.mimickingPlayer then ValueSome <| randomPlayer()
                             else ValueSome maskedEnemy.mimickingPlayer
-                        //else
-                          //  ValueNone
+                        else
+                            ValueNone
                     else
                         ValueNone
                 else if not <| enemyAI :? DressGirlAI then
                     // DressGirlAI is set during the Update() step instead, if it's enabled.
                     if Set.contains enemyAI.enemyType.enemyName <| getConfig().enemies then
-                        let gamble = random.Next(0,100);
-                        logInfo $"mimic roll: {gamble}/{getConfig().enemyMimicChance}"
-                        if gamble<getConfig().enemyMimicChance then
+                        if random.Next(0,100)<getConfig().nonMaskedMimicChance then
                             ValueSome <| randomPlayer()
                         else 
                             ValueNone

@@ -54,11 +54,17 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
         with | _ -> logError $"Failed to register an enemy to the config: {enemyAI.GetType().Name}"
 
 
-    member val EnemyMimicChance =
+    member val MaskedMimicChance =
+        let description = "Chance for masked enemy to start mimicking players (in percentage 0-100)"
+        bindImitateVoice
+            "Mimic chance (masked enemy)"
+            100
+            <| ConfigDescription(description, AcceptableValueRange(0, 100))
+    member val NonMaskedMimicChance =
         let description = "Chance for non-masked enemies to start mimicking players (in percentage 0-100)"
         bindImitateVoice
-            "Chance (non-masked enemy)"
-            10
+            "Mimic chance (non-masked enemies)"
+            100
             <| ConfigDescription(description, AcceptableValueRange(0, 100))
     member val MinimumDelayMasked =
         let description = "The minimum amount of time in between voice playbacks for masked enemies (in milliseconds)."
@@ -188,7 +194,9 @@ type SyncedConfig =
     {   /// Enemies that have voice mimicking enabled.
         enemies: Set<string>
 
-        enemyMimicChance: int
+        maskedMimicChance: int
+        nonMaskedMimicChance: int
+        
         minimumDelayMasked: int
         maximumDelayMasked: int
         minimumDelayNonMasked: int
@@ -216,7 +224,9 @@ let private toSyncedConfig () =
             &enemies %= Set.add key.Key
     {   enemies = enemies
 
-        enemyMimicChance = localConfig.EnemyMimicChance.Value
+        maskedMimicChance = localConfig.MaskedMimicChance.Value
+        nonMaskedMimicChance = localConfig.NonMaskedMimicChance.Value
+
         minimumDelayMasked = localConfig.MinimumDelayMasked.Value
         maximumDelayMasked = localConfig.MaximumDelayMasked.Value
         minimumDelayNonMasked = localConfig.MinimumDelayNonMasked.Value
