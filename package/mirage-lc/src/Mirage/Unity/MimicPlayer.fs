@@ -58,28 +58,21 @@ type MimicPlayer() =
     member this.StartMimicking() =
         if this.IsHost then
             mimicId <- Guid.NewGuid()
-            let maskedEnemy = this.GetComponent<MaskedPlayerEnemy>()
+            let isEnemyEnabled = Set.contains enemyAI.enemyType.enemyName (getConfig().enemies)
             let mimickingPlayer =
-                if enemyAI :? MaskedPlayerEnemy then
-                    if Set.contains maskedEnemy.enemyType.enemyName <| getConfig().enemies then
-                        if random.Next(0,100)<getConfig().maskedMimicChance then
-                            if isNull maskedEnemy.mimickingPlayer then ValueSome <| randomPlayer()
-                            else ValueSome maskedEnemy.mimickingPlayer
-                        else
-                            ValueNone
-                    else
-                        ValueNone
-                else if not <| enemyAI :? DressGirlAI then
-                    // DressGirlAI is set during the Update() step instead, if it's enabled.
-                    if Set.contains enemyAI.enemyType.enemyName <| getConfig().enemies then
-                        if random.Next(0,100)<getConfig().nonMaskedMimicChance then
-                            ValueSome <| randomPlayer()
-                        else 
-                            ValueNone
-                    else
-                        ValueNone
-                else
-                    ValueNone
+                match enemyAI with
+                    | :? MaskedPlayerEnemy as maskedEnemy when
+                        isEnemyEnabled && random.Next(0, 100) < getConfig().maskedMimicChance ->
+                        ValueSome <|
+                            if isNull maskedEnemy.mimickingPlayer then randomPlayer()
+                            else maskedEnemy.mimickingPlayer
+                    | _ when
+                        isEnemyEnabled
+                            && not (enemyAI :? MaskedPlayerEnemy)
+                            && not (enemyAI :? DressGirlAI)
+                            && random.Next(0, 100) < getConfig().nonMaskedMimicChance ->
+                        ValueSome <| randomPlayer()
+                    | _ -> ValueNone
             flip iter mimickingPlayer <| fun player ->
                 this.MimicPlayer(int player.playerClientId)
 
