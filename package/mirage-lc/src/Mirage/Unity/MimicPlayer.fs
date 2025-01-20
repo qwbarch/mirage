@@ -62,14 +62,20 @@ type MimicPlayer() =
             let mimickingPlayer =
                 if enemyAI :? MaskedPlayerEnemy then
                     if Set.contains maskedEnemy.enemyType.enemyName <| getConfig().enemies then
-                        if isNull maskedEnemy.mimickingPlayer then ValueSome <| randomPlayer()
-                        else ValueSome maskedEnemy.mimickingPlayer
+                        if random.Next(0,100)<getConfig().maskedMimicChance then
+                            if isNull maskedEnemy.mimickingPlayer then ValueSome <| randomPlayer()
+                            else ValueSome maskedEnemy.mimickingPlayer
+                        else
+                            ValueNone
                     else
                         ValueNone
                 else if not <| enemyAI :? DressGirlAI then
                     // DressGirlAI is set during the Update() step instead, if it's enabled.
                     if Set.contains enemyAI.enemyType.enemyName <| getConfig().enemies then
-                        ValueSome <| randomPlayer()
+                        if random.Next(0,100)<getConfig().nonMaskedMimicChance then
+                            ValueSome <| randomPlayer()
+                        else 
+                            ValueNone
                     else
                         ValueNone
                 else
