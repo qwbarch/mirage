@@ -4,8 +4,6 @@ open BepInEx
 open FSharpPlus
 open System
 open System.IO
-open System.Reflection
-open System.Collections.Generic
 open System.Runtime.Serialization
 open BepInEx.Configuration
 open Unity.Netcode
@@ -30,19 +28,6 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
 
     member val internal General = general
     member val internal Enemies = enemies
-
-    member _.ClearOrphanedEntries() =
-        let clear (config: ConfigFile) =
-            let entries =
-                config
-                    .GetType()
-                    .GetProperty("OrphanedEntries", BindingFlags.NonPublic ||| BindingFlags.Instance)
-                    .GetValue(config, null)
-                    :?> Dictionary<ConfigDefinition, string>
-            entries.Clear()
-            config.Save()
-        clear general
-        clear enemies
 
     member _.RegisterEnemy(enemyAI: EnemyAI) =
         try

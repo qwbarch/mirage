@@ -26,7 +26,6 @@ let syncConfig () =
             let enemyAI = prefab.Prefab.GetComponent<EnemyAI>()
             if not <| isNull enemyAI then
                 localConfig.RegisterEnemy enemyAI
-        localConfig.ClearOrphanedEntries()
         initEnemiesLethalConfig
             (Assembly.GetExecutingAssembly())
             (getEnemyConfigEntries())

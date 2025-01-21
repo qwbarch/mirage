@@ -1,5 +1,14 @@
 ## Changelog
 
+### 1.16.0
+
+- Enemies now have a configurable chance to start mimicking a player's voice - [#134](<https://github.com/qwbarch/mirage/pull/134>) - Thanks to [Kuodos](<https://github.com/Kuodos>) for the contribution.
+- Orphaned config entries no longer gets deleted.
+
+Thanks to [Lunxara](<https://www.twitch.tv/lunxara>) for testing yet another update, and confirming it works as expected.  
+If anyone would like to contribute to Mirage, take a look at issue [#131](<https://github.com/qwbarch/mirage/issues/131>).
+I left a comment at the bottom of the issue on which files to look at.
+
 ### 1.15.5
 
 - Fixed a bug that caused some enemies that were disabled in ``Mirage.Enemies.cfg`` to still mimic voices.
