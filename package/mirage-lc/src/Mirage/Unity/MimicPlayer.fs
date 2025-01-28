@@ -125,14 +125,14 @@ type MimicPlayer() =
                     else
                         int player.playerClientId
 
-                match (Option.ofObj dressGirlAI.hauntingPlayer, Option.ofObj mimickingPlayer) with
-                    | (Some hauntingPlayer, Some mimickingPlayer) when hauntingPlayer = mimickingPlayer && round.connectedPlayersAmount > 0 ->
+                match (ValueOption.ofObj dressGirlAI.hauntingPlayer, ValueOption.ofObj mimickingPlayer) with
+                    | (ValueSome hauntingPlayer, ValueSome mimickingPlayer) when hauntingPlayer = mimickingPlayer && round.connectedPlayersAmount > 0 ->
                         this.MimicPlayer <| randomPlayerNotHaunted()
-                    | (Some hauntingPlayer, None) ->
+                    | (ValueSome hauntingPlayer, ValueNone) ->
                         if round.connectedPlayersAmount = 0 then
                             this.MimicPlayer <| int hauntingPlayer.playerClientId
                         else
                             this.MimicPlayer <| randomPlayerNotHaunted()
-                    | (None, Some _) ->
+                    | (ValueNone, ValueSome _) ->
                         this.ResetMimicPlayer()
                     | _ -> ()

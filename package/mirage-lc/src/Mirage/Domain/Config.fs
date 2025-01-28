@@ -105,7 +105,6 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
             false
             <| ConfigDescription "Whether the zombie arms animation should be used."
              
-
     member val EnableMaskTexture =
         bindMaskedEnemy
             "Enable mask texture"
@@ -270,12 +269,7 @@ let private deserializeFromBytes<'A> (data: array<byte>) : 'A =
         Unchecked.defaultof<'A>
 
 let private sendMessage action (clientId: uint64) (stream: FastBufferWriter) =
-    let MaxBufferSize = 1300
-    let delivery =
-        if stream.Capacity > MaxBufferSize
-            then NetworkDelivery.ReliableFragmentedSequenced
-            else NetworkDelivery.Reliable
-    messageManager().SendNamedMessage(toNamedMessage action, clientId, stream, delivery)
+    messageManager().SendNamedMessage(toNamedMessage action, clientId, stream)
 
 let internal revertSync () = syncedConfig <- None
 
