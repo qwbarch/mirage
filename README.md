@@ -35,7 +35,7 @@ For bugs, submit a [new issue](https://github.com/qwbarch/mirage/issues) on GitH
 
 #### Do I need Skinwalkers for this mod to work?
 
-No, Mirage is a standalone mod. Installing both Mirage and Skinwalkers will result in Skinwalkers playing voices at the same time as Mirage.
+No, Mirage is a standalone mod. Installing both Mirage and Skinwalkers will result in unsynced voicelines due to Skinwalkers playing voices at the same time as Mirage.
 
 #### Does every player need the same configuration?
 

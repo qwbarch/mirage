@@ -1,5 +1,11 @@
 ## Changelog
 
+### 1.17.0
+
+- Fixed an issue with config syncing for some players.
+
+Thanks to [Lunxara](<https://www.twitch.tv/lunxara>) for testing the update!
+
 ### 1.16.0
 
 - Enemies now have a configurable chance to start mimicking a player's voice - [#134](<https://github.com/qwbarch/mirage/pull/134>) - Thanks to [Kuodos](<https://github.com/Kuodos>) for the contribution.
