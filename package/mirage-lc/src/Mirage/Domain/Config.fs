@@ -4,13 +4,22 @@ open BepInEx
 open FSharpPlus
 open System
 open System.IO
+open System.Collections.Generic
 open System.Runtime.Serialization
 open BepInEx.Configuration
 open Unity.Netcode
 open Unity.Collections
+open Newtonsoft.Json
 open Mirage.Prelude
 open Mirage.PluginInfo
 open Mirage.Domain.Logger
+
+/// Max bytes of a packet. If the config payload is larger than this, it will be split into multiple packets.
+let [<Literal>] MaxPacket = 1024
+
+/// Serialized config is streamed into multiple packets if it exceeds __MaxPacket__.
+/// This holds the packets until __FinishSync__ is found.
+let mutable private receivedPackets = List<byte>()
 
 let private loadConfig configName = ConfigFile(Path.Combine(Paths.ConfigPath, $"Mirage.{configName}.cfg"), true)
 
@@ -37,7 +46,6 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
                 enemyAI :? MaskedPlayerEnemy
             )
         with | _ -> logError $"Failed to register an enemy to the config: {enemyAI.GetType().Name}"
-
 
     member val MaskedMimicChance =
         let description = "Chance for masked enemy to start mimicking a player's suit, cosmetics, and voice."
@@ -164,9 +172,8 @@ let internal getEnemyConfigEntries () =
     let mutable enemies = zero
     for key in localConfig.Enemies.Keys do
         try
-            if localConfig.Enemies.ContainsKey key then
-                let enemy = localConfig.Enemies[key] :?> ConfigEntry<bool>
-                &enemies %= List.cons enemy
+            let enemy = localConfig.Enemies[key] :?> ConfigEntry<bool>
+            &enemies %= List.cons enemy
         with | error ->
             logError $"Failed to read entry from Mirage.Enemies.cfg:\n{error}"
     enemies
@@ -229,6 +236,10 @@ let private toSyncedConfig () =
         enablePlayerNames = localConfig.EnablePlayerNames.Value
     }
 
+/// This should only be invoked by the host during the start of a new game.
+let initSyncedConfig () =
+    syncedConfig <- Some <| toSyncedConfig()
+
 let isConfigReady () = syncedConfig.IsSome
 
 /// Get the currently synchronized config. This should only be used while in-game (not inside the menu).
@@ -238,12 +249,16 @@ let getConfig () =
     syncedConfig.Value
 
 /// An action for synchronizing the <b>SyncedConfig</b>.
-type internal SyncAction = RequestSync | ReceiveSync
+type internal SyncAction
+    = RequestSync
+    | ReceiveSync
+    | FinishSync
 
 /// Convert the action to the message event name.
 let private toNamedMessage = function
     | RequestSync -> $"{pluginId}_OnRequestConfigSync"
     | ReceiveSync -> $"{pluginId}_OnReceiveConfigSync"
+    | FinishSync -> $"{pluginId}_OnFinishConfigSync"
 
 let private messageManager () = NetworkManager.Singleton.CustomMessagingManager
 let private isClient () = NetworkManager.Singleton.IsClient
@@ -269,40 +284,59 @@ let private deserializeFromBytes<'A> (data: array<byte>) : 'A =
         Unchecked.defaultof<'A>
 
 let private sendMessage action (clientId: uint64) (stream: FastBufferWriter) =
-    messageManager().SendNamedMessage(toNamedMessage action, clientId, stream)
+    messageManager().SendNamedMessage(toNamedMessage action, clientId, stream, NetworkDelivery.ReliableSequenced)
 
 let internal revertSync () = syncedConfig <- None
 
 let internal requestSync () =
     if isClient() then
-        use stream = new FastBufferWriter(sizeof<int32>, Allocator.Temp) 
-        sendMessage RequestSync 0UL stream
+        use writer = new FastBufferWriter(sizeof<int32>, Allocator.Temp) 
+        sendMessage RequestSync 0UL writer
 
 let private onRequestSync clientId _ =
     if isHost() then
         let bytes = serializeToBytes <| getConfig()
-        let bytesLength = bytes.Length
-        use writer = new FastBufferWriter(bytesLength + sizeof<int32>, Allocator.Temp)
+        let playerId = StartOfRound.Instance.ClientPlayerList[clientId]
+        logInfo $"Syncing configuration with Player #{playerId}"
         try
-            writer.WriteValueSafe &bytesLength
-            writer.WriteBytesSafe bytes
-            sendMessage ReceiveSync clientId writer
+            for index in 0 .. (bytes.Length - 1) / MaxPacket do
+                let offset = index * MaxPacket
+                let packetLength = Math.Min(MaxPacket, bytes.Length - offset)
+                use writer = new FastBufferWriter(packetLength + sizeof<int32>, Allocator.Temp)
+                writer.WriteValueSafe &packetLength
+                writer.WriteBytesSafe(bytes, packetLength, offset)
+                sendMessage ReceiveSync clientId writer
         with | error ->
-            logError $"Failed during onRequestSync: {error}"
+            logError $"Failed while sending ReceiveSync packet for Player #{playerId}: {error}"
+        
+        try
+            use writer = new FastBufferWriter(sizeof<int32>, Allocator.Temp)
+            sendMessage FinishSync clientId writer
+        with | error ->
+            logError $"Failed while sending FinishSync packet for Player #{playerId}: {error}"
 
 let private onReceiveSync _ (reader: FastBufferReader) =
     if not <| isHost() then
         Result.iterError logError <| monad' {
             if not <| reader.TryBeginRead sizeof<int> then
                 return! Error "onReceiveSync failed while reading beginning of buffer."
-            let mutable bytesLength = 0
-            reader.ReadValueSafe &bytesLength
-            if not <| reader.TryBeginRead(bytesLength) then
-                return! Error "onReceiveSync failed. Host could not synchronize config."
-            let bytes = Array.zeroCreate<byte> bytesLength
-            reader.ReadBytesSafe(ref bytes, bytesLength)
-            syncedConfig <- Some <| deserializeFromBytes bytes
+            let mutable packetLength = 0
+            reader.ReadValueSafe &packetLength
+            if not <| reader.TryBeginRead(packetLength) then
+                return! Error "onReceiveSync failed while reading the packet length."
+            let packet = Array.zeroCreate<byte> packetLength
+            reader.ReadBytesSafe(ref packet, packetLength)
+            receivedPackets.AddRange packet
         }
+
+let onFinishSync _ _ =
+    if not <| isHost() then
+        try
+            syncedConfig <- Some << deserializeFromBytes <| receivedPackets.ToArray()
+            logInfo $"Received config from host: {JsonConvert.SerializeObject(syncedConfig.Value, Formatting.Indented)}"
+        with | error ->
+            logError $"Failed onFinishSync due to error: {error}"
+        receivedPackets.Clear()
 
 /// Register the named message handler for the given action.
 let internal registerHandler action =
@@ -310,8 +344,7 @@ let internal registerHandler action =
     let register handler = messageManager().RegisterNamedMessageHandler(message, handler)
     let callback =
         match action with
-            | RequestSync -> 
-                syncedConfig <- Some <| toSyncedConfig()
-                onRequestSync
+            | RequestSync -> onRequestSync
             | ReceiveSync -> onReceiveSync
+            | FinishSync -> onFinishSync
     register callback

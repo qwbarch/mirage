@@ -2,8 +2,10 @@ module Mirage.Hook.Config
 
 open Unity.Netcode
 open System.Reflection
+open Newtonsoft.Json
 open Mirage.Compatibility
 open Mirage.Domain.Config
+open Mirage.Domain.Logger
 
 let syncConfig () =
     On.GameNetcodeStuff.PlayerControllerB.add_ConnectClientToPlayerObject(fun orig self ->
@@ -11,6 +13,7 @@ let syncConfig () =
             registerHandler RequestSync
         else
             registerHandler ReceiveSync
+            registerHandler FinishSync
             requestSync()
         orig.Invoke self
     )
@@ -29,4 +32,11 @@ let syncConfig () =
         initEnemiesLethalConfig
             (Assembly.GetExecutingAssembly())
             (getEnemyConfigEntries())
+    )
+
+    On.StartOfRound.add_Start(fun orig self ->
+        orig.Invoke self
+        if self.IsHost then
+            initSyncedConfig()
+            logInfo $"This configuration will be synced with clients: {JsonConvert.SerializeObject(getConfig(), Formatting.Indented)}"
     )

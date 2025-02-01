@@ -39,17 +39,11 @@ type Plugin() =
             initLobbyCompatibility pluginName pluginVersion
             initGeneralLethalConfig assembly localConfig.General
 
-            let enemies = getEnemyConfigEntries()
-            if List.isEmpty enemies then
-                logWarning "Mirage.Enemies.cfg has not been generated yet. Please host a game to create the file."
-            else
-                initEnemiesLethalConfig assembly enemies
-
             initNetcodePatcher assembly
 
             ignore <| Directory.CreateDirectory mirageDirectory
             let! settings = initSettings <| Path.Join(mirageDirectory, "settings.json")
-            logInfo $"Loaded settings: {JsonConvert.SerializeObject settings}"
+            logInfo $"Loaded settings: {JsonConvert.SerializeObject(settings, Formatting.Indented)}"
             ignore <| deleteRecordings settings
             Application.add_quitting(fun () -> ignore << deleteRecordings <| getSettings())
 
