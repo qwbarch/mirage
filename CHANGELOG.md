@@ -1,8 +1,19 @@
 ## Changelog
 
+### 1.18.0
+
+- Fixed an issue with config syncing for some players. This was meant to be the previous update, but it unfortunately didn't work properly.
+- Added [MaskedFixes](<https://thunderstore.io/c/lethal-company/p/VirusTLNR/MaskedFixes/>) as a dependency to fix the vanilla invisible masked bug.
+    - With permission from [VirusTLNR](<https://thunderstore.io/c/lethal-company/p/VirusTLNR/>), I will integrate the fix into Mirage later on when I have time to look.
+- Startup no longer complains about a missing ``Mirage.Enemies.cfg`` folder.
+
+Special thanks:
+- ThisGuyHere - For debugging the invisible masked bug, providing enough context for VirusTLNR to work with.
+- [VirusTLNR](<https://thunderstore.io/c/lethal-company/p/VirusTLNR/>) - For debugging the invisible masked bug, and creating a solution for it.
+
 ### 1.17.0
 
-- Fixed an issue with config syncing for some players.
+~~- Fixed an issue with config syncing for some players.~~
 
 Thanks to [Lunxara](<https://www.twitch.tv/lunxara>) for testing the update!
 
