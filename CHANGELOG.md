@@ -1,5 +1,15 @@
 ## Changelog
 
+### 1.18.1
+
+- Replaced the deprecated dependency [MaskedFixes](https://thunderstore.io/c/lethal-company/p/VirusTLNR/MaskedFixes/) with [MaskedInvisFix](https://thunderstore.io/c/lethal-company/p/VirusTLNR/MaskedInvisFix/).
+
+Note: I will likely leave this as a dependency as Mirage instead of porting it directly into the mod for two reasons:
+- I don't want the maintenance burden that comes with porting someone else's code
+- If [VirusTLNR](https://thunderstore.io/c/lethal-company/p/VirusTLNR/) updates the mod, Mirage users can simply update the mod as well instead of having to wait for me to update it on my end.
+
+Thanks again to [VirusTLNR](https://thunderstore.io/c/lethal-company/p/VirusTLNR/) for providing this fix!
+
 ### 1.18.0
 
 - Fixed an issue with config syncing for some players. This was meant to be the previous update, but it unfortunately didn't work properly.
