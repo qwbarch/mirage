@@ -1,5 +1,9 @@
 ## Changelog
 
+### 1.18.2
+
+- Added [MaskFixes](https://thunderstore.io/c/lethal-company/p/ButteryStancakes/MaskFixes/) by [ButteryStancakes](https://thunderstore.io/c/lethal-company/p/ButteryStancakes/) as a ThunderStore dependency, since it fixes many of the issues that vanilla Masked have.
+
 ### 1.18.1
 
 - Replaced the deprecated dependency [MaskedFixes](https://thunderstore.io/c/lethal-company/p/VirusTLNR/MaskedFixes/) with [MaskedInvisFix](https://thunderstore.io/c/lethal-company/p/VirusTLNR/MaskedInvisFix/).
