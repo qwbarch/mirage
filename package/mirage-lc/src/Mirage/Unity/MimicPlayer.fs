@@ -58,7 +58,7 @@ type MimicPlayer() =
     member this.StartMimicking() =
         if this.IsHost then
             mimicId <- Guid.NewGuid()
-            let isEnemyEnabled = Set.contains enemyAI.enemyType.enemyName (getConfig().enemies)
+            let isEnemyEnabled = Set.contains enemyAI.enemyType.enemyName <| getConfig().enemies
             let mimickingPlayer =
                 match enemyAI with
                     | :? MaskedPlayerEnemy as maskedEnemy when
@@ -77,12 +77,12 @@ type MimicPlayer() =
                 this.MimicPlayer(int player.playerClientId)
 
     /// Mimic the given player locally. An attached <b>MimicVoice</b> automatically uses the mimicked player for voices.
-    member this.MimicPlayer(playerId) =
+    member this.MimicPlayer playerId =
         let player = StartOfRound.Instance.allPlayerScripts[playerId]
         logMimic $"Mimicking player #{player.playerClientId}"
         mimickingPlayer <- player
-        let maskedEnemy = this.GetComponent<MaskedPlayerEnemy>()
-        if not <| isNull maskedEnemy then
+        if enemyAI :? MaskedPlayerEnemy && getConfig().copyMaskedVisuals then
+            let maskedEnemy = enemyAI :?> MaskedPlayerEnemy
             maskedEnemy.mimickingPlayer <- player
             maskedEnemy.SetSuit player.currentSuitID
             maskedEnemy.SetEnemyOutside(player.transform.position.y < -80f)

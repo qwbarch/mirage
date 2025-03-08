@@ -5,7 +5,12 @@
 - Fixed a ``NullReferenceException`` when leaving back to the main menu.
 - Added a setting to the ``LethalSettings`` menu: ``muteVoiceMimic``
     - When enabled, all voice mimicking will be disabled.
+    - Default value: false.
     - This setting is there for players who don't want to hear any voice mimicking while everyone else in the group wants to hear them.
+- Added a config option: ``Copy masked visuals``.
+    - When enabled, masked enemies will copy the player visuals it mimics.
+    - Default value: true.
+    - By default, this is the same behaviour as it always has been. The config simply gives the user the option to disable it if they prefer to.
 
 ### 1.18.2
 

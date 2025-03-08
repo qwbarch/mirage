@@ -117,19 +117,25 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
         bindMaskedEnemy
             "Enable mask texture"
             false
-            <| ConfigDescription("Whether the masked enemy's mask texture should be shown.")
+            <| ConfigDescription "Whether the masked enemy's mask texture should be shown."
     
     member val EnableRadarSpin =
         bindMaskedEnemy
             "Enable radar spin"
             false
-            <| ConfigDescription("Whether masked enemies should spin on the radar.")
+            <| ConfigDescription "Whether masked enemies should spin on the radar."
 
     member val MimicVoiceWhileHiding =
         bindMaskedEnemy
             "Mimic voice while hiding"
             false
-            <| ConfigDescription("Whether or not masked enemies should mimic voices while hiding on the ship")
+            <| ConfigDescription "Whether or not masked enemies should mimic voices while hiding on the ship"
+    
+    member val CopyMaskedVisuals =
+        bindMaskedEnemy
+            "Copy masked visuals"
+            true
+            <| ConfigDescription "Whether or not masked enemies should copy the player's visuals of who it's mimicking"
     
     member val EnablePlayerNames =
         let description = "Whether or not name tags above a player should show. Useful for making it harder to distinguish masked enemies from players."
@@ -202,6 +208,7 @@ type SyncedConfig =
         enableMaskTexture: bool
         enableRadarSpin: bool
         mimicVoiceWhileHiding: bool
+        copyMaskedVisuals: bool
 
         enablePlayerNames: bool
     }
@@ -232,6 +239,7 @@ let private toSyncedConfig () =
         enableMaskTexture = localConfig.EnableMaskTexture.Value
         enableRadarSpin = localConfig.EnableRadarSpin.Value
         mimicVoiceWhileHiding = localConfig.MimicVoiceWhileHiding.Value
+        copyMaskedVisuals = localConfig.CopyMaskedVisuals.Value
 
         enablePlayerNames = localConfig.EnablePlayerNames.Value
     }
