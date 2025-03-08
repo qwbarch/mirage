@@ -11,6 +11,7 @@
     - When enabled, masked enemies will copy the player visuals it mimics.
     - Default value: true.
     - By default, this is the same behaviour as it always has been. The config simply gives the user the option to disable it if they prefer to.
+- Bumped dependency for ``ButterStancakes-MaskFixes`` from ``1.2.1`` -> ``1.2.2``.
 
 ### 1.18.2
 
