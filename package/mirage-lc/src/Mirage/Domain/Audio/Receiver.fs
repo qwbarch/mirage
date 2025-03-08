@@ -41,13 +41,15 @@ type AudioReceiver =
             try
                 if not this.disposed then
                     this.disposed <- true
+                    dispose this.decoder
                     if not <| isNull this.audioSource then
                         this.audioSource.Stop()
-                    dispose this.decoder
-            finally
-                if not (isNull this.audioSource) && not (isNull this.audioSource.clip) then
-                    UnityEngine.Object.Destroy this.audioSource.clip
-                    this.audioSource.clip <- null
+                        if not <| isNull this.audioSource.clip then
+                            UnityEngine.Object.Destroy this.audioSource.clip
+                            this.audioSource.clip <- null
+            // For whatever reason, a null reference exception can still be thrown when going back to the menu,
+            // despite the null checks above. This intentionally catches it and silences the exception.
+            with :? NullReferenceException -> ()
 
 /// The inverse of __AudioSender__. Receives packets sent by the AudioSender, decodes the opus packet, and then plays it back live.
 let AudioReceiver audioSource totalSamples onPacketDecoded cancellationToken =

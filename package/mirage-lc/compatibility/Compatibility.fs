@@ -58,6 +58,8 @@ type LethalSettingsArgs =
         setNeverDeleteRecordings: bool -> unit
         getAllowRecordVoice: unit -> bool
         setAllowRecordVoice: bool -> unit
+        getMuteVoiceMimic: unit -> bool
+        setMuteVoiceMimic: bool -> unit
     }
 
 let initLethalSettings settings =
@@ -85,6 +87,11 @@ let initLethalSettings settings =
                             Text = "Allow record voice",
                             Value = settings.getAllowRecordVoice(),
                             OnValueChanged = fun _ value -> settings.setAllowRecordVoice value
+                        )
+                        ToggleComponent(
+                            Text = "Mute voice mimic",
+                            Value = settings.getMuteVoiceMimic(),
+                            OnValueChanged = fun _ value -> settings.setMuteVoiceMimic value
                         )
                     |]
             ),

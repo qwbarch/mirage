@@ -19,12 +19,14 @@ type SavedSettings =
     {   localPlayerVolume: Nullable<float32>
         neverDeleteRecordings: Nullable<bool>
         allowRecordVoice: Nullable<bool>
+        muteVoiceMimic: Nullable<bool>
     }
 
 let private defaultSettings =
     {   localPlayerVolume = Nullable 0.5f
         neverDeleteRecordings = Nullable false
         allowRecordVoice = Nullable true
+        muteVoiceMimic = Nullable false
     }
 
 type Settings =
@@ -34,6 +36,8 @@ type Settings =
         neverDeleteRecordings: bool
         /// If set to false, recordings will not be created.
         allowRecordVoice: bool
+        /// IF set to true, voice mimicking will not be played for the local player.
+        muteVoiceMimic: bool
     }
 
 let private fromSavedSettings savedSettings =
@@ -42,6 +46,7 @@ let private fromSavedSettings savedSettings =
     {   localPlayerVolume = getValue _.localPlayerVolume
         neverDeleteRecordings = getValue _.neverDeleteRecordings
         allowRecordVoice = getValue _.allowRecordVoice
+        muteVoiceMimic = getValue _.muteVoiceMimic
     }
 
 let mutable private settings = fromSavedSettings defaultSettings
@@ -88,6 +93,8 @@ let internal initSettings filePath =
                 setNeverDeleteRecordings = fun value -> saveSettings { settings with neverDeleteRecordings = value }
                 getAllowRecordVoice = fun () -> settings.allowRecordVoice
                 setAllowRecordVoice = fun value -> saveSettings { settings with allowRecordVoice = value }
+                getMuteVoiceMimic = fun () -> settings.muteVoiceMimic
+                setMuteVoiceMimic = fun value -> saveSettings { settings with muteVoiceMimic = value }
             }
         return settings
     }

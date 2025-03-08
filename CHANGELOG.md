@@ -1,5 +1,12 @@
 ## Changelog
 
+### 1.19.0
+
+- Fixed a ``NullReferenceException`` when leaving back to the main menu.
+- Added a setting to the ``LethalSettings`` menu: ``muteVoiceMimic``
+    - When enabled, all voice mimicking will be disabled.
+    - This setting is there for players who don't want to hear any voice mimicking while everyone else in the group wants to hear them.
+
 ### 1.18.2
 
 - Added [MaskFixes](https://thunderstore.io/c/lethal-company/p/ButteryStancakes/MaskFixes/) by [ButteryStancakes](https://thunderstore.io/c/lethal-company/p/ButteryStancakes/) as a ThunderStore dependency, since it fixes many of the issues that vanilla Masked have.

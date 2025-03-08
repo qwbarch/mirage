@@ -111,7 +111,8 @@ type MimicVoice() as self =
                 SoundManager.Instance.playerVoiceMixers[int mimicPlayer.MimickingPlayer.playerClientId]
             audioStream.AudioSource.mute <-
                 enemyAI.isEnemyDead
-                    || (not (getConfig().mimicVoiceWhileHiding) && maskedEnemyIsHiding())
+                    || not (getConfig().mimicVoiceWhileHiding) && maskedEnemyIsHiding()
                     || isMimicLocalPlayerMuted()
                     || isNotHauntedOrDisappearedDressGirl()
                     || spectatingPlayer.isInsideFactory = enemyAI.isOutside
+                    || getSettings().muteVoiceMimic
