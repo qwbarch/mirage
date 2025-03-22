@@ -2,6 +2,7 @@ module Mirage.Hook.AudioSpatializer
 
 open FSharpPlus
 open UnityEngine
+open Mirage.Domain.Null
 
 /// Disables the audio spatializer log spam.
 /// Credits: [IAmBatby](https://github.com/IAmBatby) and [mattymatty](https://github.com/mattymatty97).

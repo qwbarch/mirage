@@ -5,6 +5,7 @@ open Unity.Netcode
 open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicPlayer
 open Mirage.Unity.MirageVoice
+open Mirage.Domain.Null
 
 let mutable initialized = false
 
@@ -15,7 +16,7 @@ let registerPrefab () =
             initialized <- true
             for prefab in GameNetworkManager.Instance.GetComponent<NetworkManager>().NetworkConfig.Prefabs.m_Prefabs do
                 let enemyAI = prefab.Prefab.GetComponent<EnemyAI>()
-                if not <| isNull enemyAI then
+                if isNotNull enemyAI then
                     iter (ignore << enemyAI.gameObject.AddComponent)
                         [   typeof<AudioStream>
                             typeof<MimicPlayer>

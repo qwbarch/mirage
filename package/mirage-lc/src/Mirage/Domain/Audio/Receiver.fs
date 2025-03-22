@@ -16,6 +16,7 @@ open Mirage.Core.Task.Loop
 open Mirage.Core.Task.Fork
 open Mirage.Domain.Audio.Packet
 open Mirage.Domain.Audio.Stream
+open Mirage.Domain.Null
 
 [<Struct>]
 type DecodedPacket =
@@ -38,18 +39,14 @@ type AudioReceiver =
         }
     interface IDisposable with
         member this.Dispose () =
-            try
-                if not this.disposed then
-                    this.disposed <- true
-                    dispose this.decoder
-                    if not <| isNull this.audioSource then
-                        this.audioSource.Stop()
-                        if not <| isNull this.audioSource.clip then
-                            UnityEngine.Object.Destroy this.audioSource.clip
-                            this.audioSource.clip <- null
-            // For whatever reason, a null reference exception can still be thrown when going back to the menu,
-            // despite the null checks above. This intentionally catches it and silences the exception.
-            with :? NullReferenceException -> ()
+            if not this.disposed then
+                this.disposed <- true
+                dispose this.decoder
+                if isNotNull this.audioSource then
+                    this.audioSource.Stop()
+                    if isNotNull this.audioSource.clip then
+                        UnityEngine.Object.Destroy this.audioSource.clip
+                        this.audioSource.clip <- null
 
 /// The inverse of __AudioSender__. Receives packets sent by the AudioSender, decodes the opus packet, and then plays it back live.
 let AudioReceiver audioSource totalSamples onPacketDecoded cancellationToken =
@@ -97,8 +94,8 @@ let startAudioReceiver receiver =
                 ArrayPool.Shared.Return pcmData
         }
     let playbackThread () =
-        forever <| fun () -> valueTask {
-            if not receiver.disposed then
+        valueTask {
+            while not receiver.disposed do
                 let! decodedPacket = readChannel receiver.playbackChannel
                 try
                     if decodedPacket.samples.length > 0 then

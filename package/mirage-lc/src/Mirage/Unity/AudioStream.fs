@@ -90,7 +90,7 @@ type AudioStream() as self =
         iter dispose audioReceiver
 
     /// Stream audio from the player (can be host or non-host) to all other players.
-    member this.StreamOpusFromFile(filePath) =
+    member this.StreamOpusFromFile filePath =
         valueTask {
             let localId = StartOfRound.Instance.localPlayerController.actualClientId
             if Some localId <> this.AllowedSenderId then
@@ -109,7 +109,7 @@ type AudioStream() as self =
         }
 
     /// Initialize the audio receiver to playback audio when opus packets are received.
-    member this.InitializeAudioReceiver(totalSamples) =
+    member this.InitializeAudioReceiver totalSamples =
         iter dispose audioReceiver
         let triggerEvent (decodedPacket: DecodedPacket) =
             let eventData =
@@ -129,7 +129,7 @@ type AudioStream() as self =
         event.Trigger(this, eventData)
     
     [<ClientRpc>]
-    member this.InitializeAudioReceiverClientRpc(totalSamples) =
+    member this.InitializeAudioReceiverClientRpc totalSamples =
         if not this.IsHost then
             this.InitializeAudioReceiver totalSamples
 
@@ -141,7 +141,7 @@ type AudioStream() as self =
 
     /// Send the current frame data to each client.
     [<ClientRpc>]
-    member this.SendPacketClientRpc(opusPacket) =
+    member this.SendPacketClientRpc opusPacket =
         if not this.IsHost then
             onReceivePacket audioReceiver opusPacket
     

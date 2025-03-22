@@ -5,9 +5,10 @@ open System
 open System.Collections.Generic
 open Unity.Netcode
 open GameNetcodeStuff
-open Mirage.Domain.Logger
 open Mirage.Unity.AudioStream
+open Mirage.Domain.Logger
 open Mirage.Domain.Config
+open Mirage.Domain.Null
 
 /// Holds what players that can be mimicked, to avoid duplicates.
 let private playerPool = List<int>()
@@ -96,7 +97,7 @@ type MimicPlayer() =
     member this.MimicPlayerClientRpc(playerId, mimicId') =
         if not this.IsHost then
             mimicId <- new Guid(mimicId')
-            this.MimicPlayer(playerId)
+            this.MimicPlayer playerId
 
     member this.ResetMimicPlayer() =
         logMimic "No longer mimicking a player."
@@ -125,14 +126,14 @@ type MimicPlayer() =
                     else
                         int player.playerClientId
 
-                match (ValueOption.ofObj dressGirlAI.hauntingPlayer, ValueOption.ofObj mimickingPlayer) with
-                    | (ValueSome hauntingPlayer, ValueSome mimickingPlayer) when hauntingPlayer = mimickingPlayer && round.connectedPlayersAmount > 0 ->
+                match ValueOption.ofObj dressGirlAI.hauntingPlayer, ValueOption.ofObj mimickingPlayer with
+                    | ValueSome hauntingPlayer, ValueSome mimickingPlayer when hauntingPlayer = mimickingPlayer && round.connectedPlayersAmount > 0 ->
                         this.MimicPlayer <| randomPlayerNotHaunted()
-                    | (ValueSome hauntingPlayer, ValueNone) ->
+                    | ValueSome hauntingPlayer, ValueNone ->
                         if round.connectedPlayersAmount = 0 then
                             this.MimicPlayer <| int hauntingPlayer.playerClientId
                         else
                             this.MimicPlayer <| randomPlayerNotHaunted()
-                    | (ValueNone, ValueSome _) ->
+                    | ValueNone, ValueSome _ ->
                         this.ResetMimicPlayer()
                     | _ -> ()

@@ -13,6 +13,7 @@ open Mirage.Domain.Logger
 open Mirage.Domain.Config
 open Mirage.Domain.Setting
 open Mirage.Domain.Audio.Recording
+open Mirage.Domain.Null
 open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicPlayer
 
@@ -30,9 +31,9 @@ type MimicVoice() as self =
     let startVoiceMimic () =
         forever <| fun () -> valueTask {
             try
-                if not (isNull enemyAI)
+                if isNotNull enemyAI
                     && not enemyAI.isEnemyDead
-                    && not (isNull mimicPlayer.MimickingPlayer)
+                    && isNotNull mimicPlayer.MimickingPlayer
                     && Object.ReferenceEquals(mimicPlayer.MimickingPlayer, StartOfRound.Instance.localPlayerController)
                 then
                     let! recording = getRecording recordingManager

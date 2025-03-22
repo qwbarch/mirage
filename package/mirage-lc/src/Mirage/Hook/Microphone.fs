@@ -16,6 +16,7 @@ open Mirage.Core.Task.Loop
 open Mirage.Core.Task.Fork
 open Mirage.Domain.Config
 open Mirage.Domain.Setting
+open Mirage.Domain.Null
 
 let [<Literal>] MinAudioDurationMs = 150
 let [<Literal>] MinSilenceDurationMs = 2000
@@ -61,7 +62,7 @@ let private bufferChannel =
     let consumer () =
         forever <| fun () -> valueTask {
             let! input = readChannel channel
-            if not <| isNull StartOfRound.Instance then
+            if isNotNull StartOfRound.Instance then
                 writeChannel processingChannel << ValueSome <|
                     {   samples = input.samples
                         format =

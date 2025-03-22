@@ -6,8 +6,9 @@ open System.Threading.Tasks
 open System.Collections.Generic
 open Mirage.Prelude
 open Mirage.Core.Audio.Opus.Reader
-open Mirage.Domain.Audio.Packet
 open Mirage.Core.Audio.Opus.Codec
+open Mirage.Domain.Audio.Packet
+open Mirage.Domain.Null
 
 let [<Literal>] MinimumBufferedAudioMs = 1000
 
@@ -32,7 +33,7 @@ let streamAudio opusReader cancellationToken (sendPacket: voption<OpusPacket> ->
         let delayBuffer = new LinkedList<float>()
         while opusReader.reader.HasNextPacket do
             let rentedPacket = opusReader.reader.RentNextRawPacket()
-            if not <| isNull rentedPacket.packet then
+            if isNotNull rentedPacket.packet then
                 let currentTime = opusReader.reader.CurrentTime.TotalMilliseconds * frequency
                 let delay = currentTime - previousTime
                 ignore <| delayBuffer.AddLast delay

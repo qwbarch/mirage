@@ -2,12 +2,13 @@ module Mirage.Hook.MaskedPlayerEnemy
 
 open FSharpPlus
 open UnityEngine
+open Unity.Netcode
 open System
 open System.Collections.Generic
 open Mirage.Domain.Config
 open Mirage.Unity.MimicPlayer
-open Unity.Netcode
 open Mirage.Domain.Logger
+open Mirage.Domain.Null
 
 let [<Literal>] private MaskedEnemyName = "Masked"
 let mutable private maskedPrefab = null
@@ -52,7 +53,7 @@ let hookMaskedEnemy () =
     On.GameNetworkManager.add_Start(fun orig self ->
         orig.Invoke self
         for prefab in NetworkManager.Singleton.NetworkConfig.Prefabs.m_Prefabs do
-            if not (isNull <| prefab.Prefab.GetComponent<MaskedPlayerEnemy>()) then
+            if isNotNull <| prefab.Prefab.GetComponent<MaskedPlayerEnemy>() then
                 let maskedEnemy = prefab.Prefab.GetComponent<MaskedPlayerEnemy>()
                 // Keep only the vanilla masked enemy.
                 if maskedEnemy.enemyType.enemyName = MaskedEnemyName then
@@ -76,9 +77,9 @@ let hookMaskedEnemy () =
                 enemy
             let isMaskedEnemy (enemy: SpawnableEnemyWithRarity) =
                 // Not all mods have the enemyType and/or enemyPrefab setup.
-                not (isNull enemy)
-                    && not (isNull enemy.enemyType)
-                    && not (isNull enemy.enemyType.enemyPrefab)
+                isNotNull enemy
+                    && isNotNull enemy.enemyType
+                    && isNotNull enemy.enemyType.enemyPrefab
                     && enemy.enemyType.enemyName = maskedPrefab.enemyType.enemyName
             let logs = new List<string>()
             let minSpawnChance = float localConfig.MaskedSpawnChance.Value

@@ -10,7 +10,6 @@ open Mirage.Domain.Audio.Stream
 open Mirage.Core.Task.Channel
 open Mirage.Core.Task.Lock
 open Mirage.Core.Task.LVar
-open Mirage.Core.Task.Loop
 open Mirage.Core.Task.Fork
 
 type AudioSender =
@@ -47,14 +46,21 @@ let startAudioSender sender =
                     writeChannel sender.channel packet
             }
     let consumer () =
-        forever <| fun () -> valueTask {
-            let! value = readChannel sender.channel
-            match value with
-                | ValueNone -> dispose sender
-                | ValueSome packet ->
-                    let! running = readLVar sender.running
-                    if running then
-                        sender.sendPacket packet
+        valueTask {
+            let mutable value = ValueNone
+            let awaitPacket () =
+                valueTask {
+                    let! packet = readChannel sender.channel
+                    value <- packet
+                    return ValueOption.isSome packet
+                }
+            while! awaitPacket() do
+                match value with
+                    | ValueNone -> dispose sender
+                    | ValueSome packet ->
+                        let! running = readLVar sender.running
+                        if running then
+                            sender.sendPacket packet
         }
     fork sender.cancellationToken producer
     ignore <| consumer()

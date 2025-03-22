@@ -6,6 +6,7 @@ open Newtonsoft.Json
 open Mirage.Compatibility
 open Mirage.Domain.Config
 open Mirage.Domain.Logger
+open Mirage.Domain.Null
 
 let syncConfig () =
     On.GameNetcodeStuff.PlayerControllerB.add_ConnectClientToPlayerObject(fun orig self ->
@@ -27,7 +28,7 @@ let syncConfig () =
         orig.Invoke self
         for prefab in GameNetworkManager.Instance.GetComponent<NetworkManager>().NetworkConfig.Prefabs.m_Prefabs do
             let enemyAI = prefab.Prefab.GetComponent<EnemyAI>()
-            if not <| isNull enemyAI then
+            if isNotNull enemyAI then
                 localConfig.RegisterEnemy enemyAI
         initEnemiesLethalConfig
             (Assembly.GetExecutingAssembly())
