@@ -143,6 +143,12 @@ let readMicrophone recordingDirectory =
         orig.Invoke self
     )
 
+    // In case the StartTrackingAllPlayerVoices hook fails due to another mod erroring.
+    On.StartOfRound.add_OnShipLandedMiscEvents(fun orig self ->
+        isReady <- true
+        orig.Invoke self
+    )
+
     // Set isReady: false when exiting to the main menu, or the round is over.
     On.StartOfRound.add_OnDestroy(fun orig self ->
         isReady <- false
