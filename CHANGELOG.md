@@ -1,5 +1,10 @@
 ## Changelog
 
+### 1.19.1
+
+- Attempt to fix a bug that was causing some modpacks to only record voices for hosts.
+- Now uses a unity compatible null-check, hopefully eliminating some null reference exceptions. Thanks to [DiFFoZ](https://thunderstore.io/c/lethal-company/p/DiFFoZ/) for pointing it out and providing a solution!
+
 ### 1.19.0
 
 - Fixed a ``NullReferenceException`` when leaving back to the main menu.
