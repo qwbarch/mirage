@@ -4,6 +4,7 @@ open System
 open UnityEngine
 open Unity.Netcode
 open Mirage.Domain.Null
+open Mirage.Domain.Logger
 
 [<AllowNullLiteral>]
 type MaskedAnimator() =
@@ -14,7 +15,7 @@ type MaskedAnimator() =
     let mutable itemHolder = null
     let mutable heldItem = null
     let mutable upperBodyAnimationsWeight = 0.0f
-    let mutable updateFrequency = 0.0f
+    let mutable layerIndex = -1
 
     let rec randomItem () =
         let items = StartOfRound.Instance.allItemsList.itemsList
@@ -22,7 +23,6 @@ type MaskedAnimator() =
         if isNull <| item.spawnPrefab.GetComponent<GrabbableObject>() then randomItem()
         else item.spawnPrefab
 
-    
     let spawnItem () =
         // if isHost
         let item =
@@ -39,6 +39,7 @@ type MaskedAnimator() =
     
     member this.Start() =
         creatureAnimator <- this.transform.GetChild(0).GetChild(3).GetComponent<Animator>()
+        layerIndex <- creatureAnimator.GetLayerIndex "Item"
         itemHolder <- GameObject "ItemHolder"
         itemHolder.transform.parent <-
             this.transform
@@ -62,15 +63,26 @@ type MaskedAnimator() =
         heldItem.grabbable <- false
 
     member _.FixedUpdate() =
-        let updateAnimation weight =
-            upperBodyAnimationsWeight <- Mathf.Lerp(upperBodyAnimationsWeight, weight, 25f * updateFrequency)
-            creatureAnimator.SetLayerWeight(creatureAnimator.GetLayerIndex "Item", upperBodyAnimationsWeight)
+        let reset name = creatureAnimator.ResetTrigger $"Hold{name}"
+        let trigger name =
+            reset "Shotgun"
+            reset "Flash"
+            reset "Lung"
+            reset "OneItem"
+            creatureAnimator.SetTrigger $"Hold{name}"
 
-        updateAnimation <|
-            if isNull heldItem then 0f
-            else 0.9f
+        if isNotNull heldItem then
+            upperBodyAnimationsWeight <- Mathf.Lerp(upperBodyAnimationsWeight, 0.9f, 0.5f)
+            creatureAnimator.SetLayerWeight(layerIndex, upperBodyAnimationsWeight)
 
-        creatureAnimator.SetTrigger "HoldFlash"
-        creatureAnimator.ResetTrigger "HoldLung"
-        creatureAnimator.ResetTrigger "HoldShotgun"
-        creatureAnimator.ResetTrigger "HoldOneItem"
+            if heldItem.itemProperties.twoHandedAnimation then
+                trigger "Lung"
+            else
+                if heldItem :? FlashlightItem then
+                    trigger "Flash"
+                else if heldItem :? Shovel then
+                    trigger "Lung"
+                else if heldItem :? ShotgunItem then
+                    trigger "Shotgun"
+                else
+                    trigger "OneItem"
