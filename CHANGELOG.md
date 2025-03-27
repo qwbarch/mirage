@@ -1,5 +1,11 @@
 ## Changelog
 
+### 1.20.1
+
+- Masked holding items no longer show a hover tooltip, thanks to [mattymatty](<https://thunderstore.io/c/lethal-company/p/mattymatty/>).
+- Fixed a bug that caused an error on startup when [BepInEx Faster Load AssetBundles Patcher](<https://thunderstore.io/c/lethal-company/p/DiFFoZ/BepInEx_Faster_Load_AssetBundles_Patcher/>) is installed, thanks to [DiFFoZ](<https://thunderstore.io/c/lethal-company/p/DiFFoZ/>).
+- Fixed a bug that caused items being held by masked enemies to persist between rounds.
+
 ### 1.20.0
 
 - Masked enemies are now able to spawn holding an item at a random chance (in percentage).
