@@ -4,6 +4,7 @@ open System
 open UnityEngine
 open Unity.Netcode
 open Mirage.Domain.Null
+open Mirage.Domain.Config
 
 [<AllowNullLiteral>]
 type MaskedAnimator() =
@@ -58,10 +59,24 @@ type MaskedAnimator() =
         itemHolder.transform.localPosition <- Vector3(-0.002f, 0.036f, -0.042f);
         itemHolder.transform.localRotation <- Quaternion.Euler(-3.616f, -2.302f, 0.145f)
 
-        if this.IsHost then
+        if this.IsHost && random.Next(0, 100) < getConfig().maskedItemSpawnChance then
             this.HoldItem <| spawnItem()
 
-        heldItem <- spawnItem()
+    member this.HoldItem item =
+        heldItem <- item
+        heldItem.parentObject <- itemHolder.transform
+        heldItem.isHeld <- true
+        heldItem.isHeldByEnemy <- true
+        heldItem.grabbable <- false
+        if this.IsHost then
+            this.HoldItemClientRpc item.NetworkObject
+    
+    [<ClientRpc>]
+    member this.HoldItemClientRpc(reference: NetworkObjectReference) =
+        if not this.IsHost then
+            let mutable item = null
+            if reference.TryGet &item then
+                this.HoldItem <| item.GetComponent<GrabbableObject>()
 
     member _.FixedUpdate() =
         let reset name = creatureAnimator.ResetTrigger $"Hold{name}"
@@ -88,18 +103,3 @@ type MaskedAnimator() =
                 else
                     trigger "OneItem"
     
-    member this.HoldItem item =
-        heldItem <- item
-        heldItem.parentObject <- itemHolder.transform
-        heldItem.isHeld <- true
-        heldItem.isHeldByEnemy <- true
-        heldItem.grabbable <- false
-        if this.IsHost then
-            this.HoldItemClientRpc item.NetworkObject
-    
-    [<ClientRpc>]
-    member this.HoldItemClientRpc(reference: NetworkObjectReference) =
-        if not this.IsHost then
-            let mutable item = null
-            if reference.TryGet &item then
-                this.HoldItem <| item.GetComponent<GrabbableObject>()

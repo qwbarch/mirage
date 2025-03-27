@@ -32,7 +32,7 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
             description
         )
     let bindImitateVoice key (value: 'A) (description: 'B) = bind "Imitate voice" key value description
-    let bindMaskedEnemy = bind "Masked enemy"
+    let bindMaskedEnemy key (value: 'A) (description: 'B) = bind "Masked enemy" key value description
     let bindSpawnControl key (value: 'A) (description: 'B) = bind "Spawn control" key value description
 
     member val internal General = general
@@ -137,6 +137,13 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
             true
             <| ConfigDescription "Whether or not masked enemies should copy the player's visuals of who it's mimicking"
     
+    member val MaskedItemSpawnChance =
+        let description = "Percent chance for a masked to spawn with an item. If you use LethalIntelligence, you should disable this option as it conflicts."
+        bindMaskedEnemy
+            "Masked item spawn chance"
+            50
+            <| ConfigDescription(description, AcceptableValueRange(0, 100))
+    
     member val EnablePlayerNames =
         let description = "Whether or not name tags above a player should show. Useful for making it harder to distinguish masked enemies from players."
         bind
@@ -201,6 +208,8 @@ type SyncedConfig =
         minimumDelayNonMasked: int
         maximumDelayNonMasked: int
 
+        maskedItemSpawnChance: int
+
         enableMimicVoiceWhileAlive: bool
         enableRecordVoiceWhileDead: bool
 
@@ -231,6 +240,8 @@ let private toSyncedConfig () =
         maximumDelayMasked = localConfig.MaximumDelayMasked.Value
         minimumDelayNonMasked = localConfig.MinimumDelayNonMasked.Value
         maximumDelayNonMasked = localConfig.MaximumDelayNonMasked.Value
+
+        maskedItemSpawnChance = localConfig.MaskedItemSpawnChance.Value
 
         enableMimicVoiceWhileAlive = localConfig.EnableMimicVoiceWhileAlive.Value
         enableRecordVoiceWhileDead = localConfig.EnableRecordVoiceWhileDead.Value
