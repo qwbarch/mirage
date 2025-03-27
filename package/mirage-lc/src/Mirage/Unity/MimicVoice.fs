@@ -17,12 +17,13 @@ open Mirage.Domain.Null
 open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicPlayer
 
-let private random = Random()
 
 type MimicVoice() as self =
     inherit NetworkBehaviour()
 
     let recordingManager = RecordingManager()
+    let random = Random()
+
     let mutable voicePlayback: GameObject = null
     let mutable audioStream: AudioStream = null
     let mutable mimicPlayer: MimicPlayer = null

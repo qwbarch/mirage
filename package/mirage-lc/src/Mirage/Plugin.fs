@@ -33,7 +33,7 @@ open Mirage.Hook.PlayerControllerB
 type Plugin() =
     inherit BaseUnityPlugin()
 
-    member _.Awake() =
+    member this.Awake() =
         let assembly = Assembly.GetExecutingAssembly()
         fork CancellationToken.None <| fun () -> valueTask {
             initLobbyCompatibility pluginName pluginVersion
@@ -51,12 +51,18 @@ type Plugin() =
             for category in Seq.cast<LogCategory> <| Enum.GetValues typeof<LogCategory> do
                 Logs.SetLogLevel(category, LogLevel.Error)
 
+            // Credits to Piggy and VirusTLNR: https://github.com/VirusTLNR/LethalIntelligence
+            let maskedAnimatorController =
+                AssetBundle
+                    .LoadFromFile(Path.Combine(Path.GetDirectoryName this.Info.Location, "mapdotanimpack"))
+                    .LoadAsset<RuntimeAnimatorController> "MaskedMetarig.controller"
+
             // Hooks.
             cacheDissonance()
             disableAudioSpatializer()
             registerPrefab()
             syncConfig()
             readMicrophone recordingDirectory
-            hookMaskedEnemy()
+            hookMaskedEnemy maskedAnimatorController
             hookPlayerControllerB()
         }

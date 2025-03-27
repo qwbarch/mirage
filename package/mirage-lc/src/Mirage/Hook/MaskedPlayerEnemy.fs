@@ -13,7 +13,7 @@ open Mirage.Domain.Null
 let [<Literal>] private MaskedEnemyName = "Masked"
 let mutable private maskedPrefab = null
 
-let hookMaskedEnemy () =
+let hookMaskedEnemy maskedAnimationController =
     On.MaskedPlayerEnemy.add_Start(fun orig self ->
         try
             self.GetComponent<MimicPlayer>().StartMimicking()
@@ -32,6 +32,7 @@ let hookMaskedEnemy () =
             self.GetComponentsInChildren<Transform>()
                 |> tryFind _.name.StartsWith("MapDot")
                 |> iter disable
+        self.creatureAnimator.runtimeAnimatorController <- maskedAnimationController
     )
 
     On.MaskedPlayerEnemy.add_SetHandsOutClientRpc(fun orig self _ ->
