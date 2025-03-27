@@ -133,6 +133,8 @@ If you're making small changes for your friends, you will need to share the comp
 - [Winter Mantis](<https://thunderstore.io/c/lethal-company/p/WinterMantis/>) and ``Myrin`` - For their help in testing experimental builds and providing consistent feedback on the Lethal Company modding Discord.
 - [a glitched npc](<https://www.twitch.tv/a_glitched_npc>) - For helping test many of the experimental builds on stream. Check out his stream! https://www.twitch.tv/a_glitched_npc
 - [slayer6409](https://thunderstore.io/c/lethal-company/p/slayer6409) - For helping with profiling Mirage, providing feedback on performance issues.
+- [Piggy](https://thunderstore.io/c/lethal-company/p/Piggy/) - For his MIT licensed asset bundle, which Mirage uses for masked held item animations.
+- [VirusTLNR](https://thunderstore.io/c/lethal-company/p/VirusTLNR/) - For the masked held item animation implementation and overall help when I have questions.
 
 ## Changelog
 
