@@ -1,5 +1,19 @@
 ## Changelog
 
+### 1.20.0
+
+- Masked enemies are now able to spawn holding an item at a random chance (in percentage).
+    - Config name: ``Masked item spawn chance``
+    - Default value: 50
+    - Note: This config option likely conflicts with [LethalIntelligence](<https://thunderstore.io/c/lethal-company/p/VirusTLNR/LethalIntelligenceExperimental/>). You should disable this option (set it to 0) if you use LethalIntelligence.
+- ``Masked enemy spawn chance`` default value has been lowered to ``0.5f``.
+
+Full credits:
+- [Piggy](https://thunderstore.io/c/lethal-company/p/Piggy/) for his MIT licensed asset bundle.
+- [VirusTLNR](https://thunderstore.io/c/lethal-company/p/VirusTLNR/) for the held item animation implementation and for helping me out when I had questions.
+
+Held item animation is taken from [LethalIntelligence](https://thunderstore.io/c/lethal-company/p/VirusTLNR/LethalIntelligenceExperimental/) (with permission). Go check this mod out!
+
 ### 1.19.1
 
 - Attempt to fix a bug that was causing some modpacks to only record voices for hosts.

@@ -13,6 +13,7 @@ Mirage is a mod that gives any enemy the ability to mimic a player's voice (full
   - Voices are synced to all players. This means everyone hears the same voice, the same words, at the same time.
   - Only masked enemies mimic voices by default, other enemies can be enabled via config.
 - Masked enemies use the mimicking player's suit and cosmetics.
+- Masked enemies can spawn with a held item.
 - Remove the mask from masked enemies.
 - Remove the arms-out animation from masked enemies.
 - Configuration is synced to all players (only the host's config is used).
