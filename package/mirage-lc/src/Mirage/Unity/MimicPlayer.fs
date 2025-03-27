@@ -110,7 +110,7 @@ type MimicPlayer() =
         if not this.IsHost then
             this.ResetMimicPlayer()
 
-    member this.Update() =
+    member this.FixedUpdate() =
         if this.IsHost then
             // Set the mimicking player after the haunting player changes.
             // In singleplayer, the haunting player will always be the local player.

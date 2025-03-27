@@ -4,7 +4,6 @@ open System
 open UnityEngine
 open Unity.Netcode
 open Mirage.Domain.Null
-open Mirage.Domain.Logger
 
 [<AllowNullLiteral>]
 type MaskedAnimator() =
@@ -12,10 +11,10 @@ type MaskedAnimator() =
 
     let random = Random()
     let mutable creatureAnimator = null
-    let mutable itemHolder = null
-    let mutable heldItem = null
+    let mutable itemHolder = GameObject "ItemHolder"
+    let mutable heldItem: GrabbableObject = null
     let mutable upperBodyAnimationsWeight = 0.0f
-    let mutable layerIndex = -1
+    let mutable layerIndex = None
 
     let rec randomItem () =
         let items = StartOfRound.Instance.allItemsList.itemsList
@@ -24,7 +23,6 @@ type MaskedAnimator() =
         else item.spawnPrefab
 
     let spawnItem () =
-        // if isHost
         let item =
             Object.Instantiate<GameObject>(
                 randomItem(),
@@ -36,11 +34,15 @@ type MaskedAnimator() =
         if isNotNull scanNode then
             scanNode.gameObject.SetActive false
         item.GetComponent<GrabbableObject>()
-    
+
     member this.Start() =
         creatureAnimator <- this.transform.GetChild(0).GetChild(3).GetComponent<Animator>()
-        layerIndex <- creatureAnimator.GetLayerIndex "Item"
-        itemHolder <- GameObject "ItemHolder"
+        layerIndex <- Some <| creatureAnimator.GetLayerIndex "Item"
+
+        if layerIndex.IsNone then
+            this.enabled <- false
+            raise <| InvalidProgramException "Failed to find item layer. Please use a mod manager to install this mod properly."
+
         itemHolder.transform.parent <-
             this.transform
                 .GetChild(0)
@@ -56,11 +58,10 @@ type MaskedAnimator() =
         itemHolder.transform.localPosition <- Vector3(-0.002f, 0.036f, -0.042f);
         itemHolder.transform.localRotation <- Quaternion.Euler(-3.616f, -2.302f, 0.145f)
 
+        if this.IsHost then
+            this.HoldItem <| spawnItem()
+
         heldItem <- spawnItem()
-        heldItem.parentObject <- itemHolder.transform
-        heldItem.isHeld <- true
-        heldItem.isHeldByEnemy <- true
-        heldItem.grabbable <- false
 
     member _.FixedUpdate() =
         let reset name = creatureAnimator.ResetTrigger $"Hold{name}"
@@ -73,7 +74,7 @@ type MaskedAnimator() =
 
         if isNotNull heldItem then
             upperBodyAnimationsWeight <- Mathf.Lerp(upperBodyAnimationsWeight, 0.9f, 0.5f)
-            creatureAnimator.SetLayerWeight(layerIndex, upperBodyAnimationsWeight)
+            creatureAnimator.SetLayerWeight(layerIndex.Value, upperBodyAnimationsWeight)
 
             if heldItem.itemProperties.twoHandedAnimation then
                 trigger "Lung"
@@ -86,3 +87,19 @@ type MaskedAnimator() =
                     trigger "Shotgun"
                 else
                     trigger "OneItem"
+    
+    member this.HoldItem item =
+        heldItem <- item
+        heldItem.parentObject <- itemHolder.transform
+        heldItem.isHeld <- true
+        heldItem.isHeldByEnemy <- true
+        heldItem.grabbable <- false
+        if this.IsHost then
+            this.HoldItemClientRpc item.NetworkObject
+    
+    [<ClientRpc>]
+    member this.HoldItemClientRpc(reference: NetworkObjectReference) =
+        if not this.IsHost then
+            let mutable item = null
+            if reference.TryGet &item then
+                this.HoldItem <| item.GetComponent<GrabbableObject>()
