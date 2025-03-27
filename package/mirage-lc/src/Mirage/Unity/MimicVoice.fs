@@ -1,4 +1,4 @@
-module Mirage.Unity.MirageVoice
+module Mirage.Unity.MimicVoice
 
 open IcedTasks
 open FSharpPlus

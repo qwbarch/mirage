@@ -5,7 +5,7 @@ open Unity.Netcode
 open Mirage.Domain.Null
 open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicPlayer
-open Mirage.Unity.MirageVoice
+open Mirage.Unity.MimicVoice
 open Mirage.Unity.MaskedAnimator
 
 let mutable private initialized = false

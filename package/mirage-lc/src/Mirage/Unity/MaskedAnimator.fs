@@ -5,7 +5,10 @@ open UnityEngine
 open Unity.Netcode
 open Mirage.Domain.Null
 open Mirage.Domain.Config
+open Mirage.Domain.Logger
 
+/// Full credits goes to Piggy and VirusTLNR:
+/// https://github.com/VirusTLNR/LethalIntelligence
 [<AllowNullLiteral>]
 type MaskedAnimator() =
     inherit NetworkBehaviour()
@@ -13,7 +16,7 @@ type MaskedAnimator() =
     let random = Random()
     let mutable creatureAnimator = null
     let mutable itemHolder = GameObject "ItemHolder"
-    let mutable heldItem: GrabbableObject = null
+    let mutable heldItem = null
     let mutable upperBodyAnimationsWeight = 0.0f
     let mutable layerIndex = None
 
@@ -31,10 +34,9 @@ type MaskedAnimator() =
                 Quaternion.identity
             )
         item.GetComponent<NetworkObject>().Spawn(destroyWithScene = true)
-        let scanNode = item.GetComponentInChildren<ScanNodeProperties>()
-        if isNotNull scanNode then
-            scanNode.gameObject.SetActive false
         item.GetComponent<GrabbableObject>()
+    
+    member _.HeldItem with get () = heldItem
 
     member this.Start() =
         creatureAnimator <- this.transform.GetChild(0).GetChild(3).GetComponent<Animator>()
@@ -63,11 +65,23 @@ type MaskedAnimator() =
             this.HoldItem <| spawnItem()
 
     member this.HoldItem item =
+        let scanNode = item.GetComponentInChildren<ScanNodeProperties>()
+        if isNotNull scanNode then
+            scanNode.gameObject.SetActive false
+
+        // Hide the hover text.
+        let collider = item.GetComponent<BoxCollider>()
+        if isNotNull collider then
+            collider.enabled <- false
+
         heldItem <- item
-        heldItem.parentObject <- itemHolder.transform
         heldItem.isHeld <- true
         heldItem.isHeldByEnemy <- true
         heldItem.grabbable <- false
+        heldItem.grabbableToEnemies <- false
+        heldItem.hasHitGround <- false
+        heldItem.EnablePhysics false
+        heldItem.parentObject <- itemHolder.transform
         if this.IsHost then
             this.HoldItemClientRpc item.NetworkObject
     
@@ -91,15 +105,14 @@ type MaskedAnimator() =
             upperBodyAnimationsWeight <- Mathf.Lerp(upperBodyAnimationsWeight, 0.9f, 0.5f)
             creatureAnimator.SetLayerWeight(layerIndex.Value, upperBodyAnimationsWeight)
 
-            if heldItem.itemProperties.twoHandedAnimation then
-                trigger "Lung"
-            else
-                if heldItem :? FlashlightItem then
-                    trigger "Flash"
+            trigger <|
+                if heldItem.itemProperties.twoHandedAnimation then
+                    "Lung"
+                else if heldItem :? FlashlightItem then
+                    "Flash"
                 else if heldItem :? Shovel then
-                    trigger "Lung"
+                    "Lung"
                 else if heldItem :? ShotgunItem then
-                    trigger "Shotgun"
+                    "Shotgun"
                 else
-                    trigger "OneItem"
-    
+                    "OneItem"

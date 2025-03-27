@@ -6,9 +6,10 @@ open Unity.Netcode
 open System
 open System.Collections.Generic
 open Mirage.Domain.Config
-open Mirage.Unity.MimicPlayer
 open Mirage.Domain.Logger
 open Mirage.Domain.Null
+open Mirage.Unity.MaskedAnimator
+open Mirage.Unity.MimicPlayer
 
 let [<Literal>] private MaskedEnemyName = "Masked"
 let mutable private maskedPrefab = null
@@ -102,4 +103,13 @@ let hookMaskedEnemy maskedAnimationController =
                     enemy.enemyType.MaxCount <- localConfig.MaxMaskedSpawns.Value
                     level.Enemies.Add enemy
             logInfo <| "Adjusting spawn weights for masked enemies:\n" + String.Join("\n", logs)
+    )
+
+    On.MaskedPlayerEnemy.add_OnDestroy(fun orig self ->
+        // Remove the held item when the round ends.
+        orig.Invoke self
+        if self.IsHost then
+            let animator = self.GetComponent<MaskedAnimator>()
+            if isNotNull animator.HeldItem then
+                animator.HeldItem.GetComponent<NetworkObject>().Despawn()
     )
