@@ -74,6 +74,7 @@
     <Compile Include="Mirage/Hook/MaskedPlayerEnemy.fs" />
     <Compile Include="Mirage/Hook/Prefab.fs" />
     <Compile Include="Mirage/Hook/Microphone.fs" />
+    <Compile Include="Mirage/Hook/PreInitScene.fs" />
     <Compile Include="Properties/AssemblyInfo.fs" />
     <Compile Include="Mirage/Plugin.fs" />
   </ItemGroup>
