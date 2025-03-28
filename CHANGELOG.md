@@ -1,5 +1,10 @@
 ## Changelog
 
+### 1.20.2
+
+- Fixed a compatibility issue with [LethalIntelligence](<https://thunderstore.io/c/lethal-company/p/VirusTLNR/LethalIntelligenceExperimental/>) causing Mirage to fail to load.
+- Held item feature is now automatically disabled when LethalIntelligence is installed, to allow LethalIntelligence to handle masked holding items instead.
+
 ### 1.20.1
 
 - Masked holding items no longer show a hover tooltip, thanks to [mattymatty](<https://thunderstore.io/c/lethal-company/p/mattymatty/>).
