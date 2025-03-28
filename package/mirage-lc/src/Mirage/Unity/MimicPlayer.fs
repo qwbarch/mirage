@@ -20,9 +20,9 @@ type MimicPlayer() =
     let onSetMimicId = Event<Guid>()
     let random = Random()
 
-    let mutable enemyAI: EnemyAI = null
-    let mutable mimicId: Guid = Guid.Empty
-    let mutable mimickingPlayer: PlayerControllerB = null
+    let mutable enemyAI = null
+    let mutable mimicId = Guid.Empty
+    let mutable mimickingPlayer = null
 
     let logMimic message = logInfo $"{enemyAI.GetType().Name}({mimicId}) - {message}"
 

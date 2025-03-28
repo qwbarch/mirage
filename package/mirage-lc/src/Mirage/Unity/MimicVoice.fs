@@ -18,39 +18,16 @@ open Mirage.Unity.AudioStream
 open Mirage.Unity.MimicPlayer
 
 
-type MimicVoice() as self =
+type MimicVoice() =
     inherit NetworkBehaviour()
 
     let recordingManager = RecordingManager()
     let random = Random()
 
-    let mutable voicePlayback: GameObject = null
-    let mutable audioStream: AudioStream = null
-    let mutable mimicPlayer: MimicPlayer = null
-    let mutable enemyAI: EnemyAI = null
-
-    let startVoiceMimic () =
-        forever <| fun () -> valueTask {
-            try
-                if isNotNull enemyAI
-                    && not enemyAI.isEnemyDead
-                    && isNotNull mimicPlayer.MimickingPlayer
-                    && Object.ReferenceEquals(mimicPlayer.MimickingPlayer, StartOfRound.Instance.localPlayerController)
-                then
-                    let! recording = getRecording recordingManager
-                    if recording.IsSome then
-                        do! audioStream.StreamOpusFromFile recording.Value
-            with
-                | :? TaskCanceledException as error -> raise error
-                | error -> logError $"Error occurred while mimicking voice: {error}"
-            let delay =
-                if enemyAI :? MaskedPlayerEnemy then
-                    random.Next(getConfig().minimumDelayMasked, getConfig().maximumDelayMasked + 1)
-                else
-                    random.Next(getConfig().minimumDelayNonMasked, getConfig().maximumDelayNonMasked + 1)
-
-            do! Task.Delay(delay, self.destroyCancellationToken)
-        }
+    let mutable voicePlayback = null
+    let mutable audioStream = null
+    let mutable mimicPlayer = null
+    let mutable enemyAI = null
     
     member this.Awake() =
         audioStream <- this.GetComponent<AudioStream>()
@@ -70,14 +47,36 @@ type MimicVoice() as self =
         voicePlayback.transform.parent <- audioStream.transform
         voicePlayback.SetActive true
     
-    member _.Start() =
-        try ignore <| startVoiceMimic()
+    member this.Start() =
+        let startVoiceMimicking () =
+            forever <| fun () -> valueTask {
+                try
+                    if isNotNull enemyAI
+                        && not enemyAI.isEnemyDead
+                        && isNotNull mimicPlayer.MimickingPlayer
+                        && Object.ReferenceEquals(mimicPlayer.MimickingPlayer, StartOfRound.Instance.localPlayerController)
+                    then
+                        let! recording = getRecording recordingManager
+                        if recording.IsSome then
+                            do! audioStream.StreamOpusFromFile recording.Value
+                with
+                    | :? TaskCanceledException as error -> raise error
+                    | error -> logError $"Error occurred while mimicking voice: {error}"
+                let delay =
+                    if enemyAI :? MaskedPlayerEnemy then
+                        random.Next(getConfig().minimumDelayMasked, getConfig().maximumDelayMasked + 1)
+                    else
+                        random.Next(getConfig().minimumDelayNonMasked, getConfig().maximumDelayNonMasked + 1)
+
+                do! Task.Delay(delay, this.destroyCancellationToken)
+            }
+        try ignore <| startVoiceMimicking()
         with :? TaskCanceledException as _ -> ()
 
     /// Update voice playback object to always be at the same location as the parent.
     member this.LateUpdate() = voicePlayback.transform.position <- this.transform.position
 
-    member _.Update() =
+    member _.FixedUpdate() =
         if isNull mimicPlayer.MimickingPlayer || isNull enemyAI then
             audioStream.AudioSource.mute <- true
         else

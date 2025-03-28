@@ -11,4 +11,4 @@ open Mirage.Hook.PreInitScene
 type Plugin() =
     inherit BaseUnityPlugin()
 
-    member this.Awake() = loadMirage this
+    member this.Awake() = hookPreInitScene this
