@@ -138,7 +138,7 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
             <| ConfigDescription "Whether or not masked enemies should copy the player's visuals of who it's mimicking"
     
     member val MaskedItemSpawnChance =
-        let description = "Percent chance for a masked to spawn with an item. If you use LethalIntelligence, you should disable this option as it conflicts."
+        let description = "Percent chance for a masked to spawn with an item. This is automatically disabled when LethalIntelligence is found to avoid conflicts."
         bindMaskedEnemy
             "Masked item spawn chance"
             50

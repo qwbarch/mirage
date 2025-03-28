@@ -5,6 +5,7 @@ open UnityEngine
 open Unity.Netcode
 open Mirage.Domain.Null
 open Mirage.Domain.Config
+open Mirage.Compatibility
 
 /// Full credits goes to Piggy and VirusTLNR:
 /// https://github.com/VirusTLNR/LethalIntelligence
@@ -17,7 +18,7 @@ type MaskedAnimator() =
     let mutable itemHolder = GameObject "ItemHolder"
     let mutable heldItem = null
     let mutable upperBodyAnimationsWeight = 0.0f
-    let mutable layerIndex = None
+    let mutable layerIndex = -1
 
     let rec randomItem () =
         let items = StartOfRound.Instance.allItemsList.itemsList
@@ -38,30 +39,29 @@ type MaskedAnimator() =
     member _.HeldItem with get () = heldItem
 
     member this.Start() =
-        creatureAnimator <- this.transform.GetChild(0).GetChild(3).GetComponent<Animator>()
-        layerIndex <- Some <| creatureAnimator.GetLayerIndex "Item"
-
-        if layerIndex.IsNone then
+        if isLethalIntelligenceLoaded() then
             this.enabled <- false
-            raise <| InvalidProgramException "Failed to find item layer. Please use a mod manager to install this mod properly."
+        else
+            creatureAnimator <- this.transform.GetChild(0).GetChild(3).GetComponent<Animator>()
+            layerIndex <- creatureAnimator.GetLayerIndex "Item"
 
-        itemHolder.transform.parent <-
-            this.transform
-                .GetChild(0)
-                .GetChild(3)
-                .GetChild(0)
-                .GetChild(0)
-                .GetChild(0)
-                .GetChild(0)
-                .GetChild(1)
-                .GetChild(0)
-                .GetChild(0)
-                .GetChild(0)
-        itemHolder.transform.localPosition <- Vector3(-0.002f, 0.036f, -0.042f);
-        itemHolder.transform.localRotation <- Quaternion.Euler(-3.616f, -2.302f, 0.145f)
+            itemHolder.transform.parent <-
+                this.transform
+                    .GetChild(0)
+                    .GetChild(3)
+                    .GetChild(0)
+                    .GetChild(0)
+                    .GetChild(0)
+                    .GetChild(0)
+                    .GetChild(1)
+                    .GetChild(0)
+                    .GetChild(0)
+                    .GetChild(0)
+            itemHolder.transform.localPosition <- Vector3(-0.002f, 0.036f, -0.042f);
+            itemHolder.transform.localRotation <- Quaternion.Euler(-3.616f, -2.302f, 0.145f)
 
-        if this.IsHost && random.Next(0, 100) < getConfig().maskedItemSpawnChance then
-            this.HoldItem <| spawnItem()
+            if this.IsHost && random.Next(0, 100) < getConfig().maskedItemSpawnChance then
+                this.HoldItem <| spawnItem()
 
     member this.HoldItem item =
         let scanNode = item.GetComponentInChildren<ScanNodeProperties>()
@@ -102,7 +102,7 @@ type MaskedAnimator() =
 
         if isNotNull heldItem then
             upperBodyAnimationsWeight <- Mathf.Lerp(upperBodyAnimationsWeight, 0.9f, 0.5f)
-            creatureAnimator.SetLayerWeight(layerIndex.Value, upperBodyAnimationsWeight)
+            creatureAnimator.SetLayerWeight(layerIndex, upperBodyAnimationsWeight)
 
             trigger <|
                 if heldItem.itemProperties.twoHandedAnimation then
