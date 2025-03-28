@@ -5,7 +5,6 @@ open UnityEngine
 open Unity.Netcode
 open Mirage.Domain.Null
 open Mirage.Domain.Config
-open Mirage.Domain.Logger
 
 /// Full credits goes to Piggy and VirusTLNR:
 /// https://github.com/VirusTLNR/LethalIntelligence

@@ -4,7 +4,6 @@ open FSharpPlus
 open System
 open System.Collections.Generic
 open Unity.Netcode
-open GameNetcodeStuff
 open Mirage.Unity.AudioStream
 open Mirage.Domain.Logger
 open Mirage.Domain.Config

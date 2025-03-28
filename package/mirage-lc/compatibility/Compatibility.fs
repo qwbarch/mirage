@@ -1,12 +1,16 @@
 module Mirage.Compatibility
 
-open BepInEx.Bootstrap
 open System
+open BepInEx.Bootstrap
 open LobbyCompatibility.Features
 open LobbyCompatibility.Enums
 open LethalSettings.UI
 open LethalSettings.UI.Components
 open LethalConfig.ConfigItems
+
+let [<Literal>] lethalIntelligenceModId = "VirusTLNR.LethalIntelligence"
+
+let isLethalIntelligenceLoaded () = Chainloader.PluginInfos.ContainsKey lethalIntelligenceModId
 
 // Why are these not part of Mirage.dll?
 // Due to the netcode patcher requiring a call to Assembly.GetExecutingAssembly().GetTypes(), it
