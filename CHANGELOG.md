@@ -5,6 +5,9 @@
 - Masked enemies holding items can now drop their items.
 - Added a config option called ``Drop store item on death``. Default value: ``false``.
 - Added a config option called ``Drop scrap item on death``. Default value: ``true``.
+- Added a config option called ``Scrap value multiplier``.
+    - This only affects the scrap value multiplier for scrap items dropped by masked enemies.
+    - Defualt value: ``1.0``.
 
 ### 1.21.0
 

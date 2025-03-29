@@ -245,6 +245,13 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile, items: ConfigFile) =
             "Drop held scrap item on death"
             true
             <| ConfigDescription description
+    
+    member val ScrapValueMultiplier =
+        let description = "Value multiplier to use on scrap items that drop from masked enemies."
+        bindConfigureItem 
+            "Scrap value multiplier"
+            1.0
+            <| ConfigDescription description
 
 let internal localConfig =
     LocalConfig(
@@ -286,6 +293,7 @@ type SyncedConfig =
         storeItemRollChance: int
         maskedDropStoreItemOnDeath: bool
         maskedDropScrapItemOnDeath: bool
+        scrapValueMultiplier: float
 
         enableMimicVoiceWhileAlive: bool
         enableRecordVoiceWhileDead: bool
@@ -341,6 +349,7 @@ let private toSyncedConfig () =
         storeItemRollChance = localConfig.StoreItemRollChance.Value
         maskedDropStoreItemOnDeath = localConfig.MaskedDropStoreItemOnDeath.Value
         maskedDropScrapItemOnDeath = localConfig.MaskedDropScrapItemOnDeath.Value
+        scrapValueMultiplier = localConfig.ScrapValueMultiplier.Value
 
         enableMimicVoiceWhileAlive = localConfig.EnableMimicVoiceWhileAlive.Value
         enableRecordVoiceWhileDead = localConfig.EnableRecordVoiceWhileDead.Value

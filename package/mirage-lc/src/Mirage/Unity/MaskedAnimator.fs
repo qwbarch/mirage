@@ -52,7 +52,10 @@ type MaskedAnimator() =
         prefab.GetComponent<NetworkObject>().Spawn(destroyWithScene = true)
         struct (
             prefab.GetComponent<GrabbableObject>(),
-            int <| float32 (random.Next(item.minValue, item.maxValue)) * RoundManager.Instance.scrapValueMultiplier
+            int <|
+                float (random.Next(item.minValue, item.maxValue))
+                    * float RoundManager.Instance.scrapValueMultiplier
+                    * getConfig().scrapValueMultiplier
         )
     
     member val HeldItem = null with get, set
