@@ -3,9 +3,12 @@ module Mirage.Unity.MaskedAnimator
 open System
 open UnityEngine
 open Unity.Netcode
+open Mirage.Prelude
 open Mirage.Domain.Null
 open Mirage.Domain.Config
 open Mirage.Compatibility
+open Mirage.Domain.Logger
+open Mirage.Hook.Item
 
 /// Full credits goes to Piggy and VirusTLNR:
 /// https://github.com/VirusTLNR/LethalIntelligence
@@ -20,16 +23,33 @@ type MaskedAnimator() =
     let mutable upperBodyAnimationsWeight = 0.0f
     let mutable layerIndex = -1
 
-    let rec randomItem () =
-        let items = StartOfRound.Instance.allItemsList.itemsList
-        let item = items[random.Next(0, items.Count)]
-        if isNull <| item.spawnPrefab.GetComponent<GrabbableObject>() then randomItem()
+    let rec chooseItem () =
+        let roll = random.NextDouble() * 100.0
+        let mutable cumulativePercent = 0.0
+        let item =
+            if random.Next(0, 100) < getConfig().storeItemRollChance && not (Map.isEmpty <| getConfig().storeItemWeights) then
+                let mutable itemName = null
+                for weight in getConfig().storeItemWeights do
+                    if isNull itemName then
+                        &cumulativePercent += float weight.Value / float (getConfig().totalItemWeights) * 100.0
+                        if roll < cumulativePercent then
+                            itemName <- weight.Key
+                Map.find itemName <| getItems()
+            else
+                let mutable item = null
+                for scrap in StartOfRound.Instance.currentLevel.spawnableScrap do
+                    if isNull item then
+                        &cumulativePercent += float scrap.rarity / float (getTotalScrapWeight()) * 100.0
+                        if not (Set.contains scrap.spawnableItem.itemName <| getConfig().disabledScrapItems) && roll < cumulativePercent then
+                            item <- scrap.spawnableItem
+                item
+        if isNull <| item.spawnPrefab.GetComponent<GrabbableObject>() then chooseItem()
         else item.spawnPrefab
 
     let spawnItem () =
         let item =
             Object.Instantiate<GameObject>(
-                randomItem(),
+                chooseItem(),
                 Vector3.zero,
                 Quaternion.identity
             )

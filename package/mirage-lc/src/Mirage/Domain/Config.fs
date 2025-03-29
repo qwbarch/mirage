@@ -17,8 +17,10 @@ open Mirage.Domain.Logger
 /// Default store items to enable in the config.
 let defaultStoreItemWeight = function
     | "Walkie-talkie" -> 3
+    | "Shovel" -> 15
     | "Pro-flashlight" -> 10
-    | "Shovel" -> 20
+    | "Stun grenade" -> 1
+    | "Extension ladder" -> 1
     | "Spray paint" -> 1
     | _ -> 0
 
@@ -220,14 +222,14 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile, items: ConfigFile) =
         let description = "Percent chance for a masked to spawn with an item. This is automatically disabled when LethalIntelligence is found to avoid conflicts."
         bindConfigureItem
             "Chance to spawn with item"
-            75
+            80
             <| ConfigDescription(description, AcceptableValueRange(0, 100))
     
     member val StoreItemRollChance =
         let description = "When a masked spawns with an item, this config is the percent chance for the item to be a store item. When it fails the roll, it becomes a scrap item instead."
         bindConfigureItem
             "Chance to roll as store item"
-            75
+            50
             <| ConfigDescription(description, AcceptableValueRange(0, 100))
 
 let internal localConfig =
@@ -254,6 +256,7 @@ let internal getEnemyConfigEntries () =
 [<Serializable>]
 type SyncedConfig =
     {   enemies: Set<string>
+        totalItemWeights: int
         storeItemWeights: Map<string, int>
         disabledScrapItems: Set<string>
 
@@ -306,6 +309,7 @@ let private toSyncedConfig () =
             | _ -> ()
 
     {   enemies = enemies
+        totalItemWeights = sum <| Map.values storeItemWeights
         storeItemWeights = storeItemWeights
         disabledScrapItems = disabledScrapItems
 
