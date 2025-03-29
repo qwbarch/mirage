@@ -8,9 +8,9 @@ open LethalSettings.UI
 open LethalSettings.UI.Components
 open LethalConfig.ConfigItems
 
-let [<Literal>] lethalIntelligenceModId = "VirusTLNR.LethalIntelligence"
+let [<Literal>] LethalIntelligenceModId = "VirusTLNR.LethalIntelligence"
 
-let inline isLethalIntelligenceLoaded () = Chainloader.PluginInfos.ContainsKey lethalIntelligenceModId
+let inline isLethalIntelligenceLoaded () = Chainloader.PluginInfos.ContainsKey LethalIntelligenceModId
 
 // Why are these not part of Mirage.dll?
 // Due to the netcode patcher requiring a call to Assembly.GetExecutingAssembly().GetTypes(), it

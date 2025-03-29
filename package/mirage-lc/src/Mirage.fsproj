@@ -70,6 +70,7 @@
     <Compile Include="Mirage/Unity/AudioStream.fs" />
     <Compile Include="Mirage/Unity/MimicPlayer.fs" />
     <Compile Include="Mirage/Unity/MimicVoice.fs" />
+    <Compile Include="Mirage/Hook/Item.fs" />
     <Compile Include="Mirage/Unity/MaskedAnimator.fs" />
     <Compile Include="Mirage/Hook/MaskedPlayerEnemy.fs" />
     <Compile Include="Mirage/Hook/Prefab.fs" />

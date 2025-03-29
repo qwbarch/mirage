@@ -14,6 +14,20 @@ open Mirage.Prelude
 open Mirage.PluginInfo
 open Mirage.Domain.Logger
 
+/// Default store items to enable in the config.
+let defaultStoreItemWeight = function
+    | "Walkie-talkie" -> 3
+    | "Pro-flashlight" -> 10
+    | "Shovel" -> 20
+    | "Spray paint" -> 1
+    | _ -> 0
+
+/// Default scrap items to disable in the config.
+let defaultDisabledScrapItems =
+    Set.ofList
+        [   "Apparatus"
+        ]
+
 /// Max bytes of a packet. If the config payload is larger than this, it will be split into multiple packets.
 let [<Literal>] MaxPacket = 1024
 
@@ -23,7 +37,10 @@ let mutable private receivedPackets = List<byte>()
 
 let private loadConfig configName = ConfigFile(Path.Combine(Paths.ConfigPath, $"Mirage.{configName}.cfg"), true)
 
-type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
+let [<Literal>] private StoreItemSection = "2. Store Item Whitelist (Enable to allow masked to hold these items)"
+let [<Literal>] private ScrapItemSection = "3. Scrap Item Blacklist (Enable to prevent masked from holding these items)"
+
+type LocalConfig(general: ConfigFile, enemies: ConfigFile, items: ConfigFile) =
     let bind section key value (description: ConfigDescription) =
         general.Bind(
             section,
@@ -35,8 +52,17 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
     let bindMaskedEnemy key (value: 'A) (description: 'B) = bind "Masked enemy" key value description
     let bindSpawnControl key (value: 'A) (description: 'B) = bind "Spawn control" key value description
 
+    let bindConfigureItem key (value: 'A) (description: 'B) =
+        items.Bind(
+            "1. Masked held item configuration",
+            key,
+            value,
+            description
+        )
+
     member val internal General = general
     member val internal Enemies = enemies
+    member val internal Items = items
 
     member _.RegisterEnemy(enemyAI: EnemyAI) =
         try
@@ -46,6 +72,24 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
                 enemyAI :? MaskedPlayerEnemy
             )
         with | _ -> logError $"Failed to register an enemy to the config: {enemyAI.GetType().Name}"
+    
+    member _.RegisterStoreItem(item: Item) =
+        try
+            ignore <| items.Bind(
+                StoreItemSection,
+                item.itemName,
+                defaultStoreItemWeight item.itemName 
+            )
+        with | _ -> logError $"Failed to register a store item to the config: {item.itemName}"
+    
+    member _.RegisterScrapItem(item: Item) =
+        try
+            ignore <| items.Bind(
+                ScrapItemSection,
+                item.itemName,
+                Set.contains item.itemName defaultDisabledScrapItems
+            )
+        with | _ -> logError $"Failed to register a store item to the config: {item.itemName}"
 
     member val MaskedMimicChance =
         let description = "Chance for masked enemy to start mimicking a player's suit, cosmetics, and voice."
@@ -137,13 +181,6 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
             true
             <| ConfigDescription "Whether or not masked enemies should copy the player's visuals of who it's mimicking"
     
-    member val MaskedItemSpawnChance =
-        let description = "Percent chance for a masked to spawn with an item. This is automatically disabled when LethalIntelligence is found to avoid conflicts."
-        bindMaskedEnemy
-            "Masked item spawn chance"
-            50
-            <| ConfigDescription(description, AcceptableValueRange(0, 100))
-    
     member val EnablePlayerNames =
         let description = "Whether or not name tags above a player should show. Useful for making it harder to distinguish masked enemies from players."
         bind
@@ -178,8 +215,27 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile) =
             "Max spawned masked enemies"
             2
             <| ConfigDescription description
+    
+    member val MaskedItemSpawnChance =
+        let description = "Percent chance for a masked to spawn with an item. This is automatically disabled when LethalIntelligence is found to avoid conflicts."
+        bindConfigureItem
+            "Chance to spawn with item"
+            75
+            <| ConfigDescription(description, AcceptableValueRange(0, 100))
+    
+    member val StoreItemRollChance =
+        let description = "When a masked spawns with an item, this config is the percent chance for the item to be a store item. When it fails the roll, it becomes a scrap item instead."
+        bindConfigureItem
+            "Chance to roll as store item"
+            75
+            <| ConfigDescription(description, AcceptableValueRange(0, 100))
 
-let internal localConfig = LocalConfig(loadConfig "General", loadConfig "Enemies")
+let internal localConfig =
+    LocalConfig(
+        loadConfig "General",
+        loadConfig "Enemies",
+        loadConfig "Items"
+    )
 
 let internal getEnemyConfigEntries () =
     let mutable enemies = zero
@@ -197,8 +253,9 @@ let internal getEnemyConfigEntries () =
 /// </summary>
 [<Serializable>]
 type SyncedConfig =
-    {   /// Enemies that have voice mimicking enabled.
-        enemies: Set<string>
+    {   enemies: Set<string>
+        storeItemWeights: Map<string, int>
+        disabledScrapItems: Set<string>
 
         maskedMimicChance: int
         nonMaskedMimicChance: int
@@ -209,6 +266,7 @@ type SyncedConfig =
         maximumDelayNonMasked: int
 
         maskedItemSpawnChance: int
+        storeItemRollChance: int
 
         enableMimicVoiceWhileAlive: bool
         enableRecordVoiceWhileDead: bool
@@ -225,13 +283,31 @@ type SyncedConfig =
 let mutable private syncedConfig: Option<SyncedConfig> = None
 
 let private toSyncedConfig () =
-    let enemyKeys = localConfig.Enemies.Keys
+    // Load enemies.
     let mutable enemies = zero
-    for key in enemyKeys do
-        let mutable entry = null
-        if localConfig.Enemies.TryGetEntry(key, &entry) && entry.Value then
+    for key in localConfig.Enemies.Keys do
+        let mutable enabled = null
+        if localConfig.Enemies.TryGetEntry(key, &enabled) && enabled.Value then
             &enemies %= Set.add key.Key
+
+    // Load items.
+    let mutable storeItemWeights = zero
+    let mutable disabledScrapItems = zero
+    for key in localConfig.Items.Keys do
+        match key.Section with
+            | StoreItemSection ->
+                let mutable weight = null
+                if localConfig.Items.TryGetEntry(key, &weight) && weight.Value > 0 then
+                    &storeItemWeights %= Map.add key.Key weight.Value
+            | ScrapItemSection ->
+                let mutable disabled = null
+                if localConfig.Items.TryGetEntry(key, &disabled) && disabled.Value then
+                    &disabledScrapItems %= Set.add key.Key
+            | _ -> ()
+
     {   enemies = enemies
+        storeItemWeights = storeItemWeights
+        disabledScrapItems = disabledScrapItems
 
         maskedMimicChance = localConfig.MaskedMimicChance.Value
         nonMaskedMimicChance = localConfig.NonMaskedMimicChance.Value
@@ -242,6 +318,7 @@ let private toSyncedConfig () =
         maximumDelayNonMasked = localConfig.MaximumDelayNonMasked.Value
 
         maskedItemSpawnChance = localConfig.MaskedItemSpawnChance.Value
+        storeItemRollChance = localConfig.StoreItemRollChance.Value
 
         enableMimicVoiceWhileAlive = localConfig.EnableMimicVoiceWhileAlive.Value
         enableRecordVoiceWhileDead = localConfig.EnableRecordVoiceWhileDead.Value

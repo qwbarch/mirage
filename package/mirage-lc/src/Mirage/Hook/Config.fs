@@ -1,5 +1,6 @@
 module Mirage.Hook.Config
 
+open FSharpPlus
 open Unity.Netcode
 open System.Reflection
 open Newtonsoft.Json
@@ -35,9 +36,17 @@ let syncConfig () =
             (getEnemyConfigEntries())
     )
 
-    On.StartOfRound.add_Start(fun orig self ->
+    On.Terminal.add_Start(fun orig self ->
         orig.Invoke self
+        iter localConfig.RegisterStoreItem self.buyableItemsList
         if self.IsHost then
             initSyncedConfig()
             logInfo $"This configuration will be synced with clients: {JsonConvert.SerializeObject(getConfig(), Formatting.Indented)}"
+    )
+
+    On.StartOfRound.add_LoadShipGrabbableItems(fun orig self ->
+        orig.Invoke self
+        for item in self.allItemsList.itemsList do
+            if item.isScrap then
+                localConfig.RegisterScrapItem item
     )
