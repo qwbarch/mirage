@@ -1,5 +1,11 @@
 ## Changelog
 
+### 1.22.0
+
+- Masked enemies holding items can now drop their items.
+- Added a config option called ``Drop store item on death``. Default value: ``false``.
+- Added a config option called ``Drop scrap item on death``. Default value: ``true``.
+
 ### 1.21.0
 
 - Renamed ``Masked item spawn chance`` to ``Chance to spawn with item`` and moved to a new file: ``Mirage.Items.cfg`` (you'll need to re-do this config option, sorry).

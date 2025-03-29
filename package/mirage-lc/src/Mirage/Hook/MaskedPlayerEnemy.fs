@@ -1,10 +1,12 @@
 module Mirage.Hook.MaskedPlayerEnemy
 
+open IcedTasks
 open FSharpPlus
 open UnityEngine
 open Unity.Netcode
 open System
 open System.Collections.Generic
+open System.Threading.Tasks
 open Mirage.Domain.Config
 open Mirage.Domain.Logger
 open Mirage.Domain.Null
@@ -113,21 +115,26 @@ let hookMaskedEnemy maskedAnimationController =
         let dropItem =
             isScrap && getConfig().maskedDropScrapItemOnDeath
                 || not isScrap && getConfig().maskedDropStoreItemOnDeath
-        if isNotNull heldItem then
-            heldItem.isHeld <- false
-            heldItem.isHeldByEnemy <- false
-            heldItem.hasHitGround <- true
-            heldItem.EnablePhysics true
+        if isNotNull heldItem && dropItem then
+            ignore <| valueTask {
+                do! Task.Delay 900 // Wait for the masked enemy to fall to the ground.
 
-            if dropItem then
+                heldItem.isHeldByEnemy <- false
+                heldItem.hasHitGround <- true
+                heldItem.EnablePhysics true
+
                 heldItem.grabbable <- true
                 heldItem.grabbableToEnemies <- true
 
                 // Enable scanner.
-                heldItem.transform.Find("ScanNode").gameObject.SetActive true
+                let scanNode = heldItem.transform.GetComponentInChildren<ScanNodeProperties> true
+                if isNotNull scanNode then
+                    scanNode.gameObject.SetActive true
 
                 // Enable the hover text.
                 let collider = heldItem.GetComponent<BoxCollider>()
                 if isNotNull collider then
                     collider.enabled <- true
+            }
+            maskedAnimator.HeldItem <- null
     )

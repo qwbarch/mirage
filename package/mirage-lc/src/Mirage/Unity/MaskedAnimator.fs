@@ -94,8 +94,8 @@ type MaskedAnimator() =
             &RoundManager.Instance.totalScrapValueInLevel += float32 scrapValue
 
         // Disable scanner text.
-        let scanNode = item.transform.Find "ScanNode"
-        if not <| Object.ReferenceEquals(scanNode, null) then
+        let scanNode = item.GetComponentInChildren<ScanNodeProperties>()
+        if isNotNull scanNode then
             scanNode.gameObject.SetActive false
 
         // Hide the hover text.
@@ -103,7 +103,6 @@ type MaskedAnimator() =
         if isNotNull collider then
             collider.enabled <- false
 
-        this.HeldItem.isHeld <- true
         this.HeldItem.isHeldByEnemy <- true
         this.HeldItem.grabbable <- false
         this.HeldItem.grabbableToEnemies <- false
