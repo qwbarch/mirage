@@ -1,5 +1,21 @@
 ## Changelog
 
+### 1.21.0
+
+- Renamed ``Masked item spawn chance`` to ``Chance to spawn with item`` and moved to a new file: ``Mirage.Items.cfg`` (you'll need to re-do this config option, sorry).
+    - Default value: 80
+    - This means that by default, there is a 80% chance for a masked enemy to spawn with a held item, and a 20% chance to hold nothing.
+- Added a new config option ``Chance to roll as store item``.
+    - Default vlaue: 50.
+    - This means that by default, there is a 50% chance for the held item to be a store item. Otherwise, it'll be a scrap item using the current round's scrap weights.
+- Added a section in ``Mirage.Items.cfg`` called ``Store Item Weights``.
+    - This section contains a weight option for every store item.
+    - By default, only walkie-talkie, shovel, pro-flashlight, stun grenade, extension ladder, and spray paint, are enabled.
+    - The higher the number relative to others, the higher the chance for that item to be used by a masked.
+- Added a section in ``Mirage.Items.cfg`` called ``Scrap Item Blacklist``.
+    - This section contains a true/false option for every scrap in the game.
+    - When a value is set to ``true``, masked enemies will never hold that item.
+
 ### 1.20.2
 
 - Fixed a compatibility issue with [LethalIntelligence](<https://thunderstore.io/c/lethal-company/p/VirusTLNR/LethalIntelligenceExperimental/>) causing Mirage to fail to load.

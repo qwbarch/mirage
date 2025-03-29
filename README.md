@@ -23,16 +23,21 @@ Mirage is a mod that gives any enemy the ability to mimic a player's voice (full
   - Note: Setting the spawn-rate to 25% basically guarantees a spawn per round.
 - Highly optimized for performance.
 
-## I have a question. How can I ask for help?
+## Frequently asked questions
+
+#### I found an item that looks bugged when held by masked. Can you fix it?
+
+No, but you can request to have it disabled by default to help provide a better out-of-the-box experience.  
+Please add the item name to the [defaultDisabledScrapItems](<https://github.com/qwbarch/mirage/blob/4874a964c570417f762ee511212f67d0abd2bed7/package/mirage-lc/src/Mirage/Domain/Config.fs#L28>) list (case sensitive) and then open a pull request.
+
+#### I have a question. How can I ask for help?
 
 If you have question, simply create a [new discussion](https://github.com/qwbarch/mirage/discussions) on GitHub.
 I'll respond as soon as I'm available.
 
-## I found a bug. Where can I report it?
+#### I found a bug. Where can I report it?
 
-For bugs, submit a [new issue](https://github.com/qwbarch/mirage/issues) on GitHub. Please mention the bug report is specifically for ``Lethal Company``.
-
-## Frequently asked questions
+For bugs, submit a [new issue](https://github.com/qwbarch/mirage/issues) on GitHub.
 
 #### Do I need Skinwalkers for this mod to work?
 

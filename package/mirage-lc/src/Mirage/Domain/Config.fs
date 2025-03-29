@@ -39,7 +39,7 @@ let mutable private receivedPackets = List<byte>()
 
 let private loadConfig configName = ConfigFile(Path.Combine(Paths.ConfigPath, $"Mirage.{configName}.cfg"), true)
 
-let [<Literal>] private StoreItemSection = "2. Store Item Whitelist (Enable to allow masked to hold these items)"
+let [<Literal>] private StoreItemSection = "2. Store Item Weights"
 let [<Literal>] private ScrapItemSection = "3. Scrap Item Blacklist (Enable to prevent masked from holding these items)"
 
 type LocalConfig(general: ConfigFile, enemies: ConfigFile, items: ConfigFile) =
@@ -219,14 +219,14 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile, items: ConfigFile) =
             <| ConfigDescription description
     
     member val MaskedItemSpawnChance =
-        let description = "Percent chance for a masked to spawn with an item. This is automatically disabled when LethalIntelligence is found to avoid conflicts."
+        let description = "Percent chance for a masked to spawn with an item. This is automatically disabled when LethalIntelligence to allow it to control held items instead."
         bindConfigureItem
             "Chance to spawn with item"
             80
             <| ConfigDescription(description, AcceptableValueRange(0, 100))
     
     member val StoreItemRollChance =
-        let description = "When a masked spawns with an item, this config is the percent chance for the item to be a store item. When it fails the roll, it becomes a scrap item instead."
+        let description = "When a masked spawns with an item, this config is the percent chance for the item to be a store item. When it fails the roll, it becomes a scrap item instead (using the current round's scrap weights)."
         bindConfigureItem
             "Chance to roll as store item"
             50
