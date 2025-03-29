@@ -85,10 +85,18 @@ type MaskedAnimator() =
     member this.HoldItem struct (item, scrapValue) =
         this.HeldItem <- item
         this.HeldItem.SetScrapValue scrapValue
-        &RoundManager.Instance.totalScrapValueInLevel += float32 scrapValue
+
+        // Only increase total scrap value in level if scraps are droppable.
+        let isScrap = item.itemProperties.isScrap
+        if isScrap && getConfig().maskedDropScrapItemOnDeath
+            || not isScrap && getConfig().maskedDropStoreItemOnDeath
+        then
+            &RoundManager.Instance.totalScrapValueInLevel += float32 scrapValue
 
         // Disable scanner text.
-        item.transform.Find("ScanNode").gameObject.SetActive false
+        let scanNode = item.transform.Find "ScanNode"
+        if not <| Object.ReferenceEquals(scanNode, null) then
+            scanNode.gameObject.SetActive false
 
         // Hide the hover text.
         let collider = item.GetComponent<BoxCollider>()

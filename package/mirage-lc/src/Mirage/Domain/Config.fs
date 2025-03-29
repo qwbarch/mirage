@@ -232,10 +232,17 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile, items: ConfigFile) =
             50
             <| ConfigDescription(description, AcceptableValueRange(0, 100))
     
-    member val MaskedDropItemOnDeath =
-        let description = "Whether a masked enemy should drop its held item on death or not."
+    member val MaskedDropStoreItemOnDeath =
+        let description = "Whether a masked enemy should drop its held item on death or not (if it's a store item)."
         bindConfigureItem
-            "Drop held item on death"
+            "Drop held store item on death"
+            false
+            <| ConfigDescription description
+    
+    member val MaskedDropScrapItemOnDeath =
+        let description = "Whether a masked enemy should drop its held item on death or not (if it's a scrap item)."
+        bindConfigureItem
+            "Drop held scrap item on death"
             true
             <| ConfigDescription description
 
@@ -275,9 +282,10 @@ type SyncedConfig =
         minimumDelayNonMasked: int
         maximumDelayNonMasked: int
 
-        maskedDropItemOnDeath: bool
         maskedItemSpawnChance: int
         storeItemRollChance: int
+        maskedDropStoreItemOnDeath: bool
+        maskedDropScrapItemOnDeath: bool
 
         enableMimicVoiceWhileAlive: bool
         enableRecordVoiceWhileDead: bool
@@ -329,9 +337,10 @@ let private toSyncedConfig () =
         minimumDelayNonMasked = localConfig.MinimumDelayNonMasked.Value
         maximumDelayNonMasked = localConfig.MaximumDelayNonMasked.Value
 
-        maskedDropItemOnDeath = localConfig.MaskedDropItemOnDeath.Value
         maskedItemSpawnChance = localConfig.MaskedItemSpawnChance.Value
         storeItemRollChance = localConfig.StoreItemRollChance.Value
+        maskedDropStoreItemOnDeath = localConfig.MaskedDropStoreItemOnDeath.Value
+        maskedDropScrapItemOnDeath = localConfig.MaskedDropScrapItemOnDeath.Value
 
         enableMimicVoiceWhileAlive = localConfig.EnableMimicVoiceWhileAlive.Value
         enableRecordVoiceWhileDead = localConfig.EnableRecordVoiceWhileDead.Value
