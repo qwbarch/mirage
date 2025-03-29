@@ -219,18 +219,25 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile, items: ConfigFile) =
             <| ConfigDescription description
     
     member val MaskedItemSpawnChance =
-        let description = "Percent chance for a masked to spawn with an item. This is automatically disabled when LethalIntelligence to allow it to control held items instead."
+        let description = "Percent chance for a masked enemy to spawn with an item. This is automatically disabled when LethalIntelligence to allow it to control held items instead."
         bindConfigureItem
             "Chance to spawn with item"
             80
             <| ConfigDescription(description, AcceptableValueRange(0, 100))
     
     member val StoreItemRollChance =
-        let description = "When a masked spawns with an item, this config is the percent chance for the item to be a store item. When it fails the roll, it becomes a scrap item instead (using the current round's scrap weights)."
+        let description = "When a masked enemy spawns with an item, this config is the percent chance for the item to be a store item. When it fails the roll, it becomes a scrap item instead (using the current round's scrap weights)."
         bindConfigureItem
             "Chance to roll as store item"
             50
             <| ConfigDescription(description, AcceptableValueRange(0, 100))
+    
+    member val MaskedDropItemOnDeath =
+        let description = "Whether a masked enemy should drop its held item on death or not."
+        bindConfigureItem
+            "Drop held item on death"
+            true
+            <| ConfigDescription description
 
 let internal localConfig =
     LocalConfig(
@@ -268,6 +275,7 @@ type SyncedConfig =
         minimumDelayNonMasked: int
         maximumDelayNonMasked: int
 
+        maskedDropItemOnDeath: bool
         maskedItemSpawnChance: int
         storeItemRollChance: int
 
@@ -321,6 +329,7 @@ let private toSyncedConfig () =
         minimumDelayNonMasked = localConfig.MinimumDelayNonMasked.Value
         maximumDelayNonMasked = localConfig.MaximumDelayNonMasked.Value
 
+        maskedDropItemOnDeath = localConfig.MaskedDropItemOnDeath.Value
         maskedItemSpawnChance = localConfig.MaskedItemSpawnChance.Value
         storeItemRollChance = localConfig.StoreItemRollChance.Value
 

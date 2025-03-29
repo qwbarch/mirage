@@ -110,6 +110,27 @@ let hookMaskedEnemy maskedAnimationController =
         orig.Invoke self
         if self.IsHost then
             let animator = self.GetComponent<MaskedAnimator>()
-            if isNotNull animator.HeldItem then
+            if isNotNull animator.HeldItem && not animator.HeldItem.scrapPersistedThroughRounds then
                 animator.HeldItem.GetComponent<NetworkObject>().Despawn()
+    )
+
+    On.MaskedPlayerEnemy.add_KillEnemy(fun orig self destroy ->
+        orig.Invoke(self, destroy)
+        let maskedAnimator = self.GetComponent<MaskedAnimator>()
+        let heldItem = maskedAnimator.HeldItem
+        if isNotNull heldItem then
+            heldItem.isHeld <- false
+            heldItem.isHeldByEnemy <- false
+            heldItem.grabbable <- true
+            heldItem.grabbableToEnemies <- true
+            heldItem.hasHitGround <- true
+            heldItem.EnablePhysics true
+
+            // Enable scanner.
+            heldItem.transform.Find("ScanNode").gameObject.SetActive true
+
+            // Enable the hover text.
+            let collider = heldItem.GetComponent<BoxCollider>()
+            if isNotNull collider then
+                collider.enabled <- true
     )
