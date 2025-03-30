@@ -90,9 +90,6 @@ type MaskedAnimator() =
             if this.IsHost && random.Next(0, 100) < getConfig().maskedItemSpawnChance then
                 this.HoldItem <| spawnItem()
     
-    override this.OnNetworkSpawn() =
-        base.OnNetworkSpawn()
-
     member this.HoldItem struct (item, scrapValue) =
         this.HeldItem <- item
         this.HeldItem.SetScrapValue scrapValue
@@ -115,20 +112,33 @@ type MaskedAnimator() =
         this.HeldItem.parentObject <- itemHolder.transform
 
         if this.IsHost then
+            // Roll for whether to drop item on death or not.
             let isScrap = this.HeldItem.itemProperties.isScrap
             dropItemOnDeath <-
-                isScrap && Random().Next(0, 100) < getConfig().maskedDropScrapItemOnDeath
-                    || not isScrap && Random().Next(0, 100) < getConfig().maskedDropStoreItemOnDeath
+                isScrap && random.Next(0, 100) < getConfig().maskedDropScrapItemOnDeath
+                    || not isScrap && random.Next(0, 100) < getConfig().maskedDropStoreItemOnDeath
+            
+            // Roll for whether to emit light or not (if it's a flashlight).
+            let emitFlashlight = random.Next(0, 100) < getConfig().emitFlashlightChance
+            if emitFlashlight then
+                this.EmitFlashlight()
 
-            this.HoldItemClientRpc(item.NetworkObject, scrapValue, dropItemOnDeath)
+            this.HoldItemClientRpc(item.NetworkObject, scrapValue, dropItemOnDeath, emitFlashlight)
+    
+    member private this.EmitFlashlight() =
+        if this.HeldItem :? FlashlightItem then
+            for light in this.HeldItem.GetComponentsInChildren<Light>() do
+                light.enabled <- true
     
     [<ClientRpc>]
-    member this.HoldItemClientRpc(reference: NetworkObjectReference, scrapValue, dropItemOnDeath') =
+    member this.HoldItemClientRpc(reference: NetworkObjectReference, scrapValue, dropItemOnDeath', emitFlashlight) =
         if not this.IsHost then
             let mutable item = null
             if reference.TryGet &item then
                 this.HoldItem <| struct (item.GetComponent<GrabbableObject>(), scrapValue)
                 dropItemOnDeath <- dropItemOnDeath'
+                if emitFlashlight then
+                    this.EmitFlashlight()
 
     member this.FixedUpdate() =
         let reset name = creatureAnimator.ResetTrigger("Hold" + name)
@@ -167,8 +177,10 @@ type MaskedAnimator() =
                 heldItem.hasHitGround <- true
                 heldItem.EnablePhysics true
 
-                heldItem.grabbable <- true
-                heldItem.grabbableToEnemies <- true
+                // Disable the flashlight light.
+                if heldItem :? FlashlightItem then
+                    for light in heldItem.GetComponentsInChildren<Light>() do
+                        light.enabled <- false
 
                 // Enable scanner.
                 let scanNode = heldItem.transform.GetComponentInChildren<ScanNodeProperties> true
@@ -179,6 +191,9 @@ type MaskedAnimator() =
                 let collider = heldItem.GetComponent<BoxCollider>()
                 if isNotNull collider then
                     collider.enabled <- true
+
+                heldItem.grabbable <- true
+                heldItem.grabbableToEnemies <- true
 
                 this.HeldItem <- null
             }

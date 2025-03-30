@@ -249,6 +249,13 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile, items: ConfigFile) =
             100
             <| ConfigDescription(description, AcceptableValueRange(0, 100))
     
+    member val EmitFlashlightChance =
+        let description = "Percent chance for flashlights to emit light while being held by a masked enemy."
+        bindConfigureItem
+            "Chance for flashlights to emit light"
+            50
+            <| ConfigDescription(description, AcceptableValueRange(0, 100))
+    
     member val ScrapValueMultiplier =
         let description = "Value multiplier to use on scrap items that drop from masked enemies."
         bindConfigureItem 
@@ -296,6 +303,7 @@ type SyncedConfig =
         storeItemRollChance: int
         maskedDropStoreItemOnDeath: int
         maskedDropScrapItemOnDeath: int
+        emitFlashlightChance: int
         scrapValueMultiplier: float
 
         enableMimicVoiceWhileAlive: bool
@@ -352,6 +360,7 @@ let private toSyncedConfig () =
         storeItemRollChance = localConfig.StoreItemRollChance.Value
         maskedDropStoreItemOnDeath = localConfig.MaskedDropStoreItemOnDeath.Value
         maskedDropScrapItemOnDeath = localConfig.MaskedDropScrapItemOnDeath.Value
+        emitFlashlightChance = localConfig.EmitFlashlightChance.Value
         scrapValueMultiplier = localConfig.ScrapValueMultiplier.Value
 
         enableMimicVoiceWhileAlive = localConfig.EnableMimicVoiceWhileAlive.Value
