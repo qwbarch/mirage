@@ -7,6 +7,7 @@ open Unity.Netcode
 open System
 open System.Collections.Generic
 open System.Threading.Tasks
+open Mirage.Prelude
 open Mirage.Domain.Config
 open Mirage.Domain.Logger
 open Mirage.Domain.Null
@@ -109,32 +110,5 @@ let hookMaskedEnemy maskedAnimationController =
 
     On.MaskedPlayerEnemy.add_KillEnemy(fun orig self destroy ->
         orig.Invoke(self, destroy)
-        let maskedAnimator = self.GetComponent<MaskedAnimator>()
-        let heldItem = maskedAnimator.HeldItem
-        let isScrap = heldItem.itemProperties.isScrap
-        let dropItem =
-            isScrap && getConfig().maskedDropScrapItemOnDeath
-                || not isScrap && getConfig().maskedDropStoreItemOnDeath
-        if isNotNull heldItem && dropItem then
-            ignore <| valueTask {
-                do! Task.Delay 900 // Wait for the masked enemy to fall to the ground.
-
-                heldItem.isHeldByEnemy <- false
-                heldItem.hasHitGround <- true
-                heldItem.EnablePhysics true
-
-                heldItem.grabbable <- true
-                heldItem.grabbableToEnemies <- true
-
-                // Enable scanner.
-                let scanNode = heldItem.transform.GetComponentInChildren<ScanNodeProperties> true
-                if isNotNull scanNode then
-                    scanNode.gameObject.SetActive true
-
-                // Enable the hover text.
-                let collider = heldItem.GetComponent<BoxCollider>()
-                if isNotNull collider then
-                    collider.enabled <- true
-            }
-            maskedAnimator.HeldItem <- null
+        self.GetComponent<MaskedAnimator>().OnDeath()
     )

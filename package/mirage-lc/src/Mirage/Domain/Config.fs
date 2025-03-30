@@ -76,7 +76,7 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile, items: ConfigFile) =
                 stripConfigKey enemyAI.enemyType.enemyName,
                 enemyAI :? MaskedPlayerEnemy
             )
-        with | _ -> logError $"Failed to register an enemy to the config: {enemyAI.GetType().Name}"
+        with | _ -> logWarning $"Failed to register an enemy to the config: {enemyAI.GetType().Name}"
     
     member _.RegisterStoreItem(item: Item) =
         try
@@ -85,7 +85,7 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile, items: ConfigFile) =
                 stripConfigKey item.itemName,
                 defaultStoreItemWeight item.itemName 
             )
-        with | _ -> logError $"Failed to register a store item to the config: {item.itemName}"
+        with | _ -> logWarning $"Failed to register a store item to the config: {item.itemName}"
     
     member _.RegisterScrapItem(item: Item) =
         try
@@ -94,7 +94,7 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile, items: ConfigFile) =
                 stripConfigKey item.itemName,
                 Set.contains item.itemName defaultDisabledScrapItems
             )
-        with | _ -> logError $"Failed to register a scrap item to the config: {item.itemName}"
+        with | _ -> logWarning $"Failed to register a scrap item to the config: {item.itemName}"
 
     member val MaskedMimicChance =
         let description = "Chance for masked enemy to start mimicking a player's suit, cosmetics, and voice."
@@ -236,18 +236,18 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile, items: ConfigFile) =
             <| ConfigDescription(description, AcceptableValueRange(0, 100))
     
     member val MaskedDropStoreItemOnDeath =
-        let description = "Whether a masked enemy should drop its held item on death or not (if it's a store item)."
+        let description = "Percent chance for a masked enemy to drop its held item on death (if it's a store item)."
         bindConfigureItem
-            "Drop held store item on death"
-            false
-            <| ConfigDescription description
+            "Chance to drop held store item on death"
+            0
+            <| ConfigDescription(description, AcceptableValueRange(0, 100))
     
     member val MaskedDropScrapItemOnDeath =
-        let description = "Whether a masked enemy should drop its held item on death or not (if it's a scrap item)."
+        let description = "Percent chance for a masked enemy to drop its held item on death (if it's a scrap item)."
         bindConfigureItem
-            "Drop held scrap item on death"
-            true
-            <| ConfigDescription description
+            "Chance to drop held scrap item on death"
+            100
+            <| ConfigDescription(description, AcceptableValueRange(0, 100))
     
     member val ScrapValueMultiplier =
         let description = "Value multiplier to use on scrap items that drop from masked enemies."
@@ -294,8 +294,8 @@ type SyncedConfig =
 
         maskedItemSpawnChance: int
         storeItemRollChance: int
-        maskedDropStoreItemOnDeath: bool
-        maskedDropScrapItemOnDeath: bool
+        maskedDropStoreItemOnDeath: int
+        maskedDropScrapItemOnDeath: int
         scrapValueMultiplier: float
 
         enableMimicVoiceWhileAlive: bool

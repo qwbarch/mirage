@@ -1,6 +1,8 @@
 module Mirage.Unity.MaskedAnimator
 
+open IcedTasks
 open System
+open System.Threading.Tasks
 open UnityEngine
 open Unity.Netcode
 open Mirage.Prelude
@@ -20,6 +22,7 @@ type MaskedAnimator() =
     let mutable itemHolder = GameObject "ItemHolder"
     let mutable upperBodyAnimationsWeight = 0.0f
     let mutable layerIndex = -1
+    let mutable dropItemOnDeath = false
 
     let rec chooseItem () =
         let roll = random.NextDouble() * 100.0
@@ -58,7 +61,9 @@ type MaskedAnimator() =
                     * getConfig().scrapValueMultiplier
         )
     
-    member val HeldItem = null with get, set
+    member val HeldItem: GrabbableObject = null with get, set
+
+    member _.DropItemOnDeath with get() = dropItemOnDeath
 
     member this.Start() =
         if isLethalIntelligenceLoaded() then
@@ -84,17 +89,13 @@ type MaskedAnimator() =
 
             if this.IsHost && random.Next(0, 100) < getConfig().maskedItemSpawnChance then
                 this.HoldItem <| spawnItem()
+    
+    override this.OnNetworkSpawn() =
+        base.OnNetworkSpawn()
 
     member this.HoldItem struct (item, scrapValue) =
         this.HeldItem <- item
         this.HeldItem.SetScrapValue scrapValue
-
-        // Only increase total scrap value in level if scraps are droppable.
-        let isScrap = item.itemProperties.isScrap
-        if isScrap && getConfig().maskedDropScrapItemOnDeath
-            || not isScrap && getConfig().maskedDropStoreItemOnDeath
-        then
-            &RoundManager.Instance.totalScrapValueInLevel += float32 scrapValue
 
         // Disable scanner text.
         let scanNode = item.GetComponentInChildren<ScanNodeProperties>()
@@ -114,14 +115,20 @@ type MaskedAnimator() =
         this.HeldItem.parentObject <- itemHolder.transform
 
         if this.IsHost then
-            this.HoldItemClientRpc(item.NetworkObject, scrapValue)
+            let isScrap = this.HeldItem.itemProperties.isScrap
+            dropItemOnDeath <-
+                isScrap && Random().Next(0, 100) < getConfig().maskedDropScrapItemOnDeath
+                    || not isScrap && Random().Next(0, 100) < getConfig().maskedDropStoreItemOnDeath
+
+            this.HoldItemClientRpc(item.NetworkObject, scrapValue, dropItemOnDeath)
     
     [<ClientRpc>]
-    member this.HoldItemClientRpc(reference: NetworkObjectReference, scrapValue) =
+    member this.HoldItemClientRpc(reference: NetworkObjectReference, scrapValue, dropItemOnDeath') =
         if not this.IsHost then
             let mutable item = null
             if reference.TryGet &item then
                 this.HoldItem <| struct (item.GetComponent<GrabbableObject>(), scrapValue)
+                dropItemOnDeath <- dropItemOnDeath'
 
     member this.FixedUpdate() =
         let reset name = creatureAnimator.ResetTrigger("Hold" + name)
@@ -147,3 +154,31 @@ type MaskedAnimator() =
                     "Shotgun"
                 else
                     "OneItem"
+    
+    member this.OnDeath() =
+        let heldItem = this.HeldItem
+        if isNotNull heldItem && this.DropItemOnDeath then
+            ignore <| valueTask {
+                do! Task.Delay 900 // Wait for the masked enemy to fall to the ground.
+
+                &RoundManager.Instance.totalScrapValueInLevel += float32 heldItem.scrapValue
+
+                heldItem.isHeldByEnemy <- false
+                heldItem.hasHitGround <- true
+                heldItem.EnablePhysics true
+
+                heldItem.grabbable <- true
+                heldItem.grabbableToEnemies <- true
+
+                // Enable scanner.
+                let scanNode = heldItem.transform.GetComponentInChildren<ScanNodeProperties> true
+                if isNotNull scanNode then
+                    scanNode.gameObject.SetActive true
+
+                // Enable the hover text.
+                let collider = heldItem.GetComponent<BoxCollider>()
+                if isNotNull collider then
+                    collider.enabled <- true
+
+                this.HeldItem <- null
+            }
