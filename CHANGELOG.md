@@ -1,5 +1,12 @@
 ## Changelog
 
+### 1.23.0
+
+- Added a new config option ``Chance for flashlights to emit light``. Default value: ``50``.
+- Changed ``Drop store item on death`` to a new config option that takes a percentage instead.
+- Changed ``Drop scrap item on death`` to a new config option that takes a percentage instead.
+- Fixed certain enemies and items failing to register to the config.
+
 ### 1.22.0
 
 - Masked enemies holding items can now drop their items.
