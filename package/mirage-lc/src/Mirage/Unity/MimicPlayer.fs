@@ -58,7 +58,7 @@ type MimicPlayer() =
     member this.StartMimicking() =
         if this.IsHost then
             mimicId <- Guid.NewGuid()
-            let isEnemyEnabled = Set.contains enemyAI.enemyType.enemyName <| getConfig().enemies
+            let isEnemyEnabled = Set.contains (stripConfigKey enemyAI.enemyType.enemyName) (getConfig().enemies)
             let mimickingPlayer =
                 match enemyAI with
                     | :? MaskedPlayerEnemy as maskedEnemy when
@@ -114,7 +114,7 @@ type MimicPlayer() =
             // Set the mimicking player after the haunting player changes.
             // In singleplayer, the haunting player will always be the local player.
             // In multiplayer, the haunting player will always be the non-local player.
-            if enemyAI :? DressGirlAI && Set.contains enemyAI.enemyType.enemyName (getConfig().enemies) then
+            if enemyAI :? DressGirlAI && Set.contains (stripConfigKey enemyAI.enemyType.enemyName) (getConfig().enemies) then
                 let dressGirlAI = enemyAI :?> DressGirlAI
                 let round = StartOfRound.Instance
 

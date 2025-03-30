@@ -30,6 +30,9 @@ let defaultDisabledScrapItems =
         [   "Apparatus"
         ]
 
+/// Strip any non-supported characters by BepInEx as a config key.
+let stripConfigKey = String.replace "'" ""
+
 /// Max bytes of a packet. If the config payload is larger than this, it will be split into multiple packets.
 let [<Literal>] MaxPacket = 1024
 
@@ -70,7 +73,7 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile, items: ConfigFile) =
         try
             ignore <| enemies.Bind(
                 "Enemies",
-                enemyAI.enemyType.enemyName,
+                stripConfigKey enemyAI.enemyType.enemyName,
                 enemyAI :? MaskedPlayerEnemy
             )
         with | _ -> logError $"Failed to register an enemy to the config: {enemyAI.GetType().Name}"
@@ -79,7 +82,7 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile, items: ConfigFile) =
         try
             ignore <| items.Bind(
                 StoreItemSection,
-                item.itemName,
+                stripConfigKey item.itemName,
                 defaultStoreItemWeight item.itemName 
             )
         with | _ -> logError $"Failed to register a store item to the config: {item.itemName}"
@@ -88,10 +91,10 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile, items: ConfigFile) =
         try
             ignore <| items.Bind(
                 ScrapItemSection,
-                item.itemName,
+                stripConfigKey item.itemName,
                 Set.contains item.itemName defaultDisabledScrapItems
             )
-        with | _ -> logError $"Failed to register a store item to the config: {item.itemName}"
+        with | _ -> logError $"Failed to register a scrap item to the config: {item.itemName}"
 
     member val MaskedMimicChance =
         let description = "Chance for masked enemy to start mimicking a player's suit, cosmetics, and voice."

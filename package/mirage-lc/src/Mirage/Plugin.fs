@@ -90,4 +90,5 @@ type Plugin() as self =
             }
         } :?> IEnumerator
 
-    member _.Awake() = hookPreInitScene main
+    member _.Awake() =
+        hookPreInitScene main

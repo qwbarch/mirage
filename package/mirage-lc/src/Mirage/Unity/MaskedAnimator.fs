@@ -30,14 +30,14 @@ type MaskedAnimator() =
                 if isNull itemName then
                     &cumulativePercent += float weight.Value / float (getConfig().totalItemWeights) * 100.0
                     if roll < cumulativePercent then
-                        itemName <- weight.Key
+                        itemName <- stripConfigKey weight.Key
             Map.find itemName <| getItems()
         else
             let mutable item = null
             for scrap in StartOfRound.Instance.currentLevel.spawnableScrap do
                 if isNull item then
                     &cumulativePercent += float scrap.rarity / float (getTotalScrapWeight()) * 100.0
-                    if not (Set.contains scrap.spawnableItem.itemName <| getConfig().disabledScrapItems) && roll < cumulativePercent then
+                    if not (Set.contains (stripConfigKey scrap.spawnableItem.itemName) <| getConfig().disabledScrapItems) && roll < cumulativePercent then
                         item <- scrap.spawnableItem
             item
 
