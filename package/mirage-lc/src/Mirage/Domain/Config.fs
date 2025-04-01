@@ -222,7 +222,7 @@ type LocalConfig(general: ConfigFile, enemies: ConfigFile, items: ConfigFile) =
             <| ConfigDescription description
     
     member val MaskedItemSpawnChance =
-        let description = "Percent chance for a masked enemy to spawn with an item. This is automatically disabled when LethalIntelligence to allow it to control held items instead."
+        let description = "Percent chance for a masked enemy to spawn with an item. This is automatically disabled when LethalIntelligence is installed to allow it to control held items instead."
         bindConfigureItem
             "Chance to spawn with item"
             80
