@@ -1,13 +1,10 @@
 module Mirage.Hook.MaskedPlayerEnemy
 
-open IcedTasks
 open FSharpPlus
 open UnityEngine
 open Unity.Netcode
 open System
 open System.Collections.Generic
-open System.Threading.Tasks
-open Mirage.Prelude
 open Mirage.Domain.Config
 open Mirage.Domain.Logger
 open Mirage.Domain.Null

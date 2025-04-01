@@ -26,7 +26,7 @@ type MaskedAnimator() as self =
     let mutable dropItemOnDeath = false
 
     let itemHolderPositionAndRotation = function
-        | "HoldKnife" | "Grab" | "HoldPatcherTool" ->
+        | "HoldKnife" | "HoldPatcherTool" | "Grab" ->
             struct(
                 Vector3(0.002f, 0.056f, -0.046f),
                 Quaternion.Euler(352.996f, 0f, 356.89f)
