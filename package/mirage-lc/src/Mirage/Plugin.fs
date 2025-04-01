@@ -20,6 +20,7 @@ open Mirage.Domain.Directory
 open Mirage.Domain.Netcode
 open Mirage.Domain.Setting
 open Mirage.Domain.Audio.Recording
+open Mirage.Domain.Null
 open Mirage.Hook.AudioSpatializer
 open Mirage.Hook.Prefab
 open Mirage.Hook.Config
@@ -38,27 +39,20 @@ open Mirage.Hook.Item
 type Plugin() as self =
     inherit BaseUnityPlugin()
 
-    let [<Literal>] bundleName = "mapdotanimpack"
+    let [<Literal>] bundleName = "mirage.unity3d"
 
     let main =
         seq {
             let assembly = Assembly.GetExecutingAssembly()
-            let mutable assetBundle = null
 
-            if isLethalIntelligenceLoaded() then
-                assetBundle <-
-                    AssetBundle.GetAllLoadedAssetBundles()
-                        |> List.ofSeq
-                        |> List.find (fun bundle -> bundle.name = bundleName)
-            else
-                let bundleRequest = AssetBundle.LoadFromFileAsync(Path.Combine(Path.GetDirectoryName self.Info.Location, bundleName))
-                yield bundleRequest :> obj
-                assetBundle <- bundleRequest.assetBundle
+            let bundleRequest = AssetBundle.LoadFromFileAsync(Path.Combine(Path.GetDirectoryName self.Info.Location, bundleName))
+            yield bundleRequest :> obj
+            let assetBundle = bundleRequest.assetBundle
 
             if isNull assetBundle then
                 raise <| InvalidProgramException $"Failed to load Mirage due to missing asset bundle: {bundleName}."
 
-            let assetRequest = assetBundle.LoadAssetAsync<RuntimeAnimatorController> "MaskedMetarig.controller"
+            let assetRequest = assetBundle.LoadAssetAsync<RuntimeAnimatorController> "metarig_0.controller"
             yield assetRequest :> obj
             let maskedAnimatorController = assetRequest.asset :?> RuntimeAnimatorController
 

@@ -10,19 +10,59 @@ open Mirage.Domain.Null
 open Mirage.Domain.Config
 open Mirage.Compatibility
 open Mirage.Hook.Item
+open Mirage.Domain.Logger
 
 /// Full credits goes to Piggy and VirusTLNR:
 /// https://github.com/VirusTLNR/LethalIntelligence
 [<AllowNullLiteral>]
-type MaskedAnimator() =
+type MaskedAnimator() as self =
     inherit NetworkBehaviour()
 
     let random = Random()
     let mutable creatureAnimator = null
-    let mutable itemHolder = GameObject "ItemHolder"
+    let mutable itemHolder = GameObject "LocalItemHolder"
     let mutable upperBodyAnimationsWeight = 0.0f
     let mutable layerIndex = -1
     let mutable dropItemOnDeath = false
+
+    let itemHolderPositionAndRotation = function
+        | "HoldKnife" | "Grab" | "HoldPatcherTool" ->
+            struct(
+                Vector3(0.002f, 0.056f, -0.046f),
+                Quaternion.Euler(352.996f, 0f, 356.89f)
+            )
+        | "HoldLung" ->
+            struct (
+                Vector3(-0.1799f, -0.1014f, -0.5119f),
+                Quaternion.Euler(314.149f, 13.06f, 305.192f)
+            )
+        | "HoldShotgun" ->
+            struct (
+                Vector3(0.0402f, -0.048f, 0.0104f),
+                Quaternion.Euler(340.836f, 22.626f, 2.104f)
+            )
+        | "HoldJetpack" ->
+            struct (
+                Vector3(-0.107f, -0.078f, -0.232f),
+                Quaternion.Euler(305.184f, 210.613f, 84.047f)
+            )
+        | "HoldForward" ->
+            struct (
+                Vector3(-0.1453f, -0.0898f, -0.4686f),
+                Quaternion.Euler(314.149f, 13.06f, 305.192f)
+            )
+        | "GrabClipboard" ->
+            struct (
+                Vector3(0.007f, 0.138f, -0.066f),
+                Quaternion.Euler(15.577f, 358.759f, 356.795f)
+            )
+        | _ as unknownAnimation ->
+            logWarning $"Unsupported held item animation. Item: {self.HeldItem.itemProperties.itemName}. Animation: {unknownAnimation}"
+            // Empty-handed default position/rotation.
+            struct (
+                Vector3(0.002f, 0.0563f, -0.0456f),
+                Quaternion.Euler(359.9778f, -0.0006f, 359.9901f)
+            )
 
     let rec chooseItem () =
         let roll = random.NextDouble() * 100.0
@@ -70,22 +110,20 @@ type MaskedAnimator() =
             this.enabled <- false
         else
             creatureAnimator <- this.transform.GetChild(0).GetChild(3).GetComponent<Animator>()
-            layerIndex <- creatureAnimator.GetLayerIndex "Item"
+            layerIndex <- creatureAnimator.GetLayerIndex "Held Item"
 
             itemHolder.transform.parent <-
                 this.transform
-                    .GetChild(0)
-                    .GetChild(3)
-                    .GetChild(0)
-                    .GetChild(0)
-                    .GetChild(0)
-                    .GetChild(0)
-                    .GetChild(1)
-                    .GetChild(0)
-                    .GetChild(0)
-                    .GetChild(0)
-            itemHolder.transform.localPosition <- Vector3(-0.002f, 0.036f, -0.042f);
-            itemHolder.transform.localRotation <- Quaternion.Euler(-3.616f, -2.302f, 0.145f)
+                    .GetChild(0) // ScavengerModel
+                    .GetChild(3) // metarig
+                    .GetChild(0) // spine
+                    .GetChild(0) // spine.001
+                    .GetChild(0) // spine.002
+                    .GetChild(0) // spine.003
+                    .GetChild(1) // shoulder.R
+                    .GetChild(0) // arm.R_upper
+                    .GetChild(0) // arm.R_lower
+                    .GetChild(0) // hand.R
 
             if this.IsHost && random.Next(0, 100) < getConfig().maskedItemSpawnChance then
                 this.HoldItem <| spawnItem()
@@ -104,6 +142,18 @@ type MaskedAnimator() =
         if isNotNull collider then
             collider.enabled <- false
 
+        // Set the held animation.
+        let animation =
+            if String.IsNullOrEmpty this.HeldItem.itemProperties.grabAnim then
+                "Grab"
+            else
+                this.HeldItem.itemProperties.grabAnim
+        creatureAnimator.SetBool(animation, true)
+
+        let struct (localPosition, localRotation) = itemHolderPositionAndRotation animation
+        itemHolder.transform.localPosition <- localPosition
+        itemHolder.transform.localRotation <- localRotation
+    
         this.HeldItem.isHeldByEnemy <- true
         this.HeldItem.grabbable <- false
         this.HeldItem.grabbableToEnemies <- false
@@ -141,29 +191,9 @@ type MaskedAnimator() =
                     this.EmitFlashlight()
 
     member this.FixedUpdate() =
-        let reset name = creatureAnimator.ResetTrigger("Hold" + name)
-        let trigger name =
-            reset "Shotgun"
-            reset "Flash"
-            reset "Lung"
-            reset "OneItem"
-            creatureAnimator.SetTrigger("Hold" + name)
-
         if isNotNull this.HeldItem then
             upperBodyAnimationsWeight <- Mathf.Lerp(upperBodyAnimationsWeight, 0.9f, 0.5f)
             creatureAnimator.SetLayerWeight(layerIndex, upperBodyAnimationsWeight)
-
-            trigger <|
-                if this.HeldItem.itemProperties.twoHandedAnimation then
-                    "Lung"
-                else if this.HeldItem :? FlashlightItem then
-                    "Flash"
-                else if this.HeldItem :? Shovel then
-                    "Lung"
-                else if this.HeldItem :? ShotgunItem then
-                    "Shotgun"
-                else
-                    "OneItem"
     
     member this.OnDeath() =
         let heldItem = this.HeldItem
