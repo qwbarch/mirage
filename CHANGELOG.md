@@ -1,5 +1,13 @@
 ## Changelog
 
+### 1.23.1
+
+- Fixed the broken held item positions (e.g. the engine item was too low).
+
+Huge thanks to [XuXiaolan](<https://thunderstore.io/c/lethal-company/p/XuXiaolan/>) and [VirusTLNR](<https://thunderstore.io/c/lethal-company/p/VirusTLNR/>) for teaching me how to use the Unity editor to grab and extract the held item animations myself (I'm a complete noob at Unity). This update would not have been possible without their help.
+
+Check out [XuXiaolan](<https://thunderstore.io/c/lethal-company/p/XuXiaolan/>)'s [CodeRebirth 2](<https://thunderstore.io/c/lethal-company/p/XuXiaolan/CodeRebirth_2/>) and [VirusTLNR](<https://thunderstore.io/c/lethal-company/p/VirusTLNR/>)'s [LethalIntelligence](<https://thunderstore.io/c/lethal-company/p/VirusTLNR/LethalIntelligenceExperimental/>)!
+
 ### 1.23.0
 
 - Added a new config option ``Chance for flashlights to emit light``. Default value: ``50``.

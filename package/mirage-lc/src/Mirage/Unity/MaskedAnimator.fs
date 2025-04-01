@@ -19,7 +19,7 @@ type MaskedAnimator() as self =
     inherit NetworkBehaviour()
 
     let random = Random()
-    let mutable creatureAnimator = null
+    let mutable animator = null
     let mutable itemHolder = GameObject "LocalItemHolder"
     let mutable upperBodyAnimationsWeight = 0.0f
     let mutable layerIndex = -1
@@ -109,8 +109,8 @@ type MaskedAnimator() as self =
         if isLethalIntelligenceLoaded() then
             this.enabled <- false
         else
-            creatureAnimator <- this.transform.GetChild(0).GetChild(3).GetComponent<Animator>()
-            layerIndex <- creatureAnimator.GetLayerIndex "Held Item"
+            animator <- this.transform.GetChild(0).GetChild(3).GetComponent<Animator>()
+            layerIndex <- animator.GetLayerIndex "Held Item"
 
             itemHolder.transform.parent <-
                 this.transform
@@ -148,7 +148,7 @@ type MaskedAnimator() as self =
                 "Grab"
             else
                 this.HeldItem.itemProperties.grabAnim
-        creatureAnimator.SetBool(animation, true)
+        animator.SetBool(animation, true)
 
         let struct (localPosition, localRotation) = itemHolderPositionAndRotation animation
         itemHolder.transform.localPosition <- localPosition
@@ -193,7 +193,7 @@ type MaskedAnimator() as self =
     member this.FixedUpdate() =
         if isNotNull this.HeldItem then
             upperBodyAnimationsWeight <- Mathf.Lerp(upperBodyAnimationsWeight, 0.9f, 0.5f)
-            creatureAnimator.SetLayerWeight(layerIndex, upperBodyAnimationsWeight)
+            animator.SetLayerWeight(layerIndex, upperBodyAnimationsWeight)
     
     member this.OnDeath() =
         let heldItem = this.HeldItem
