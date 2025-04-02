@@ -1,5 +1,12 @@
 ## Changelog
 
+### 1.24.0
+
+- Fixed held items not showing for non-host clients
+- Fixed a ``NullReferenceException`` being thrown with ``PlayerAnimationEvent`` thanks to [XuXiaolan](<https://thunderstore.io/c/lethal-company/p/XuXiaolan/>)
+
+Thanks to [a glitched npc](<https://www.twitch.tv/a_glitched_npc>) and [WinterMantis](<https://thunderstore.io/c/lethal-company/p/WinterMantis/>) for helping me test!
+
 ### 1.23.1
 
 - Fixed the broken held item positions (e.g. the engine item was too low).
