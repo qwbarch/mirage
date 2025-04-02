@@ -39,7 +39,7 @@ open Mirage.Hook.Item
 type Plugin() as self =
     inherit BaseUnityPlugin()
 
-    let [<Literal>] bundleName = "mirage.unity3d"
+    let [<Literal>] bundleName = "Mirage.unity3d"
 
     let main =
         seq {
