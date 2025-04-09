@@ -1,5 +1,9 @@
 ## Changelog
 
+### 1.24.1
+
+- Fixed a potential conflict with [LethalIntelligenceExperimental](<https://thunderstore.io/c/lethal-company/p/VirusTLNR/LethalIntelligenceExperimental/>) where Mirage replaced the masked's ``runtimeAnimatorController`` when it wasn't needed.
+
 ### 1.24.0
 
 - Fixed held items not showing for non-host clients

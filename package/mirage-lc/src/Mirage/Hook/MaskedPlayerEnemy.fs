@@ -5,6 +5,7 @@ open UnityEngine
 open Unity.Netcode
 open System
 open System.Collections.Generic
+open Mirage.Compatibility
 open Mirage.Domain.Config
 open Mirage.Domain.Logger
 open Mirage.Domain.Null
@@ -33,7 +34,10 @@ let hookMaskedEnemy maskedAnimationController =
             self.GetComponentsInChildren<Transform>()
                 |> tryFind _.name.StartsWith("MapDot")
                 |> iter disable
-        self.creatureAnimator.runtimeAnimatorController <- maskedAnimationController
+        
+        // Avoid replacing the runtime animator controller when not needed.
+        if not (isLethalIntelligenceLoaded()) && getConfig().maskedItemSpawnChance > 0 then
+            self.creatureAnimator.runtimeAnimatorController <- maskedAnimationController
     )
 
     On.MaskedPlayerEnemy.add_SetHandsOutClientRpc(fun orig self _ ->
