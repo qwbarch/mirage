@@ -30,7 +30,6 @@ open Mirage.Hook.PlayerControllerB
 open Mirage.Hook.Dissonance
 open Mirage.Hook.Item
 
-
 [<BepInPlugin(pluginId, pluginName, pluginVersion)>]
 [<BepInDependency(LethalSettings.GeneratedPluginInfo.Identifier, BepInDependency.DependencyFlags.SoftDependency)>]
 [<BepInDependency(LobbyCompatibility.PluginInfo.PLUGIN_GUID, BepInDependency.DependencyFlags.SoftDependency)>]
@@ -38,6 +37,8 @@ open Mirage.Hook.Item
 [<BepInDependency(LethalIntelligenceModId, BepInDependency.DependencyFlags.SoftDependency)>]
 type Plugin() as self =
     inherit BaseUnityPlugin()
+
+    // TODO: Make this a separate dll and have bepinex load it in the background instead to avoid blocking the main thread.
 
     let [<Literal>] bundleName = "Mirage.unity3d"
 
