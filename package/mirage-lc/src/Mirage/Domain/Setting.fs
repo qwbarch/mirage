@@ -8,7 +8,6 @@ open System.IO
 open System.Threading
 open Newtonsoft.Json
 open IcedTasks
-open Mirage.PluginInfo
 open Mirage.Compatibility
 open Mirage.Core.Task.Channel
 open Mirage.Core.Task.Loop
@@ -53,7 +52,7 @@ let mutable private settings = fromSavedSettings defaultSettings
 
 let getSettings () = settings
 
-let internal initSettings filePath =
+let internal initSettings filePath pluginId pluginName pluginVersion =
     let channel = Channel CancellationToken.None
     let consumer () =
         forever <| fun () -> valueTask {

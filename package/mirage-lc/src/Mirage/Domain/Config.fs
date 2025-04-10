@@ -11,7 +11,6 @@ open Unity.Netcode
 open Unity.Collections
 open Newtonsoft.Json
 open Mirage.Prelude
-open Mirage.PluginInfo
 open Mirage.Domain.Logger
 
 /// Default store items to enable in the config.
@@ -394,10 +393,11 @@ type internal SyncAction
     | FinishSync
 
 /// Convert the action to the message event name.
+let messageId = "a5fb3c29-349d-4a27-a553-02ec39d58374"
 let private toNamedMessage = function
-    | RequestSync -> $"{pluginId}_OnRequestConfigSync"
-    | ReceiveSync -> $"{pluginId}_OnReceiveConfigSync"
-    | FinishSync -> $"{pluginId}_OnFinishConfigSync"
+    | RequestSync -> $"{messageId}_OnRequestConfigSync"
+    | ReceiveSync -> $"{messageId}_OnReceiveConfigSync"
+    | FinishSync -> $"{messageId}_OnFinishConfigSync"
 
 let private messageManager () = NetworkManager.Singleton.CustomMessagingManager
 let private isClient () = NetworkManager.Singleton.IsClient

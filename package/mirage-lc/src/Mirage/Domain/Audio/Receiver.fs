@@ -7,7 +7,6 @@ open System.Threading
 open System.Buffers
 open OpusDotNet
 open IcedTasks
-open Mirage.PluginInfo
 open Mirage.Prelude
 open Mirage.Core.Audio.PCM
 open Mirage.Core.Task.Channel
@@ -73,7 +72,7 @@ let AudioReceiver audioSource totalSamples onPacketDecoded cancellationToken =
 let startAudioReceiver receiver =
     receiver.audioSource.clip <-
         AudioClip.Create(
-            pluginId,
+            "AudioReceiver",
             receiver.totalSamples,
             OpusChannels,
             OpusSampleRate,

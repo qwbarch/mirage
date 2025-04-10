@@ -51,7 +51,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Mirage/PluginInfo.fs" />
     <Compile Include="Mirage/Domain/Null.fs" />
     <Compile Include="Mirage/Domain/Netcode.fs" />
     <Compile Include="Mirage/Domain/Logger.fs" />
@@ -75,8 +74,7 @@
     <Compile Include="Mirage/Hook/MaskedPlayerEnemy.fs" />
     <Compile Include="Mirage/Hook/Prefab.fs" />
     <Compile Include="Mirage/Hook/Microphone.fs" />
-    <Compile Include="Mirage/Hook/PreInitScene.fs" />
     <Compile Include="Properties/AssemblyInfo.fs" />
-    <Compile Include="Mirage/Plugin.fs" />
+    <Compile Include="Mirage/Main.fs" />
   </ItemGroup>
 </Project>
