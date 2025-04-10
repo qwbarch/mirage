@@ -17,6 +17,8 @@ open Mirage.Core.Task.Fork
 open Mirage.Domain.Config
 open Mirage.Domain.Setting
 open Mirage.Domain.Null
+open Mirage.Domain.Logger
+open Mirage.Prelude
 
 let [<Literal>] MinAudioDurationMs = 150
 let [<Literal>] MinSilenceDurationMs = 2000
@@ -59,9 +61,13 @@ type BufferInput =
 /// Audio data is then sent to __processingChannel__, where the audio samples are safe to use and will not be mutated.
 let private bufferChannel =
     let channel = Channel CancellationToken.None
+    let mutable i = 0
     let consumer () =
         forever <| fun () -> valueTask {
             let! input = readChannel channel
+            if i < 10 then
+                &i += 1
+                logInfo $"{i} - bufferChannel consumer. StartOfRound is null: {isNull StartOfRound.Instance}"
             if isNotNull StartOfRound.Instance then
                 writeChannel processingChannel << ValueSome <|
                     {   samples = input.samples
@@ -79,9 +85,14 @@ let private bufferChannel =
     fork CancellationToken.None consumer
     channel
 
+let mutable private micI = 0
+
 type MicrophoneSubscriber() =
     interface IMicrophoneSubscriber with
         member _.ReceiveMicrophoneData(buffer, format) =
+            if micI < 10 then
+                &micI += 1
+                logInfo $"{micI} - MicrophoneSubscriber.ReceiveMicrophoneData. Frame count: {buffer.Count}"
             let samples = ArrayPool.Shared.Rent buffer.Count
             Buffer.BlockCopy(buffer.Array, buffer.Offset, samples, 0, buffer.Count * sizeof<float32>)
             writeChannel bufferChannel
@@ -89,7 +100,9 @@ type MicrophoneSubscriber() =
                     sampleRate = format.SampleRate
                     channels = format.Channels
                 }
-        member _.Reset() = writeChannel processingChannel ValueNone
+        member _.Reset() =
+            logInfo "MicrophoneSubscriber.Reset"
+            writeChannel processingChannel ValueNone
 
 let readMicrophone recordingDirectory =
     let silero = SileroVAD SamplesPerWindow
@@ -132,35 +145,47 @@ let readMicrophone recordingDirectory =
     fork CancellationToken.None consumer
 
     On.Dissonance.DissonanceComms.add_Start(fun orig self ->
+        logInfo "Prefix - DissonanceComms.Start"
         orig.Invoke self
+        logInfo "Postfix - DissonanceComms.Start"
         self.SubscribeToRecordedAudio <| MicrophoneSubscriber()
     )
 
     // Normally during the opening doors sequence, the game suffers from dropped audio frames, causing recordings to sound glitchy.
     // To reduce the likelihood of recording glitched sounds, audio recordings only start after the sequence is completely finished.
     On.StartOfRound.add_StartTrackingAllPlayerVoices(fun orig self ->
+        logInfo "Prefix - StartOfRound.StartTrackingAllPlayerVoices"
         isReady <- true
         orig.Invoke self
+        logInfo "Postfix - StartOfRound.StartTrackingAllPlayerVoices"
     )
 
     // In case the StartTrackingAllPlayerVoices hook fails due to another mod erroring.
     On.StartOfRound.add_OnShipLandedMiscEvents(fun orig self ->
+        logInfo "Prefix - StartOfRound.OnShipLandedMiscEvents"
         isReady <- true
         orig.Invoke self
+        logInfo "Postfix - StartOfRound.OnShipLandedMiscEvents"
     )
 
     // Set isReady: false when exiting to the main menu, or the round is over.
     On.StartOfRound.add_OnDestroy(fun orig self ->
+        logInfo "Prefix - StartOfRound.OnDestroy"
         isReady <- false
         orig.Invoke self
+        logInfo "Postfix - StartOfRound.OnDestroy"
     )
 
     On.StartOfRound.add_ReviveDeadPlayers(fun orig self ->
+        logInfo "Prefix - StartOfRound.ReviveDeadPlayers"
         isReady <- false
         orig.Invoke self
+        logInfo "Postfix - StartOfRound.ReviveDeadPlayers"
     )
 
     On.MenuManager.add_Awake(fun orig self ->
+        logInfo "Prefix - MenuManager.Awake"
         orig.Invoke self
+        logInfo "Postfix - MenuManager.Awake"
         writeChannel processingChannel ValueNone
     )
