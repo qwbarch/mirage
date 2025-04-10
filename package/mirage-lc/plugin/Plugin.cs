@@ -15,10 +15,7 @@ namespace Mirage.Plugin
     {
         private static string directory;
 
-        public static string Directory
-        {
-            get => directory;
-        }
+        public static string Directory => directory;
 
         private void Awake()
         {

@@ -1,5 +1,9 @@
 ## Changelog
 
+### 1.25.0
+
+- Optimized startup time.
+
 ### 1.24.1
 
 - Fixed a potential conflict with [LethalIntelligenceExperimental](<https://thunderstore.io/c/lethal-company/p/VirusTLNR/LethalIntelligenceExperimental/>) where Mirage replaced the masked's ``runtimeAnimatorController`` when it wasn't needed.

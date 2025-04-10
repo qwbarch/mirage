@@ -407,6 +407,7 @@ bin
 **/dist
 *.o
 *.bak
+*.sln
 
 model/whisper/model.bin
 target/
