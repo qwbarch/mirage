@@ -1,6 +1,6 @@
 ## Changelog
 
-### 1.25.0
+### 1.25.1
 
 - Optimized startup time.
 

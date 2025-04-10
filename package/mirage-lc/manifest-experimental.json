@@ -4,6 +4,6 @@
     "website_url": "https://github.com/qwbarch/mirage",
     "description": "Experimental build of Mirage. Please report any issues you find on GitHub (or on the LC modding discord).",
     "dependencies": [
-        "qwbarch-MirageCore-1.0.3"
+        "qwbarch-MirageCore-1.0.4"
     ]
 }
