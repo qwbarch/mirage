@@ -12,7 +12,7 @@
     <Platform>x64</Platform>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="LethalCompany.GameLibs.Steam" Version="67.0.0-ngd.0" Publicize="true" />
+    <PackageReference Include="LethalCompany.GameLibs.Steam" Version="70.0.0-ngd.0" Publicize="true" />
     <PackageReference Include="BepInEx.Core" Version="5.4.21" />
     <ProjectReference Include="../../mirage-core/plugin/Plugin.csproj" />
     <Reference Include="Mirage">
