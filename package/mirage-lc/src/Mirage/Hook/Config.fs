@@ -4,7 +4,7 @@ open FSharpPlus
 open Unity.Netcode
 open System.Reflection
 open Newtonsoft.Json
-open Mirage.Compatibility
+open Mirage.Compatibility.Main
 open Mirage.Domain.Config
 open Mirage.Domain.Logger
 open Mirage.Domain.Null

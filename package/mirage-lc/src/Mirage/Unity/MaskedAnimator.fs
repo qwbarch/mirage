@@ -8,7 +8,7 @@ open Unity.Netcode
 open Mirage.Prelude
 open Mirage.Domain.Null
 open Mirage.Domain.Config
-open Mirage.Compatibility
+open Mirage.Compatibility.Main
 open Mirage.Hook.Item
 open Mirage.Domain.Logger
 

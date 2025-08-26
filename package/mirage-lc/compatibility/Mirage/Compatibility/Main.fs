@@ -1,4 +1,4 @@
-module Mirage.Compatibility
+module Mirage.Compatibility.Main
 
 open System
 open BepInEx.Bootstrap
@@ -7,6 +7,7 @@ open LobbyCompatibility.Enums
 open LethalSettings.UI
 open LethalSettings.UI.Components
 open LethalConfig.ConfigItems
+open Mirage.Compatibility.LethalSettings
 
 let [<Literal>] LethalIntelligenceModId = "VirusTLNR.LethalIntelligence"
 
@@ -69,6 +70,7 @@ type LethalSettingsArgs =
 let initLethalSettings settings =
     if Chainloader.PluginInfos.ContainsKey LethalSettings.GeneratedPluginInfo.Identifier then
         (lazy(
+            fixLethalSettings()
             ModMenu.RegisterMod(ModMenu.ModSettingsConfig(
                 Name = settings.pluginName,
                 Id = settings.pluginId,

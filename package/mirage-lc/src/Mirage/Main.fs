@@ -9,7 +9,7 @@ open System.Reflection
 open UnityEngine
 open Newtonsoft.Json
 open IcedTasks
-open Mirage.Compatibility
+open Mirage.Compatibility.Main
 open Mirage.Core.Task.Fork
 open Mirage.Domain.Logger
 open Mirage.Domain.Config

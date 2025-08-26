@@ -5,7 +5,7 @@ open UnityEngine
 open Unity.Netcode
 open System
 open System.Collections.Generic
-open Mirage.Compatibility
+open Mirage.Compatibility.Main
 open Mirage.Domain.Config
 open Mirage.Domain.Logger
 open Mirage.Domain.Null

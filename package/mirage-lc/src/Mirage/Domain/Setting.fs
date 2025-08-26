@@ -8,7 +8,7 @@ open System.IO
 open System.Threading
 open Newtonsoft.Json
 open IcedTasks
-open Mirage.Compatibility
+open Mirage.Compatibility.Main
 open Mirage.Core.Task.Channel
 open Mirage.Core.Task.Loop
 open Mirage.Core.Task.Fork

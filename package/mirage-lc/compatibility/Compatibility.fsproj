@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <RootNamespace>Mirage.Compatibility</RootNamespace>
+    <RootNamespace>Mirage.Compatibility.Main</RootNamespace>
     <AssemblyName>Mirage.Compatibility</AssemblyName>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
@@ -17,9 +17,13 @@
     <PackageReference Include="AinaVT-LethalConfig" Version="1.4.3" Publicize="true" />
     <PackageReference Include="TeamBMX.LobbyCompatibility" Version="1.2.0" />
     <PackageReference Include="LethalSettings" Version="1.4.0" Publicize="true" />
+    <Reference Include="plugins/MMHOOK_com.willis.lc.lethalsettings.dll">
+      <HintPath>../../../lib/MMHOOK/MMHOOK_com.willis.lc.lethalsettings.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Compatibility.fs" />
+    <Compile Include="Mirage/Compatibility/LethalSettings.fs" />
+    <Compile Include="Mirage/Compatibility/Main.fs" />
     <Compile Include="Properties/AssemblyInfo.fs" />
   </ItemGroup>
 </Project>
