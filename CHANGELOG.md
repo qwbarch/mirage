@@ -1,5 +1,10 @@
 ## Changelog
 
+### 1.26.0
+
+- Fixed a conflict with LethalIntelligence. LethalIntelligence should now fully take control of fake item logic. Huge thanks to VirusTLNR for this fix.
+- Add the LethalSettings [fix](<https://github.com/willis81808/LethalSettings/pull/8>) directly into Mirage since the pull request still hasn't been merged yet.
+
 ### 1.25.1
 
 - Optimized startup time.
