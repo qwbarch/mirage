@@ -1,6 +1,5 @@
 module Mirage.Main
 
-open BepInEx
 open Dissonance
 open System
 open System.IO

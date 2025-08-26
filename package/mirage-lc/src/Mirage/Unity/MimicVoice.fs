@@ -35,6 +35,7 @@ type MimicVoice() =
         enemyAI <- this.GetComponent<EnemyAI>()
 
         voicePlayback <- Object.Instantiate<GameObject> <| getDissonance()._playbackPrefab2
+        voicePlayback.name <- "Mirage"
         let removeComponent : Type -> unit = Object.Destroy << voicePlayback.GetComponent
         iter removeComponent
             [   typeof<VoicePlayback>

@@ -115,7 +115,7 @@ type MaskedAnimator() as self =
     
     override this.OnNetworkSpawn() =
         base.OnNetworkSpawn()
-        if this.IsHost && random.Next(0, 100) < getConfig().maskedItemSpawnChance then
+        if this.IsHost && not (isLethalIntelligenceLoaded()) && random.Next(0, 100) < getConfig().maskedItemSpawnChance then
             this.HoldItem <| spawnItem()
     
     member this.HoldItem struct (item, scrapValue) =
@@ -205,7 +205,7 @@ type MaskedAnimator() as self =
     
     member this.OnDeath() =
         let heldItem = this.HeldItem
-        if isNotNull heldItem && this.DropItemOnDeath then
+        if not (isLethalIntelligenceLoaded()) && isNotNull heldItem && this.DropItemOnDeath then
             ignore <| valueTask {
                 do! Task.Delay 900 // Wait for the masked enemy to fall to the ground.
 
