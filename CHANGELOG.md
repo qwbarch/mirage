@@ -1,5 +1,10 @@
 ## Changelog
 
+### 1.27.0
+
+- Updated to Lethal Company ``v73``.
+- Updated UnityNetcodePatcher to ``v4.4.2``.
+
 ### 1.26.0
 
 - Fixed a conflict with LethalIntelligence. LethalIntelligence should now fully take control of fake item logic. Huge thanks to VirusTLNR for this fix.
