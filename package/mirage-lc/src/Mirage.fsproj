@@ -1,6 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <Sdk Name="Evaisa.NetcodePatcher.MSBuild" Version="4.4.2" />
+  <PropertyGroup>
+    <NetcodePatcherUnityVersion>2022.3.62</NetcodePatcherUnityVersion>
+    <NetcodePatcherNetcodeVersion>1.12.0</NetcodePatcherNetcodeVersion>
+    <NetcodePatcherTransportVersion>1.0.0</NetcodePatcherTransportVersion>
+  </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Evaisa.NetcodePatcher.MSBuild" Version="4.4.2" PrivateAssets="all" />
     <NetcodePatch Include="$(TargetPath)" />
   </ItemGroup>
   <PropertyGroup>

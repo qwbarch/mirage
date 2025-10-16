@@ -1,9 +1,11 @@
 {
     "name": "MirageExperimental",
-    "version_number": "0.0.87",
+    "version_number": "0.0.90",
     "website_url": "https://github.com/qwbarch/mirage",
     "description": "Experimental build of Mirage. Please report any issues you find on GitHub (or on the LC modding discord).",
     "dependencies": [
-        "qwbarch-MirageCore-1.0.4"
+        "qwbarch-MirageCore-1.0.4",
+        "VirusTLNR-MaskedInvisFix-0.0.2",
+        "ButteryStancakes-MaskFixes-1.3.1"
     ]
 }
