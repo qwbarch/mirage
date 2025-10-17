@@ -1,5 +1,13 @@
 ## Changelog
 
+### 1.28.0
+
+- Networking now works properly for ``v73``.
+
+Note: There is currently a bug reported on this version that masked enemies holding items can bug out and
+not attack anyone.
+**I highly recommend disabling this feature until I figure out a fix.**
+
 ### 1.27.0
 
 - Updated to Lethal Company ``v73``.
