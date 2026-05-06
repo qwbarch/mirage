@@ -1,5 +1,15 @@
 ## Changelog
 
+### 1.29.2
+
+- Updated to Lethal Company ``v81``.
+
+This update is thanks to [flowflowflow](<https://github.com/flowflowflow>). Huge shoutout for creating a fix and providing a package for others to use while I was away for the past month.
+
+### 1.29.1
+
+- Skipped version to avoid any possible conflicts with flow's [pull request](<https://github.com/qwbarch/mirage/pull/196>).
+
 ### 1.29.0
 
 - Spawning masked enemies with held items now works again.
