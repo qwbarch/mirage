@@ -101,9 +101,7 @@ let hookMaskedEnemy maskedAnimationController =
                     totalWeight <- totalWeight + weight
                     let spawnChance = float weight / float totalWeight * 100.0
                     logs.Add $"Level: {level.PlanetName}. Weight: {weight}. SpawnChance: {spawnChance:F2}%%"
-                    let enemy = SpawnableEnemyWithRarity()
-                    enemy.rarity <- weight
-                    enemy.enemyType <- enemyType
+                    let enemy = SpawnableEnemyWithRarity(enemyType, weight)
                     enemy.enemyType.MaxCount <- localConfig.MaxMaskedSpawns.Value
                     level.Enemies.Add enemy
             logInfo <| "Adjusting spawn weights for masked enemies:\n" + String.Join("\n", logs)
