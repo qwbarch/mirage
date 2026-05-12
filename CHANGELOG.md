@@ -4,7 +4,7 @@
 
 - Updated to Lethal Company ``v81``.
 
-This update is thanks to [flowflowflow](<https://github.com/flowflowflow>). Huge shoutout for creating a fix and providing a package for others to use while I was away for the past month.
+This update is thanks to [flowflowflow](<https://github.com/flowflowflow>). Huge shoutout for creating a fix and providing a package for others to use while I've been away.
 
 ### 1.29.1
 
