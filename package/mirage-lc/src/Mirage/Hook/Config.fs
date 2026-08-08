@@ -25,12 +25,14 @@ let syncConfig () =
         revertSync()
     )
 
-    On.StartOfRound.add_Awake(fun orig self ->
+    On.StartOfRound.add_Start(fun orig self ->
         orig.Invoke self
-        for prefab in GameNetworkManager.Instance.GetComponent<NetworkManager>().NetworkConfig.Prefabs.m_Prefabs do
-            let enemyAI = prefab.Prefab.GetComponent<EnemyAI>()
-            if isNotNull enemyAI then
-                localConfig.RegisterEnemy enemyAI
+        let networkManager = GameNetworkManager.Instance.GetComponent<NetworkManager>()
+        if isNotNull networkManager then
+            for prefab in networkManager.NetworkConfig.Prefabs.m_Prefabs do
+                let enemyAI = prefab.Prefab.GetComponent<EnemyAI>()
+                if isNotNull enemyAI then
+                    localConfig.RegisterEnemy enemyAI
         initEnemiesLethalConfig
             (Assembly.GetExecutingAssembly())
             (getEnemyConfigEntries())
