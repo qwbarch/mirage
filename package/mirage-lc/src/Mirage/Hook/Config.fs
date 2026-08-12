@@ -25,12 +25,19 @@ let syncConfig () =
         revertSync()
     )
 
-    On.StartOfRound.add_Awake(fun orig self ->
+    On.StartOfRound.add_Start(fun orig self ->
         orig.Invoke self
-        for prefab in GameNetworkManager.Instance.GetComponent<NetworkManager>().NetworkConfig.Prefabs.m_Prefabs do
-            let enemyAI = prefab.Prefab.GetComponent<EnemyAI>()
-            if isNotNull enemyAI then
-                localConfig.RegisterEnemy enemyAI
+        let networkManager = GameNetworkManager.Instance.GetComponent<NetworkManager>()
+        if isNotNull networkManager then
+            for prefab in networkManager.NetworkConfig.Prefabs.m_Prefabs do
+                // In LC v81 (Netcode for GameObjects), NetworkConfig.Prefabs can contain
+                // entries whose Prefab is null (e.g. override entries, or prefabs registered
+                // by other mods). Calling GetComponent on a null GameObject throws
+                // NullReferenceException, so guard before dereferencing.
+                if isNotNull prefab && isNotNull prefab.Prefab then
+                    let enemyAI = prefab.Prefab.GetComponent<EnemyAI>()
+                    if isNotNull enemyAI then
+                        localConfig.RegisterEnemy enemyAI
         initEnemiesLethalConfig
             (Assembly.GetExecutingAssembly())
             (getEnemyConfigEntries())
