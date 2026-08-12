@@ -17,6 +17,7 @@ open Mirage.Core.Task.Fork
 open Mirage.Domain.Config
 open Mirage.Domain.Setting
 open Mirage.Domain.Null
+open Mirage.Domain.Logger
 
 let [<Literal>] MinAudioDurationMs = 150
 let [<Literal>] MinSilenceDurationMs = 2000
@@ -62,19 +63,29 @@ let private bufferChannel =
     let consumer () =
         forever <| fun () -> valueTask {
             let! input = readChannel channel
-            if isNotNull StartOfRound.Instance then
-                writeChannel processingChannel << ValueSome <|
-                    {   samples = input.samples
-                        format =
-                            {   sampleRate = input.sampleRate
-                                channels = input.channels
-                            }
-                        isReady = isReady
-                        isPlayerDead = StartOfRound.Instance.localPlayerController.isPlayerDead
-                        pushToTalkEnabled = IngamePlayerSettings.Instance.settings.pushToTalk
-                        isMuted = getDissonance().IsMuted
-                        allowRecordVoice = getSettings().allowRecordVoice
-                    }
+            try
+                let startOfRound = StartOfRound.Instance
+                let playerSettings = IngamePlayerSettings.Instance
+                let dissonance = getDissonance()
+                if isNotNull startOfRound
+                    && isNotNull startOfRound.localPlayerController
+                    && isNotNull playerSettings
+                    && isNotNull dissonance
+                then
+                    writeChannel processingChannel << ValueSome <|
+                        {   samples = input.samples
+                            format =
+                                {   sampleRate = input.sampleRate
+                                    channels = input.channels
+                                }
+                            isReady = isReady
+                            isPlayerDead = startOfRound.localPlayerController.isPlayerDead
+                            pushToTalkEnabled = playerSettings.settings.pushToTalk
+                            isMuted = dissonance.IsMuted
+                            allowRecordVoice = getSettings().allowRecordVoice
+                        }
+            with | error ->
+                logError $"Failed to process microphone data: {error}"
         }
     fork CancellationToken.None consumer
     channel
